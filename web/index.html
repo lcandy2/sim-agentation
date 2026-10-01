@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>sim-agentation</title>
+<link rel="stylesheet" href="/web/style.css">
+</head>
+<body>
+<header class="bar">
+  <div class="brand">sim-agentation</div>
+  <select id="device" title="Simulator"></select>
+  <div class="seg" role="tablist">
+    <button id="mode-interact" class="on" title="Use the app (I)">Interact</button>
+    <button id="mode-annotate" title="Freeze the screen and annotate (A)">Annotate</button>
+  </div>
+  <button id="btn-sdk" class="ghost toggle" title="Use SimAgentationPlus data when the app has it (S)" hidden>SDK</button>
+  <div class="spacer"></div>
+  <button id="btn-home" class="ghost" title="Home button">Home</button>
+  <button id="btn-lock" class="ghost" title="Lock button">Lock</button>
+  <span id="status" class="status">Connecting…</span>
+</header>
+
+<main>
+  <section class="stage">
+    <div id="device-frame" class="device">
+      <canvas id="screen"></canvas>
+      <div id="overlay" tabindex="0"></div>
+      <div id="frozen-badge" hidden>Click or drag · ↑ parent · Esc to resume</div>
+    </div>
+  </section>
+
+  <aside class="panel">
+    <div class="panel-head">
+      <h2>Annotations</h2>
+      <div class="panel-actions">
+        <button id="btn-copy" class="ghost small" title="Copy pending annotations as Markdown">Copy</button>
+        <button id="btn-clear" class="ghost small" title="Remove resolved and dismissed">Clear done</button>
+      </div>
+    </div>
+    <p id="empty" class="empty">Switch to Annotate, then click an element or drag a box around anything on screen.</p>
+    <ol id="list" class="list"></ol>
+  </aside>
+</main>
+
+<form id="composer" class="composer" hidden>
+  <div id="composer-target" class="composer-target"></div>
+  <textarea id="composer-text" rows="3" placeholder="What should change?"></textarea>
+  <div class="composer-row">
+    <span class="hint">⌘↩ to add · Esc to cancel</span>
+    <button type="button" id="composer-cancel" class="ghost small">Cancel</button>
+    <button type="submit" class="primary small">Add</button>
+  </div>
+</form>
+
+<script type="module" src="/web/app.js"></script>
+</body>
+</html>

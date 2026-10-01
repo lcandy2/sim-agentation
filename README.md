@@ -1,0 +1,81 @@
+# sim-agentation
+
+Annotate a running iOS simulator in the browser and hand the feedback to a coding agent. It works like [Agentation](https://agentation.com), but for iOS: freeze the screen, click an element or drag a box around anything, and write what should change. The agent gets the element, the screen it is on, strings to search the source for, and two screenshots: the whole screen with the box drawn in red, and a close-up of the box.
+
+Your app needs no SDK. Everything comes from the simulator's accessibility tree, so it works with any app on any booted simulator.
+
+## Requirements
+
+- macOS on Apple Silicon, Xcode 26
+- [Bun](https://bun.sh)
+- [baguette](https://tddworks.github.io/baguette/) (`brew install baguette`), which streams the simulator and drives its input
+
+## Run
+
+```sh
+bun src/cli.ts serve --open
+```
+
+This opens http://localhost:4848 and starts `baguette serve` if it isn't running yet.
+
+- **Interact** (`I`): use the app. Click and drag to touch, scroll with the wheel, type with the keyboard.
+- **Annotate** (`A`): freezes the screen. Hover to see elements, click one to annotate it, or drag a box over any area. Press ⌘↩ to add the note and Esc to go back to the live screen.
+
+Click **Copy** to put every pending annotation on the clipboard as Markdown, so you can paste it into any agent without MCP.
+
+## Connect an agent
+
+```sh
+claude mcp add sim-agentation -- bun /path/to/Sim-Agentation/src/cli.ts mcp
+```
+
+Tools:
+
+| Tool | What it does |
+|---|---|
+| `sim_get_pending` | Pending annotations, with element info and screenshot paths |
+| `sim_get_all` | All annotations, including finished ones |
+| `sim_watch` | Waits until you add an annotation, then returns the pending list |
+| `sim_acknowledge` | Marks one as in progress |
+| `sim_resolve` | Marks one as fixed, with a summary |
+| `sim_dismiss` | Declines one, with the reason |
+| `sim_reply` | Posts a message on one |
+
+Status changes and replies show up in the browser sidebar.
+
+## SimAgentationPlus (optional SDK)
+
+Add `sdk/SimAgentationPlus` to an app you build yourself to get exact selections and source locations. Everything compiles out of Release builds.
+
+```swift
+import SimAgentationPlus
+
+RootView()
+    .simAgentation()      // starts a local inspector on 127.0.0.1:4850 (Debug only)
+
+ShowRow(show: show)
+    .simTag()             // selectable as "ShowRow · ContentView.swift:34"
+```
+
+UIKit works too, and needs less: every view class your app defines is selectable by name, even without a background, and each annotation names the view controller that owns it. Tag a UIKit view to add its source location:
+
+```swift
+let card = TicketCardView(show: show).simTag()   // "TicketCardView · TicketViewController.swift:21"
+```
+
+When the app in front has the SDK, the status reads **Frozen · SDK**. Parents then come from the real view and layer tree instead of pixels, so backgrounds that barely differ from the page still work. Each annotation also gets the app's bundle id, a `Source` line with the tagged view's file and line, the owning view controller, and the app-defined view classes around the box. Press `S` or click **SDK** while annotating to compare with the pixel-only fallback.
+
+## Configuration
+
+| Variable | Default |
+|---|---|
+| `SIM_AGENTATION_PORT` | `4848` |
+| `SIM_AGENTATION_HOME` | `~/.sim-agentation` (annotations and screenshots) |
+| `BAGUETTE_URL` | `http://127.0.0.1:8421` |
+| `SIM_AGENTATION_SDK_URL` | `http://127.0.0.1:4850` |
+
+## Limits
+
+- Without the SDK it doesn't know which source file a view comes from. The agent searches for the labels and identifiers it is given.
+- Content without accessibility data, such as custom Canvas or Metal drawing, can only be annotated with a box.
+- baguette uses private Simulator frameworks, so a new Xcode release can break it until baguette is updated.
