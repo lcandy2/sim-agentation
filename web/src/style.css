@@ -29,8 +29,27 @@
   --control-luminosity: rgba(248, 248, 248, 0.2);
   --control-shadow: 1.25px 0 0 -0.75px #d0d0d0, -1.25px 0 0 -0.75px #d0d0d0, 0 0 0 0.5px #e8e8e8, 0 8px 15px rgba(0, 0, 0, 0.02);
   --control-label: #1a1a1a;
+  --control-secondary: #727272;
   --control-on: rgba(0, 0, 0, 0.1);
-  --control-separator: rgba(0, 0, 0, 0.155);
+  --control-separator: rgba(0, 0, 0, 0.08); /* lighter than the design's 15.5%, as asked */
+  /* macOS 27's Menu (Figma, nodes 4370:42750 and 4370:42756): #d9d9d9 at 55%
+     luminosity under #d9d9d9 at 40%, which through the glass's backdrop
+     filter blend as plain layers; its hairlines, a dark 0.5 pt outline where
+     Figma's render draws one, and a deep shadow. */
+  --menu-fill: linear-gradient(rgba(217, 217, 217, 0.4) 0 0), rgba(217, 217, 217, 0.55);
+  --menu-shadow: 0 0 0 0.5px #262626, 1.25px 0 0 -0.75px #dbdbdb, -1.25px 0 0 -0.75px #dbdbdb, 0 0 0 0.5px #dbdbdb, 0 8px 48px rgba(0, 0, 0, 0.25);
+  --menu-label: #1a1a1a;
+  --menu-disabled: #bfbfbf;
+  --menu-separator: rgba(0, 0, 0, 0.1); /* #e6e6e6, plus-darker */
+  --menu-highlight: #0069f9;
+  /* macOS 27's small dialog (Figma, node 690:10197). */
+  --sheet: #ffffff;
+  --sheet-shadow: 0 0 0.5px rgba(0, 0, 0, 0.8), 0 18px 27px rgba(0, 0, 0, 0.3);
+  --sheet-fill: rgba(0, 0, 0, 0.08);
+  --sheet-field-border: rgba(0, 0, 0, 0.08);
+  --sheet-default: #0080f7; /* #08f under #f7f7f7 plus-darker */
+  --sheet-focus: rgba(0, 136, 255, 0.5);
+  --popup-chevrons: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='rgba(0,0,0,0.85)' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 9.5l3-3 3 3M9 14.5l3 3 3-3'/%3E%3C/svg%3E");
   --menu: #ffffff;
   --card: #ffffff;
   --segment: #ffffff;
@@ -75,8 +94,20 @@
     --control-luminosity: transparent;
     --control-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08), 0 2px 40px rgba(0, 0, 0, 0.3);
     --control-label: rgba(255, 255, 255, 0.85);
+    --control-secondary: rgba(255, 255, 255, 0.55);
     --control-on: rgba(255, 255, 255, 0.14);
     --control-separator: rgba(255, 255, 255, 0.05);
+    /* The menu and dialog designs are light only; these keep the dark look. */
+    --menu-fill: #262626;
+    --menu-shadow: 0 10px 40px rgba(0, 0, 0, 0.4), 0 0 0 0.5px rgba(255, 255, 255, 0.1);
+    --menu-label: rgba(255, 255, 255, 0.85);
+    --menu-disabled: rgba(255, 255, 255, 0.25);
+    --menu-separator: rgba(255, 255, 255, 0.1);
+    --sheet: #2a2a2a;
+    --sheet-shadow: 0 0 0.5px rgba(0, 0, 0, 0.8), 0 18px 27px rgba(0, 0, 0, 0.5);
+    --sheet-fill: rgba(255, 255, 255, 0.1);
+    --sheet-field-border: rgba(255, 255, 255, 0.1);
+    --popup-chevrons: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.85)' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 9.5l3-3 3 3M9 14.5l3 3 3-3'/%3E%3C/svg%3E");
     --thumb-off: rgba(255, 255, 255, 0.08);
     --start: rgba(255, 255, 255, 0.16);
     --on-start: rgba(255, 255, 255, 0.9);
@@ -135,17 +166,16 @@ button { cursor: default; }
 .icon-btn.small svg { width: 16px; height: 16px; }
 #mode-annotate.on { background: var(--mark); color: #fff; }
 
-/* macOS 27's toolbar Segmented Control (Figma, macOS 27 Community, node
-   4370:41840): a 36 pt capsule, 4 pt in; 32 x 28 buttons with 13 pt symbols;
-   3 pt between them holding a 1 x 20 separator, left out beside the selected
-   button. Bottom up: Figma's Fill (the background, then ::before), its Glass
-   Effect (the backdrop filter and ::after, from lib/glass.js), the buttons. */
-.pill {
+/* macOS 27's toolbar controls (Figma, macOS 27 Community, nodes 4370:41840
+   and 4376:54895), all on one material: a 36 pt capsule over the Fill
+   (the background, then ::before) and the Glass Effect (the backdrop filter
+   and ::after, from lib/glass.js). A Button Group holds 28 x 28 buttons
+   4 pt apart, 4 pt in, so one button makes a circle; a Segmented Control,
+   for a choice, holds 32 x 28 ones with a 1 x 20 separator between them,
+   left out beside the selected one. */
+.pill,
+.search {
   position: relative;
-  display: inline-flex;
-  align-items: center;
-  height: 36px;
-  padding: 4px;
   border-radius: 1000px;
   background: var(--control);
   box-shadow: var(--control-shadow);
@@ -155,7 +185,9 @@ button { cursor: default; }
   backdrop-filter: blur(3px);
 }
 .pill::before,
-.pill::after {
+.pill::after,
+.search::before,
+.search::after {
   content: "";
   position: absolute;
   inset: 0;
@@ -163,10 +195,19 @@ button { cursor: default; }
   border-radius: inherit;
   pointer-events: none;
 }
-.pill::before { background: var(--control-luminosity); mix-blend-mode: luminosity; }
-.pill.glass-on::after { background: var(--glass-light) center / 100% 100% no-repeat; }
-.pill > * + * { margin-left: 3px; }
-.pill > * + *::before {
+.pill::before,
+.search::before { background: var(--control-luminosity); mix-blend-mode: luminosity; }
+.pill.glass-on::after,
+.search.glass-on::after { background: var(--glass-light) center / 100% 100% no-repeat; }
+
+.pill { display: inline-flex; align-items: center; gap: 4px; height: 36px; padding: 4px; }
+.pill .icon-btn { width: 28px; height: 28px; border-radius: 100px; color: var(--control-label); opacity: 1; }
+.pill .icon-btn svg { width: 20px; height: 20px; }
+.pill .icon-btn.on { background: var(--control-on); }
+.pill.segmented { gap: 0; }
+.pill.segmented .icon-btn { width: 32px; }
+.pill.segmented > * + * { margin-left: 3px; }
+.pill.segmented > * + *::before {
   content: "";
   position: absolute;
   top: 50%;
@@ -177,11 +218,8 @@ button { cursor: default; }
   background: var(--control-separator);
   pointer-events: none;
 }
-.pill > .on::before,
-.pill > .on + *::before { display: none; }
-.pill .icon-btn { width: 32px; height: 28px; border-radius: 100px; color: var(--control-label); opacity: 1; }
-.pill .icon-btn svg { width: 20px; height: 20px; }
-.pill .icon-btn.on { background: var(--control-on); }
+.pill.segmented > .on::before,
+.pill.segmented > .on + *::before { display: none; }
 
 .glass {
   background: var(--glass);
@@ -224,60 +262,118 @@ button { cursor: default; }
 .seg-text button.on { background: var(--segment); box-shadow: var(--glass-shadow); opacity: 1; font-weight: 600; }
 .seg-text button:disabled { opacity: 0.3; background: none; }
 
-/* Popovers and menus, after iCloud.com's: a white card with a large radius
-   and a soft, wide shadow, no border; items are a blue icon and a label. */
+/* Menus: macOS 27's (Figma, macOS 27 Community, nodes 4370:42750 and
+   4370:42756), in the top layer (components/Popover.svelte) under their
+   button: 24 pt rows 12 pt in, 13 pt medium titles after 12 pt symbols,
+   11 pt separators, a blue highlight 5 pt from the edges. Figma's medium
+   weight is 510; Chrome would round that up to Semibold, so 500 here and
+   in the dialog and search field. */
 .popover-anchor { position: relative; display: inline-grid; }
 .popover {
-  position: absolute;
-  top: calc(100% + 8px);
-  right: -4px;
-  z-index: 30;
-  min-width: 220px;
-  padding: 8px;
-  border-radius: 16px;
-  background: var(--menu);
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  width: max-content;
+  padding: 5px 12px;
   border: 0;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12), 0 0 1px rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+  overflow: visible;
+  background: var(--menu-fill);
+  box-shadow: var(--menu-shadow);
+  color: var(--menu-label);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
 }
-.popover.align-left { right: auto; left: -4px; }
+.popover.glass-on::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: var(--glass-light) center / 100% 100% no-repeat;
+  pointer-events: none;
+}
 .menu { display: grid; }
-.menu hr { margin: 6px 12px; border: 0; border-top: 1px solid var(--separator); }
+.menu hr { height: 11px; margin: 0 -1.33px; border: 0; background: linear-gradient(var(--menu-separator) 0 0) center / 100% 1px no-repeat; }
 .menu-item {
   display: flex;
   align-items: center;
-  gap: 10px;
-  height: 36px;
-  padding: 0 14px 0 12px;
+  gap: 8px;
+  height: 24px;
+  margin: 0 -7px;
+  padding: 0 7px;
   border: 0;
-  border-radius: 10px;
+  border-radius: 8px;
   background: none;
-  color: var(--text);
-  font-size: 14px;
+  color: var(--menu-label);
+  font-size: 13px;
+  font-weight: 500;
   text-align: left;
   white-space: nowrap;
 }
-.menu-item svg { width: 18px; height: 18px; flex: none; color: var(--accent); }
-.menu-item:hover:not(:disabled) { background: var(--hover); }
-.menu-item:disabled,
-.menu-item:disabled svg { color: var(--tertiary); }
-.menu-item .check { width: 18px; font-size: 13px; text-align: center; flex: none; color: var(--accent); }
+.menu-item svg { width: 18px; height: 18px; margin: 0 -3px; flex: none; }
+.menu-item:hover:not(:disabled) { background: var(--menu-highlight); color: #fff; }
+.menu-item:disabled { color: var(--menu-disabled); }
+/* A menu with checkmarks moves every title in 16 pt, the mark centered 12 pt in. */
+.menu-item .check { width: 12px; margin: 0 -2px 0 6px; flex: none; font-size: 10px; font-weight: 700; text-align: center; }
 
-.new-sim { display: grid; gap: 10px; width: 280px; padding: 8px; }
-.new-sim h4 { margin: 0 0 2px; font-size: 13px; font-weight: 600; }
-.new-sim label { display: grid; grid-template-columns: 56px 1fr; align-items: center; gap: 8px; color: var(--secondary); }
-.new-sim select, .new-sim input {
-  min-width: 0;
-  height: 26px;
-  padding: 0 8px;
-  border-radius: 6px;
-  border: 1px solid var(--separator);
-  background: var(--canvas);
+/* The New Simulator dialog: macOS 27's small dialog (Figma, macOS 27
+   Community, node 690:10197): labels right-aligned beside their fields,
+   the title and message above them, the buttons at the bottom right. */
+.sheet {
+  width: 390px;
+  padding: 0;
+  border: 0;
+  border-radius: 16px;
+  background: var(--sheet);
+  box-shadow: var(--sheet-shadow);
   color: var(--text);
-  outline: none;
+  overflow: visible;
 }
-.new-sim input:focus, .new-sim select:focus { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent); }
-.new-sim .hint { margin: 0; color: var(--secondary); }
-.form-row { display: flex; justify-content: flex-end; gap: 8px; margin-top: 2px; }
+.sheet::backdrop { background: none; }
+.sheet-grid {
+  display: grid;
+  grid-template-columns: 1fr 223px;
+  gap: 12px 6px;
+  align-items: center;
+  padding: 20px 40px 10px;
+}
+.sheet-message { grid-column: 2; display: grid; gap: 6px; padding-bottom: 8px; }
+.sheet-message h2 { margin: 0; font-size: 13px; line-height: 16px; font-weight: 700; }
+.sheet-message p { margin: 0; font-size: 11px; line-height: 14px; }
+.sheet-grid label { font-size: 13px; line-height: 24px; font-weight: 500; letter-spacing: -0.26px; text-align: right; color: var(--secondary); }
+.sheet .field,
+.sheet .popup {
+  width: 100%;
+  min-width: 0;
+  height: 24px;
+  border: 0;
+  border-radius: 6px;
+  outline: none;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 500;
+}
+.sheet .field { padding: 0 8px; background: var(--canvas); box-shadow: 0 0 0 1px var(--sheet-field-border); caret-color: #08f; }
+.sheet .field:focus { box-shadow: 0 0 0 1px var(--sheet-field-border), 0 0 0 3.5px var(--sheet-focus), inset 0 0 0 1px var(--sheet-focus); }
+.sheet .popup { appearance: none; padding: 0 24px 0 12px; background: var(--popup-chevrons) right center / 24px 24px no-repeat, var(--sheet-fill); }
+.sheet .popup:focus-visible { box-shadow: 0 0 0 3.5px var(--sheet-focus); }
+.sheet .popup:disabled { color: var(--secondary); }
+.sheet-buttons { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 20px 20px; }
+.sheet-btn {
+  min-width: 74px;
+  height: 24px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--sheet-fill);
+  color: var(--text);
+  font-size: 13px;
+  line-height: 16px;
+  font-weight: 500;
+}
+.sheet-btn.default { background: var(--sheet-default); color: #fff; }
+.sheet-btn:disabled { opacity: 0.5; }
 
 kbd {
   font: 600 11px/1 -apple-system, system-ui, sans-serif;
@@ -304,30 +400,29 @@ kbd {
 }
 /* Device Hub's top bar: + and filter in a capsule, then the sidebar toggle,
    centered 26 pt from the window's top. */
-.sidebar-top { height: 36px; flex: none; display: flex; align-items: center; justify-content: space-between; gap: 2px; padding: 0 53px 0 10px; }
+.sidebar-top { height: 36px; flex: none; display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 0 50px 0 10px; }
 /* The product name where macOS puts a window's title; the right end leaves
    room for the sidebar button, which floats (see .sidebar-toggle). */
 .brand { font-size: 13px; line-height: 16px; font-weight: 700; color: var(--sidebar-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.bar-pill { gap: 0; }
 
+/* macOS 27's search field (Figma, node 4376:54895): a control capsule with a
+   secondary magnifying glass and placeholder. */
 .search {
-  margin: 17px 9px 0 10px;
-  height: 28px;
+  margin: 13px 9px 0 10px;
+  height: 36px;
   flex: none;
   display: flex;
   align-items: center;
-  gap: 2px;
-  padding: 0 10px 0 7px;
-  border-radius: 14px;
-  background: var(--field);
-  border: 0;
-  color: var(--secondary);
+  gap: 6px;
+  padding: 0 10px;
+  color: var(--control-secondary);
 }
-.search [data-icon] svg { width: 17px; height: 17px; }
-.search input { flex: 1; min-width: 0; border: 0; background: none; outline: none; color: var(--text); font-size: 13px; }
-.search input::placeholder { color: var(--secondary); }
+.search [data-icon] { width: 16px; height: 16px; flex: none; }
+.search [data-icon] svg { width: 18px; height: 18px; margin: -1px; }
+.search input { flex: 1; min-width: 0; height: 16px; padding: 0; border: 0; background: none; outline: none; color: var(--control-label); font-size: 13px; line-height: 16px; font-weight: 500; }
+.search input::placeholder { color: var(--control-secondary); }
 .search input::-webkit-search-cancel-button { opacity: 0.5; }
-.search:focus-within { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent); }
+.search:focus-within { box-shadow: var(--control-shadow), 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent); }
 
 .devices { flex: 1; overflow-y: auto; padding: 0 9px 16px 10px; }
 .devices h3 { margin: 18px 6px 8px; font-size: 12px; line-height: 15px; font-weight: 400; color: var(--sidebar-secondary); }
@@ -376,7 +471,7 @@ kbd {
 .canvas { position: relative; flex: 1; min-width: 0; display: flex; flex-direction: column; background: var(--canvas); }
 .canvas-top { height: 52px; flex: none; display: flex; align-items: center; gap: 8px; padding: 0 7px 0 20px; transition: padding-left 320ms cubic-bezier(0.4, 0, 0.2, 1); }
 /* With the sidebar out, the title moves over for the sidebar button. */
-.window.no-sidebar .canvas-top { padding-left: 60px; }
+.window.no-sidebar .canvas-top { padding-left: 56px; }
 .title { flex: 1; min-width: 0; }
 .title-name { font-weight: 700; font-size: 13px; line-height: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .title-sub { font-size: 11px; line-height: 14px; color: var(--secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -537,7 +632,6 @@ kbd {
   border-left: 1px solid var(--separator);
 }
 .inspector-top { height: 52px; flex: none; display: flex; align-items: center; justify-content: flex-end; padding: 0 9px; }
-.tabs { gap: 0; }
 .tab-badge {
   position: absolute;
   top: 2px;
@@ -704,7 +798,7 @@ kbd {
   position: absolute;
   z-index: 6;
   top: 8px;
-  left: calc(var(--sidebar-w) - 46px);
+  left: calc(var(--sidebar-w) - 42px);
   transition: left 320ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 .window.no-sidebar .sidebar-toggle { left: 12px; }

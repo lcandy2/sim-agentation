@@ -16,7 +16,7 @@
 
 <aside class="inspector" id="inspector">
   <header class="inspector-top">
-    <div class="pill tabs" role="tablist" aria-label="Inspector">
+    <div class="pill segmented" role="tablist" aria-label="Inspector">
       {#each TABS as tab (tab.id)}
         <button
           class="icon-btn"

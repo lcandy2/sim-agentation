@@ -1,8 +1,13 @@
 <script>
+  import { onMount } from 'svelte';
   import { ui, simulatorOptions, createSimulator } from '../lib/app.svelte.js';
 
-  // `simctl create` from the sidebar's + button.
+  // `simctl create` from the sidebar's + button, as macOS 27's small dialog
+  // (Figma, macOS 27 Community, node 690:10197). Esc cancels.
   let { close } = $props();
+
+  let dialog = $state(null);
+  onMount(() => dialog.showModal());
 
   let options = $state(null);
   let runtime = $state('');
@@ -43,32 +48,34 @@
   async function submit(e) {
     e.preventDefault();
     busy = true;
-    if (await createSimulator({ name: name.trim(), deviceType, runtime })) close();
+    if (await createSimulator({ name: name.trim(), deviceType, runtime })) dialog.close();
     busy = false;
   }
 </script>
 
-<form class="new-sim" onsubmit={submit}>
-  <h4>New Simulator</h4>
-  {#if !options}
-    <p class="hint">Loading device types…</p>
-  {:else}
-    <label><span>OS</span>
-      <select bind:value={runtime}>
+<dialog class="sheet" bind:this={dialog} onclose={close} aria-labelledby="new-sim-title">
+  <form onsubmit={submit}>
+    <div class="sheet-grid">
+      <div class="sheet-message">
+        <h2 id="new-sim-title">New Simulator</h2>
+        <p>Choose an OS and a device. The simulator shows up in the device list, ready to start.</p>
+      </div>
+      <label for="new-sim-os">OS:</label>
+      <select id="new-sim-os" class="popup" bind:value={runtime} disabled={!options}>
+        {#if !options}<option value="">Loading…</option>{/if}
         {#each runtimes as r (r.identifier)}<option value={r.identifier}>{r.name}</option>{/each}
       </select>
-    </label>
-    <label><span>Device</span>
-      <select bind:value={deviceType}>
+      <label for="new-sim-device">Device:</label>
+      <select id="new-sim-device" class="popup" bind:value={deviceType} disabled={!options}>
+        {#if !options}<option value="">Loading…</option>{/if}
         {#each types as t (t.identifier)}<option value={t.identifier}>{t.name}</option>{/each}
       </select>
-    </label>
-    <label><span>Name</span>
-      <input bind:value={name} oninput={() => (named = true)} spellcheck="false" autocomplete="off">
-    </label>
-  {/if}
-  <div class="form-row">
-    <button type="button" class="text-btn" onclick={close}>Cancel</button>
-    <button type="submit" class="text-btn primary" disabled={busy || !deviceType || !name.trim()}>{busy ? 'Creating…' : 'Create'}</button>
-  </div>
-</form>
+      <label for="new-sim-name">Name:</label>
+      <input id="new-sim-name" class="field" bind:value={name} oninput={() => (named = true)} spellcheck="false" autocomplete="off">
+    </div>
+    <div class="sheet-buttons">
+      <button type="button" class="sheet-btn" onclick={() => dialog.close()}>Cancel</button>
+      <button type="submit" class="sheet-btn default" disabled={busy || !deviceType || !name.trim()}>{busy ? 'Creating…' : 'Create'}</button>
+    </div>
+  </form>
+</dialog>

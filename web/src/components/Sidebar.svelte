@@ -18,6 +18,8 @@
     ipad: (s) => s.deviceType.includes('iPad'),
   };
 
+  let creating = $state(false);
+
   const version = (runtime) => runtime.replace(/^\D+/, '');
   const byVersionThenName = (a, b) =>
     version(b.runtime).localeCompare(version(a.runtime), undefined, { numeric: true }) || a.name.localeCompare(b.name);
@@ -37,9 +39,7 @@
   <div class="sidebar-top">
     <span class="brand">SimAgentation</span>
     <div class="pill bar-pill" role="group" aria-label="Simulators">
-      <Popover icon="plus" title="New simulator" align="left">
-        {#snippet children(close)}<NewSimulator {close} />{/snippet}
-      </Popover>
+      <button class="icon-btn" title="New simulator" aria-label="New simulator" onclick={() => (creating = true)}>{@html icon('plus')}</button>
       <Popover icon="filter" title="Filter simulators" align="left">
         {#snippet children(close)}
           <div class="menu" role="menu">
@@ -65,4 +65,5 @@
       <p class="none">No simulators match.</p>
     {/each}
   </nav>
+  {#if creating}<NewSimulator close={() => (creating = false)} />{/if}
 </aside>

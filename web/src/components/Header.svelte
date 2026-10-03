@@ -36,7 +36,7 @@
     <div class="title-sub"><span>{ui.runtime}</span><span class="status">{status}</span></div>
   </div>
   <div class="toolbar">
-    <div class="pill" role="group" aria-label="Mode">
+    <div class="pill segmented" role="group" aria-label="Mode">
       <button
         id="mode-interact"
         class="icon-btn"
