@@ -879,8 +879,9 @@ kbd {
 
 /* ---------- composer popover ---------- */
 
-/* macOS 27's Popover (Figma, Popovers page): its glass (lib/glass.js), 20 pt
-   in with 8 pt between; the target as a headline, the note in a text field,
+/* macOS 27's Popover (Figma, Popovers page): its glass (lib/glass.js), 12 pt
+   in with 8 pt between, its corners concentric with the capsule buttons
+   (12 + 16); the target as a headline, the note in a text field,
    the Alert's capsule buttons. Its box takes in its pointer, Figma's
    Cartouche, 10.5 by 46, on the edge facing the selection: the box's
    clip-path is body and pointer as one (components/Composer.svelte). */
@@ -892,14 +893,14 @@ kbd {
   display: grid;
   grid-template-columns: minmax(0, 1fr); /* the row can't widen it past its edges */
   gap: 8px;
-  padding: 20px;
-  border-radius: 20px;
+  padding: 12px;
+  border-radius: 28px;
   background: var(--popover-fill);
   -webkit-backdrop-filter: blur(13px);
   backdrop-filter: blur(13px);
 }
-.composer.pointer-left { padding-left: 30.5px; }
-.composer.pointer-right { padding-right: 30.5px; }
+.composer.pointer-left { padding-left: 22.5px; }
+.composer.pointer-right { padding-right: 22.5px; }
 .composer.glass-filtered { background: none; }
 .composer.glass-on::after {
   content: "";

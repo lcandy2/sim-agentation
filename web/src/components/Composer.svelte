@@ -1,4 +1,5 @@
 <script>
+  import { tick } from 'svelte';
   import { ui, submitComposer, cancelComposer } from '../lib/app.svelte.js';
   import { POINTER, outlinePath } from '../lib/glass.js';
 
@@ -13,8 +14,9 @@
   // and one shadow cover both, as in Figma.
   const BODY = 360;
   const WIDTH = BODY + POINTER.depth;
+  const RADIUS = 28;                       // concentric with the capsule buttons, 12 in (style.css)
   const GAP = 12;                          // from the selection to the pointer's tip
-  const CLEAR = 20 + POINTER.span / 2;     // the corner radius plus half the pointer
+  const CLEAR = RADIUS + POINTER.span / 2; // the corner radius plus half the pointer
   const SHADOW_PAD = 80;                   // room around the outline for the shadow
   $effect(() => {
     const { box } = ui.draft;
@@ -25,8 +27,9 @@
     const top = Math.min(Math.max(middle - h / 2, 12), innerHeight - h - 12);
     // A composer right of the selection points left, and the other way round.
     const pointer = { side: side === 'right' ? 'left' : 'right', y: Math.round(Math.min(Math.max(middle - top, CLEAR), h - CLEAR)) };
-    place = { left, top, h, pointer, outline: outlinePath(WIDTH, h, 20, pointer) };
-    text.focus();
+    place = { left, top, h, pointer, outline: outlinePath(WIDTH, h, RADIUS, pointer) };
+    // Once it's shown: hidden until placed, the field can't take focus.
+    tick().then(() => text?.focus());
   });
 
   function submit(e) {
