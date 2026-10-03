@@ -1,6 +1,6 @@
 <script>
   import { onMount } from 'svelte';
-  import { ui, start, onWindowKey } from './lib/app.svelte.js';
+  import { ui, start, onWindowKey, fitPanels } from './lib/app.svelte.js';
   import { attachGlass } from './lib/glass.js';
   import Sidebar from './components/Sidebar.svelte';
   import Header from './components/Header.svelte';
@@ -10,6 +10,10 @@
   import Composer from './components/Composer.svelte';
   import Notification from './components/Notification.svelte';
   import DeviceSheet from './components/DeviceSheet.svelte';
+
+  // Before the first paint, so a narrow window opens without its panels
+  // sliding away.
+  fitPanels();
 
   onMount(() => {
     start();

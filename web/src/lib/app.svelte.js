@@ -1319,9 +1319,38 @@ export const zoomOut = () => setZoom(currentScale() / ZOOM_STEP);
 
 // ---------- panels ----------
 
+// As the window narrows the sidebar steps aside for the device, then the
+// inspector too; each comes back once there's room. That isn't saved, and
+// their buttons still bring them back meanwhile.
+const ROOM = { sidebar: '(max-width: 999px)', inspector: '(max-width: 719px)' };
+const crowdedOut = {};
+
+/** Fits the panels to the window, now and as it resizes. */
+export function fitPanels() {
+  for (const [name, query] of Object.entries(ROOM)) {
+    const narrow = matchMedia(query);
+    const fit = () => {
+      if (narrow.matches && ui.panels[name]) {
+        crowdedOut[name] = true;
+        showPanel(name, false);
+      } else if (!narrow.matches && crowdedOut[name]) {
+        crowdedOut[name] = false;
+        showPanel(name, true);
+      }
+    };
+    narrow.addEventListener('change', fit);
+    fit();
+  }
+}
+
 export async function togglePanel(name, show = !ui.panels[name]) {
-  ui.panels[name] = show;
+  crowdedOut[name] = false;
   storage.set(`panel-${name}`, show ? 'shown' : 'hidden');
+  await showPanel(name, show);
+}
+
+async function showPanel(name, show) {
+  ui.panels[name] = show;
   await tick();
   onStageResize();
 }

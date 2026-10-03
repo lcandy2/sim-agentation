@@ -934,7 +934,13 @@ kbd {
 @media (max-width: 1000px) {
   .window { --sidebar-w: 220px; --inspector-w: 261px; }
 }
-/* Fit-to-window still applies; the zoom buttons give their room to the title. */
-@media (max-width: 1000px) {
+/* When the canvas is too narrow for them, the zoom buttons give their room
+   to the title (fit-to-window still applies); with the inspector's tabs
+   beside them, sooner. */
+.canvas { container: canvas / inline-size; }
+@container canvas (max-width: 459px) {
   .toolbar .pill[aria-label="Zoom"] { display: none; }
+}
+@container canvas (max-width: 549px) {
+  .window.no-inspector .toolbar .pill[aria-label="Zoom"] { display: none; }
 }
