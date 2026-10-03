@@ -133,8 +133,9 @@ button { cursor: default; }
   background: var(--control);
   border: 0;
   box-shadow: var(--control-shadow);
-  backdrop-filter: saturate(180%) blur(20px);
+  /* Prefixed first: the build's CSS minifier keeps only the last of the pair. */
   -webkit-backdrop-filter: saturate(180%) blur(20px);
+  backdrop-filter: saturate(180%) blur(20px);
 }
 .pill .sep { width: 1px; height: 18px; background: var(--fill); flex: none; }
 .circle-btn {
@@ -152,8 +153,8 @@ button { cursor: default; }
   background: var(--glass);
   border: 0.5px solid var(--glass-edge);
   box-shadow: var(--glass-shadow);
-  backdrop-filter: saturate(180%) blur(20px);
   -webkit-backdrop-filter: saturate(180%) blur(20px);
+  backdrop-filter: saturate(180%) blur(20px);
 }
 
 /* Pill text buttons: tinted, or key-colored when primary. */
@@ -602,8 +603,8 @@ kbd {
   background: var(--glass);
   border: 0.5px solid var(--glass-edge);
   box-shadow: var(--glass-shadow);
-  backdrop-filter: blur(20px) saturate(1.6);
   -webkit-backdrop-filter: blur(20px) saturate(1.6);
+  backdrop-filter: blur(20px) saturate(1.6);
   transition: opacity 120ms ease;
 }
 .item-delete svg { width: 16px; height: 16px; }
