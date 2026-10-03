@@ -477,6 +477,16 @@ export function onWindowKey(e) {
 
 // ---------- device buttons ----------
 
+/**
+ * Home. A device with a home button gets the button; on the others (Face ID
+ * iPhones, newer iPads) iOS 27 ignores that legacy press (measured on 27.2:
+ * the app stayed in front), so Home is their swipe up from the bottom edge.
+ */
+export function pressHome() {
+  const hasButton = ui.chrome?.buttons?.some((b) => b.name === 'home');
+  send({ type: 'button', button: hasButton ? 'home' : 'swipe-to-home' });
+}
+
 export function pressButton(button, duration) {
   send({ type: 'button', button, ...(duration > 0.4 ? { duration } : {}) });
 }

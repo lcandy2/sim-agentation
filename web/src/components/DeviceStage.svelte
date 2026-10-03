@@ -1,7 +1,7 @@
 <script>
   import { onMount, untrack } from 'svelte';
   import {
-    ui, MARGIN, ROTATION, attachStage, onStageResize, startDevice, saveScreenshot, toggleRecording, rotate,
+    ui, MARGIN, ROTATION, attachStage, onStageResize, startDevice, pressHome, saveScreenshot, toggleRecording, rotate,
     onPointerDown, onPointerMove, onPointerUp, onWheel, onScreenKey,
   } from '../lib/app.svelte.js';
   import { icon } from '../lib/icons.js';
@@ -175,6 +175,7 @@
   <footer class="canvas-bottom">
     <div class="bottom-row">
       <div class="pill" role="group" aria-label="Device">
+        <button class="icon-btn" title="Home" data-icon="home" onclick={pressHome}>{@html icon('home')}</button>
         <button class="icon-btn" title="Save screenshot" data-icon="screenshot" onclick={saveScreenshot}>{@html icon('screenshot')}</button>
         <button
           class="icon-btn"
