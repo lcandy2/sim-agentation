@@ -430,7 +430,9 @@ kbd {
 }
 /* Device Hub's top bar: + and filter in a capsule, centered 26 pt from the
    window's top. The sidebar button lives in the canvas, before the title. */
-.sidebar-top { height: 36px; flex: none; display: flex; align-items: center; gap: 6px; }
+/* The top bar and search field reach the 7 px past the content line that
+   a selected row does, so their edges meet its blue. */
+.sidebar-top { height: 36px; flex: none; margin: 0 -7px; display: flex; align-items: center; gap: 6px; }
 /* The product name where macOS puts a window's title, then + and filter. */
 .brand { flex: 1; min-width: 0; font-size: 17px; line-height: 22px; font-weight: 700; color: var(--sidebar-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 @media (max-width: 1100px) { .brand { font-size: 15px; } } /* the narrower sidebar still fits it whole */
@@ -438,7 +440,7 @@ kbd {
 /* macOS 27's search field (Figma, node 4376:54895): a control capsule with a
    secondary magnifying glass and placeholder. */
 .search {
-  margin: 13px 0 0;
+  margin: 13px -7px 0;
   height: 36px;
   flex: none;
   display: flex;
