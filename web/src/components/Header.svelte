@@ -1,6 +1,6 @@
 <script>
   import {
-    ui, setMode, setZoom, zoomIn, zoomOut, togglePanel, toggleFocus, setInspectorTab,
+    ui, setMode, setZoom, zoomIn, zoomOut, togglePanel, toggleFocus,
     copyPending, clearDone, saveScreenshot, pressButton,
   } from '../lib/app.svelte.js';
   import { icon } from '../lib/icons.js';
@@ -18,13 +18,6 @@
       { label: 'Save Screenshot', icon: 'screenshot', run: saveScreenshot, disabled: !ui.running },
       { label: 'Lock', icon: 'lock', run: () => pressButton('lock'), disabled: !ui.running },
       { label: 'App Switcher', icon: 'app-switcher', run: () => pressButton('app-switcher'), disabled: !ui.running },
-    ],
-    [
-      { label: 'Info and Settings', icon: 'info', run: () => setInspectorTab('info') },
-    ],
-    [
-      { label: ui.panels.sidebar ? 'Hide Device List' : 'Show Device List', icon: 'sidebar', run: () => togglePanel('sidebar') },
-      { label: ui.panels.inspector ? 'Hide Inspector' : 'Show Inspector', icon: 'inspector', run: () => togglePanel('inspector') },
     ],
   ]);
 </script>
