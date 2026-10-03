@@ -18,6 +18,10 @@ export const storage = {
   },
 };
 
+function choice(stored) {
+  return stored && stored !== 'auto' && Number(stored) > 0 ? Number(stored) : 'auto';
+}
+
 export const ui = $state({
   sims: [],
   query: '',
@@ -52,8 +56,10 @@ export const ui = $state({
     choice: storage.get('stream-format') ?? 'auto', // 'auto', or a format to always use
     format: null,     // the format streaming now: 'hevc', 'hevc422', 'avcc' (H.264) or 'mjpeg'
     skipped: [],      // [{ format, reason }]: what Auto gave up on this session
-    scale: Number(storage.get('stream-scale')) || 1, // 1 full resolution, 2 half
-    bitrate: Number(storage.get('stream-bitrate')) || 8_000_000, // video only
+    scaleChoice: choice(storage.get('stream-scale')), // 'auto', 1 (full resolution) or 2 (half)
+    bitrateChoice: choice(storage.get('stream-bitrate')), // 'auto' or bits per second, video only
+    scale: 1,         // what streams now
+    bitrate: 8_000_000,
     playable: { mjpeg: true, avcc: false, hevc: false, hevc422: false },
     hardwareDecode: { mjpeg: null, avcc: null, hevc: null, hevc422: null },
     fps: 0,           // frames painted in the last second
@@ -119,6 +125,7 @@ export function attachStage({ canvas, overlay, float, stage, previewInfo }) {
 function connect(udid) {
   stopStream();
   setStatus('Connecting…');
+  settleStream();
   const { format, scale, bitrate } = ui.stream;
   const ws = new WebSocket(`ws://${location.host}/ws/${encodeURIComponent(udid)}?format=${format}&scale=${scale}&bitrate=${bitrate}`);
   ws.binaryType = 'arraybuffer';
@@ -220,6 +227,13 @@ export function setStreamChoice(choice) {
   if (choice !== 'auto' && !ui.stream.playable[choice]) return;
   ui.stream.choice = choice;
   storage.set('stream-format', choice);
+  // Auto all the way: resolution and bitrate follow too.
+  if (choice === 'auto') {
+    ui.stream.scaleChoice = ui.stream.bitrateChoice = 'auto';
+    storage.set('stream-scale', 'auto');
+    storage.set('stream-bitrate', 'auto');
+    settleStream();
+  }
   // An explicit pick deserves a fresh try at everything.
   rt.failed.clear();
   ui.stream.skipped = [];
@@ -248,16 +262,61 @@ function fallBack(format, reason) {
   return true;
 }
 
+/** 'auto', or 1 (full) or 2 (half) to always use. */
 export function setStreamScale(scale) {
-  ui.stream.scale = scale;
+  ui.stream.scaleChoice = scale;
   storage.set('stream-scale', String(scale));
-  send({ type: 'set_scale', scale });
+  settleStream();
 }
 
+/** 'auto', or bits per second to always use. */
 export function setStreamBitrate(bps) {
-  ui.stream.bitrate = bps;
+  ui.stream.bitrateChoice = bps;
   storage.set('stream-bitrate', String(bps));
-  send({ type: 'set_bitrate', bps });
+  settleStream();
+}
+
+// Auto resolution and bitrate. The device renders at 3x (iPad 2x); the page
+// shows it at ui.scale CSS px per point on a devicePixelRatio display. When
+// that is no more than half the device's pixels, half resolution looks the
+// same and costs a quarter. Going back to full waits for 60%, so a window
+// dragged across the line doesn't flip the encoder back and forth.
+const BITS_PER_PIXEL = { hevc: 0.035, avcc: 0.05, hevc422: 0.06 }; // per frame, at 60 fps
+let settleTimer;
+
+function devicePixels() {
+  const sim = ui.sims.find((s) => s.udid === ui.udid);
+  const k = sim?.deviceType.includes('iPad') ? 2 : 3;
+  const screen = ui.chrome?.screen ?? { width: 402, height: 874 };
+  return { width: screen.width * k, height: screen.height * k };
+}
+
+function autoScale() {
+  if (!ui.chrome) return ui.stream.scale;
+  const shown = (ui.chrome.screen.width * ui.scale * (window.devicePixelRatio || 1)) / devicePixels().width;
+  if (ui.stream.scale === 2) return shown > 0.6 ? 1 : 2;
+  return shown <= 0.5 ? 2 : 1;
+}
+
+function autoBitrate(format, scale) {
+  const { width, height } = devicePixels();
+  const bps = (width / scale) * (height / scale) * 60 * (BITS_PER_PIXEL[format] ?? 0.05);
+  return Math.min(16, Math.max(2, Math.round(bps / 1e6))) * 1e6;
+}
+
+/** Works out the resolution and bitrate to stream now, and tells the host what changed. */
+function settleStream() {
+  const s = ui.stream;
+  const scale = s.scaleChoice === 'auto' ? autoScale() : s.scaleChoice;
+  const bitrate = s.bitrateChoice === 'auto' ? autoBitrate(s.format, scale) : s.bitrateChoice;
+  if (scale !== s.scale) {
+    s.scale = scale;
+    send({ type: 'set_scale', scale });
+  }
+  if (bitrate !== s.bitrate) {
+    s.bitrate = bitrate;
+    send({ type: 'set_bitrate', bps: bitrate });
+  }
 }
 
 export function send(msg) {
@@ -730,7 +789,7 @@ export async function submitComposer(comment) {
   fc.strokeStyle = '#ff3b30';
   fc.lineWidth = Math.max(3, scale * 1.5);
   // Just outside the box, as on screen, so the line doesn't cover the text.
-  const out = 2 + fc.lineWidth / scale / 2;
+  const out = 1 + fc.lineWidth / scale / 2;
   fc.strokeRect((r.x - out) * scale, (r.y - out) * scale, (r.width + out * 2) * scale, (r.height + out * 2) * scale);
 
   // Close-up with some context around the box.
@@ -911,6 +970,9 @@ function currentScale() {
 
 export function updateScale() {
   ui.scale = currentScale();
+  // Zoom and window size move the auto resolution; settle once they stop.
+  clearTimeout(settleTimer);
+  settleTimer = setTimeout(settleStream, 400);
 }
 
 /** On stage resize: only fit-to-window and the preview follow the window. */

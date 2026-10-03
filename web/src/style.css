@@ -463,12 +463,12 @@ kbd {
 /* Selection layers on the screen. --unrotate turns labels and markers back
    upright when the device is turned. */
 .hl, .hl-label, .sel, .marker { position: absolute; pointer-events: none; }
-/* Outlines sit just outside the box so they never cover the text they mark. */
-.hl { outline: 1.5px solid var(--accent); outline-offset: 2px; background: color-mix(in srgb, var(--accent) 10%, transparent); border-radius: 3px; }
+/* Outlines sit just outside the box (1 pt) so they never cover the text they mark. */
+.hl { outline: 1.5px solid var(--accent); outline-offset: 1px; background: color-mix(in srgb, var(--accent) 10%, transparent); border-radius: 3px; }
 .hl-label {
   z-index: 1;
   transform-origin: 0 0;
-  transform: rotate(var(--unrotate, 0deg)) translate(-4px, calc(-100% - 6px));
+  transform: rotate(var(--unrotate, 0deg)) translate(-3px, calc(-100% - 5px));
   background: var(--accent);
   color: #fff;
   font-size: 11px;
@@ -479,7 +479,7 @@ kbd {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.sel { outline: 2px solid var(--mark); outline-offset: 2px; background: rgba(255, 59, 48, 0.1); border-radius: 3px; }
+.sel { outline: 2px solid var(--mark); outline-offset: 1px; background: rgba(255, 59, 48, 0.1); border-radius: 3px; }
 .marker {
   width: 20px;
   height: 20px;
