@@ -480,6 +480,9 @@ kbd {
   display: grid;
   place-items: center;
   /* The bottom padding keeps the device clear of the floating button bar and
+  /* The device is a picture to click and drag on, never a selection. */
+  -webkit-user-select: none;
+  user-select: none;
      leaves room for its shadow; fit-to-window sizes the device inside it. */
   /* Fit to window as in Device Hub: the bezel 21 pt under the toolbar and
      20 pt over the button bar (the 14 pt button margin is inside this). */
