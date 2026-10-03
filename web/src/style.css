@@ -1,11 +1,11 @@
 /* Laid out after Xcode's Device Hub, measured pixel by pixel from its window
-   at 1100 x 800 pt, 2x (Xcode 27.2 beta, 2026-10-03): a floating sidebar
-   panel | a white canvas with its toolbar | an inspector with three tabs. */
+   at 1100 x 800 pt, 2x (Xcode 27.2 beta, 2026-10-03): the device list | a
+   white canvas with its toolbar | an inspector with three tabs. */
 
 :root {
   /* Device Hub's light colors. */
-  --window: #f5f5f5;      /* behind the floating sidebar */
-  --sidebar: #fafafa;     /* the sidebar panel */
+  --window: #f5f5f5;
+  --sidebar: #fafafa;
   --canvas: #ffffff;
   --inspector: #fafafa;
   --text: rgba(0, 0, 0, 0.85);
@@ -20,7 +20,7 @@
   --fill: rgba(0, 0, 0, 0.05);
   --control: rgba(253, 253, 253, 0.92);
   --control-edge: transparent;
-  --control-shadow: inset 0 0 0 1px #ffffff, 0 2px 40px rgba(0, 0, 0, 0.09);
+  --control-shadow: inset 0 0 0 1px #ffffff, 0 8px 36px rgba(0, 0, 0, 0.07);
   --control-on: rgba(0, 0, 0, 0.1);
   --menu: #ffffff;
   --card: #ffffff;
@@ -252,18 +252,17 @@ kbd {
 
 /* ---------- sidebar: devices ---------- */
 
-/* A floating panel 8 pt in from the window's left, top and bottom edges,
-   240 pt wide, with a white rim and a faint shadow. */
+/* A full-height sidebar (macOS 27 no longer floats it), 248 pt wide; its
+   contents keep Device Hub's measured positions. */
 .sidebar {
-  width: 240px;
-  margin: 8px 0 8px 8px;
+  width: 248px;
+  padding: 8px 0 8px 8px;
   flex: none;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  border-radius: 17.5px;
   background: var(--sidebar);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.9), 0 0 12px rgba(0, 0, 0, 0.04);
+  border-right: 1px solid var(--separator);
   color: var(--sidebar-text);
 }
 /* Device Hub's top bar: + and filter in a capsule, then the sidebar toggle,
@@ -272,25 +271,25 @@ kbd {
 .bar-pill { gap: 0; }
 
 .search {
-  margin: 17px 10px 0;
+  margin: 17px 9px 0 10px;
   height: 28px;
   flex: none;
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 0 10px;
+  gap: 2px;
+  padding: 0 10px 0 7px;
   border-radius: 14px;
   background: var(--field);
   border: 0;
   color: var(--secondary);
 }
-.search [data-icon] svg { width: 15px; height: 15px; }
+.search [data-icon] svg { width: 17px; height: 17px; }
 .search input { flex: 1; min-width: 0; border: 0; background: none; outline: none; color: var(--text); font-size: 13px; }
 .search input::placeholder { color: var(--secondary); }
 .search input::-webkit-search-cancel-button { opacity: 0.5; }
 .search:focus-within { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent); }
 
-.devices { flex: 1; overflow-y: auto; padding: 0 10px 16px; }
+.devices { flex: 1; overflow-y: auto; padding: 0 9px 16px 10px; }
 .devices h3 { margin: 18px 6px 8px; font-size: 12px; line-height: 15px; font-weight: 400; color: var(--sidebar-secondary); }
 .devices .none { margin: 12px 6px; color: var(--sidebar-secondary); }
 
@@ -320,7 +319,7 @@ kbd {
   color: var(--tertiary);
 }
 .device-row.booted .thumb { background: var(--thumb); }
-.device-row .thumb img { height: 24px; width: auto; display: block; filter: grayscale(1) opacity(0.45); }
+.device-row .thumb img { height: 20px; width: auto; display: block; filter: grayscale(1) opacity(0.3); }
 .device-row.booted .thumb img { filter: none; }
 .device-row .thumb svg { width: 18px; height: 18px; }
 .device-row .text { min-width: 0; display: grid; } /* lets long names truncate instead of pushing the version out */
@@ -338,10 +337,11 @@ kbd {
 .canvas-top { height: 52px; flex: none; display: flex; align-items: center; gap: 8px; padding: 0 7px 0 20px; }
 .window.no-sidebar .canvas-top { padding-left: 12px; }
 .title { flex: 1; min-width: 0; }
-.title-name { font-weight: 600; font-size: 14px; line-height: 18px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.title-name { font-weight: 700; font-size: 13px; line-height: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .title-sub { font-size: 11px; line-height: 14px; color: var(--secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .title-sub .status:not(:empty)::before { content: " · "; }
 .toolbar { display: flex; align-items: center; gap: 8px; }
+.toolbar .pill[aria-label="Mode"] .icon-btn { width: 39px; }
 
 .stage {
   flex: 1;
@@ -351,9 +351,12 @@ kbd {
   place-items: center;
   /* The bottom padding keeps the device clear of the floating button bar and
      leaves room for its shadow; fit-to-window sizes the device inside it. */
-  padding: 44px 24px 110px; /* Device Hub leaves the device about 70% of the canvas height */
+  /* Fit to window as in Device Hub: the bezel 21 pt under the toolbar and
+     20 pt over the button bar (the 14 pt button margin is inside this). */
+  padding: 5px 24px 48px;
 }
-.canvas.offline .stage { padding-bottom: 40px; }
+/* Shut down, Device Hub centers the picture, name and Start on the window's middle. */
+.canvas.offline .stage { padding-bottom: 61px; }
 .stage-message { color: var(--secondary); max-width: 320px; text-align: center; }
 
 /* Device: Xcode's DeviceKit chrome artwork, laid out in JS from /api/sims/:udid/chrome.
@@ -410,42 +413,39 @@ kbd {
 
 /* Not running: picture, name and Start. */
 .preview-info { display: flex; flex-direction: column; align-items: center; text-align: center; }
-.preview-name { font-size: 17px; line-height: 21px; font-weight: 600; }
-.preview-sub { margin-top: 5px; font-size: 13.5px; line-height: 17px; color: var(--secondary); }
+.preview-name { font-size: 17px; line-height: 21px; font-weight: 500; }
+.preview-sub { margin-top: 3px; font-size: 13px; line-height: 17px; color: var(--secondary); }
+/* Device Hub's Start: a gray 76 x 28 pill, regular weight. */
 .start-btn {
-  margin-top: 23px;
-  min-width: 83px;
-  height: 30px;
+  margin-top: 20px;
+  min-width: 80px;
+  height: 28px;
   padding: 0 18px;
   border: 0;
   border-radius: 1000px;
-  background: var(--accent);
-  color: var(--on-accent);
-  font-weight: 700;
+  background: var(--start);
+  color: var(--on-start);
+  font-weight: 400;
 }
-.start-btn:hover { background: color-mix(in srgb, var(--accent), #000 3%); }
+.start-btn:hover { background: color-mix(in srgb, var(--start), #000 4%); }
 .start-btn:disabled { opacity: 0.6; }
 
 .canvas-bottom {
   position: absolute;
   left: 0;
   right: 0;
-  bottom: 14px;
+  bottom: 8px;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 10px;
   pointer-events: none; /* floats over the stage; only its controls take clicks */
 }
-.bottom-row { display: flex; gap: 10px; }
-.canvas-bottom .pill {
-  pointer-events: auto;
-  background: var(--glass);
-  border: 0.5px solid var(--glass-edge);
-  box-shadow: var(--glass-shadow);
-  backdrop-filter: saturate(180%) blur(20px);
-  -webkit-backdrop-filter: saturate(180%) blur(20px);
-}
+.bottom-row { display: flex; gap: 8px; }
+.canvas-bottom .pill { pointer-events: auto; }
+/* Device Hub draws the device buttons in solid black, heavier than the toolbar. */
+.canvas-bottom .icon-btn { color: var(--sidebar-text); opacity: 1; }
+.canvas-bottom .icon-btn svg { stroke-width: 2; }
 .icon-btn.recording { color: var(--mark); opacity: 1; }
 #frozen-badge {
   white-space: nowrap;
@@ -492,15 +492,15 @@ kbd {
 /* ---------- inspector ---------- */
 
 .inspector {
-  width: 300px;
+  width: 281px;
   flex: none;
   display: flex;
   flex-direction: column;
   background: var(--inspector);
   border-left: 1px solid var(--separator);
 }
-.inspector-top { height: 56px; flex: none; display: flex; align-items: center; justify-content: flex-end; padding: 0 10px; }
-.tabs { gap: 2px; }
+.inspector-top { height: 52px; flex: none; display: flex; align-items: center; justify-content: flex-end; padding: 0 9px; }
+.tabs { gap: 0; }
 .tab-badge {
   position: absolute;
   top: 2px;
@@ -523,12 +523,12 @@ kbd {
   align-items: center;
   justify-content: center;
   gap: 12px;
-  padding: 0 40px 40px;
+  padding: 0 44px 0;
   text-align: center;
-  color: var(--tertiary);
+  color: var(--sidebar-secondary);
 }
 .empty p { margin: 0; line-height: 16px; }
-.empty-icon svg { width: 36px; height: 36px; stroke-width: 1.3; color: var(--tertiary); }
+.empty-icon svg { width: 36px; height: 36px; stroke-width: 1.3; color: var(--sidebar-secondary); }
 
 .pane { flex: 1; overflow-y: auto; padding: 4px 16px 16px; }
 .pane-head { display: flex; align-items: center; gap: 2px; padding: 0 10px 6px 18px; }
@@ -655,9 +655,9 @@ kbd {
 .window.no-sidebar .sidebar,
 .window.no-inspector .inspector { display: none; }
 
-@media (max-width: 1100px) {
+@media (max-width: 1000px) {
   .sidebar { width: 220px; }
-  .inspector { width: 270px; }
+  .inspector { width: 261px; }
 }
 /* Fit-to-window still applies; the zoom buttons give their room to the title. */
 @media (max-width: 1000px) {

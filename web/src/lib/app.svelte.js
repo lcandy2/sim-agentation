@@ -37,6 +37,7 @@ export const ui = $state({
   flash: null,
   zoom: storage.get('zoom') ?? 'fit', // 'fit' or CSS pixels per point
   scale: 1,
+  shown: 0,           // counts each time a device is shown at its size, for the grow-in
   panels: {
     sidebar: storage.get('panel-sidebar') !== 'hidden',
     inspector: storage.get('panel-inspector') !== 'hidden',
@@ -387,7 +388,7 @@ export function onWindowKey(e) {
   if (e.target.closest?.('.composer')) return;
   if (e.metaKey) {
     if (e.target.matches?.('input')) return;
-    const actions = { '=': zoomIn, '+': zoomIn, '-': zoomOut, 0: () => setZoom(1), 9: () => setZoom('fit') };
+    const actions = { '=': zoomIn, '+': zoomIn, '-': zoomOut, 9: () => setZoom('fit') };
     if (actions[e.key]) {
       e.preventDefault();
       actions[e.key]();
@@ -866,6 +867,7 @@ export async function selectDevice(sim) {
   if (!ui.running) rt.ctx?.clearRect(0, 0, rt.canvas.width, rt.canvas.height);
   await tick();
   updateScale();
+  ui.shown++;
   if (ui.running) connect(sim.udid);
 }
 
@@ -885,7 +887,7 @@ export async function startDevice() {
 
 // ---------- zoom ----------
 
-const PREVIEW_HEIGHT = 210; // px, the not-running device picture, as in Device Hub
+const PREVIEW_HEIGHT = 197; // px, the not-running device picture, measured in Device Hub
 export const MARGIN = 14; // pt around the body for buttons that slide out
 const ZOOM_STEP = 1.25;
 

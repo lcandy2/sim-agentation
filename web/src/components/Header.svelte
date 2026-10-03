@@ -73,15 +73,6 @@
         onclick={() => setZoom('fit')}
       >{@html icon('zoom-fit')}</button>
       <i class="sep"></i>
-      <button
-        id="zoom-actual"
-        class="icon-btn"
-        class:on={ui.zoom !== 'fit' && Number(ui.zoom) === 1 && ui.running}
-        title="Actual size, 1 point per pixel (⌘0)"
-        data-icon="zoom-actual"
-        onclick={() => setZoom(1)}
-      >{@html icon('zoom-actual')}</button>
-      <i class="sep"></i>
       <button id="zoom-in" class="icon-btn" title="Zoom in (⌘+)" data-icon="zoom-in" onclick={zoomIn}>{@html icon('zoom-in')}</button>
     </div>
     <div class="pill" role="group" aria-label="View">

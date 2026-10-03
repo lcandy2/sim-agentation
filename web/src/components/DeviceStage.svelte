@@ -1,5 +1,5 @@
 <script>
-  import { onMount } from 'svelte';
+  import { onMount, untrack } from 'svelte';
   import {
     ui, MARGIN, ROTATION, attachStage, onStageResize, startDevice, pressButton, saveScreenshot, toggleRecording, rotate,
     onPointerDown, onPointerMove, onPointerUp, onWheel, onScreenKey,
@@ -23,6 +23,27 @@
     const observer = new ResizeObserver(onStageResize);
     observer.observe(stage);
     return () => observer.disconnect();
+  });
+
+  // Device Hub brings a device in small and grows it to size: a device that
+  // appears grows in from 85%, and Start grows the picture from its preview
+  // size to its running size. Zooming and resizing don't animate.
+  let rotor = $state(null);
+  let last = null; // { udid, running, scale } as last shown
+  $effect(() => {
+    ui.shown;
+    untrack(() => {
+      const prev = last;
+      last = { udid: ui.udid, running: ui.running, scale: ui.scale };
+      if (!rotor || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      const same = prev?.udid === ui.udid;
+      if (same && prev.running === ui.running) return;
+      rotor.getAnimations().forEach((a) => a.cancel());
+      rotor.animate(
+        [{ transform: `scale(${same ? prev.scale / ui.scale : 0.85})`, opacity: same ? 1 : 0 }, { transform: 'none', opacity: 1 }],
+        { duration: 450, easing: 'cubic-bezier(0.2, 0.9, 0.25, 1)' },
+      );
+    });
   });
 
   // Hardware buttons sit under the body. At rest they show OUTSET points; the
@@ -56,7 +77,7 @@
 
 <section class="stage" bind:this={stage}>
   <div class="device-wrap" hidden={!!ui.message || !chrome}>
-    <div class="rotor" style:width={px(sideways ? outer.h : outer.w)} style:height={px(sideways ? outer.w : outer.h)}>
+    <div class="rotor" bind:this={rotor} style:width={px(sideways ? outer.h : outer.w)} style:height={px(sideways ? outer.w : outer.h)}>
       <div
         class="bezel"
         class:annotating={ui.mode === 'annotate'}

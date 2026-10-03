@@ -11,9 +11,8 @@ const paths = {
   'zoom-out': '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5M8 11h6"/>',
   'zoom-in': '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5M8 11h6M11 8v6"/>',
   'zoom-fit': '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/><path d="M8 9.5V8h1.5M14 9.5V8h-1.5M8 12.5V14h1.5M14 12.5V14h-1.5"/>',
-  'zoom-actual': '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/><path d="M10 9.2 11.4 8v6.2"/>',
-  home: '<circle cx="6" cy="6" r="1.4"/><circle cx="12" cy="6" r="1.4"/><circle cx="18" cy="6" r="1.4"/><circle cx="6" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="18" cy="12" r="1.4"/><circle cx="6" cy="18" r="1.4"/><circle cx="12" cy="18" r="1.4"/><circle cx="18" cy="18" r="1.4"/>',
-  screenshot: '<path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><circle cx="12" cy="12" r="3"/>',
+  home: '<rect x="4" y="4" width="4" height="4" rx="0.9" fill="currentColor" stroke="none"/><rect x="10" y="4" width="4" height="4" rx="0.9" fill="currentColor" stroke="none"/><rect x="16" y="4" width="4" height="4" rx="0.9" fill="currentColor" stroke="none"/><rect x="4" y="10" width="4" height="4" rx="0.9" fill="currentColor" stroke="none"/><rect x="10" y="10" width="4" height="4" rx="0.9" fill="currentColor" stroke="none"/><rect x="16" y="10" width="4" height="4" rx="0.9" fill="currentColor" stroke="none"/><rect x="4" y="16" width="4" height="4" rx="0.9" fill="currentColor" stroke="none"/><rect x="10" y="16" width="4" height="4" rx="0.9" fill="currentColor" stroke="none"/><rect x="16" y="16" width="4" height="4" rx="0.9" fill="currentColor" stroke="none"/>',
+  screenshot: '<path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><path fill="currentColor" stroke="none" fill-rule="evenodd" d="M9.4 8.6h1.2l.7-1h1.4l.7 1h1.2A1.4 1.4 0 0 1 16 10v4.2a1.4 1.4 0 0 1-1.4 1.4H9.4A1.4 1.4 0 0 1 8 14.2V10a1.4 1.4 0 0 1 1.4-1.4zm2.6 1.9a1.7 1.7 0 1 0 0 3.4 1.7 1.7 0 0 0 0-3.4z"/>',
   lock: '<rect x="5" y="11" width="14" height="10" rx="2.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
   'app-switcher': '<rect x="3" y="7" width="7" height="12" rx="2"/><rect x="14" y="7" width="7" height="12" rx="2"/><path d="M10 13h4"/>',
   copy: '<rect x="8" y="8" width="12" height="13" rx="2.5"/><path d="M16 8V5.5A2.5 2.5 0 0 0 13.5 3h-7A2.5 2.5 0 0 0 4 5.5v9A2.5 2.5 0 0 0 6.5 17H8"/>',
@@ -30,7 +29,7 @@ const paths = {
   more: '<circle cx="5.5" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="18.5" cy="12" r="1.4" fill="currentColor" stroke="none"/>',
   record: '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.6" fill="currentColor" stroke="none"/>',
   'record-stop': '<circle cx="12" cy="12" r="8"/><rect x="9" y="9" width="6" height="6" rx="1.2" fill="currentColor" stroke="none"/>',
-  rotate: '<rect x="3.5" y="9" width="10" height="11.5" rx="2"/><path d="M11.5 4.5h2a5.5 5.5 0 0 1 5.5 5.5v1.5"/><path d="m16.5 9.5 2.5 2.5 2.5-2.5"/>',
+  rotate: '<rect x="7" y="8" width="10" height="10" rx="2"/><path d="M14 3.5h1.5a4 4 0 0 1 4 4V9"/><path d="m17.5 7.2 2 2 2-2"/><path d="M10 22.5H8.5a4 4 0 0 1-4-4V17"/><path d="m6.5 18.8-2-2-2 2"/>',
   'empty-doc': '<path d="M7 3h7l5 5v11a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M14 3v5h5M9 13h6M9 17h4M4 4l16 17"/>',
 };
 
