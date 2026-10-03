@@ -18,6 +18,8 @@ bun src/cli.ts serve --open
 
 This opens http://localhost:38470 and starts `baguette serve` if it isn't running yet.
 
+The page is laid out like Xcode's Device Hub: simulators on the left, the device in the middle, annotations on the right. Devices are drawn with Xcode's own DeviceKit chrome artwork (`/Library/Developer/DeviceKit/Chrome`), so the hardware buttons slide out on hover and press in when clicked. Selecting a simulator that isn't running shows it with a **Start** button; nothing boots until you press it.
+
 - **Interact** (`I`): use the app. Click and drag to touch, scroll with the wheel, type with the keyboard.
 - **Annotate** (`A`): freezes the screen. Hover to see elements, click one to annotate it, or drag a box over any area. Press ⌘↩ to add the note and Esc to go back to the live screen.
 

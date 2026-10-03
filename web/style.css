@@ -1,83 +1,468 @@
+/* Layout modelled on Xcode's Devices and Simulators window:
+   device list | device with toolbars | annotations inspector.
+   Colors, type, and radii follow the App Store on the web (apps.apple.com,
+   measured 2026-10-03): one page gray, a sidebar set off by a hairline, gray
+   fills instead of shadows, and blur only on controls that float over the device. */
+
 :root {
-  --bg: #0e0f11;
-  --panel: #16181b;
-  --line: #26292e;
-  --text: #e8e9eb;
-  --muted: #8b9098;
-  --accent: #3b82f6;
+  --sidebar: rgba(60, 60, 67, 0.03);
+  --canvas: #f5f5f7;
+  --inspector: #f5f5f7;
+  --text: rgba(0, 0, 0, 0.88);
+  --secondary: rgba(0, 0, 0, 0.56);
+  --tertiary: rgba(0, 0, 0, 0.48);
+  --separator: rgba(0, 0, 0, 0.15);
+  --hover: rgba(0, 0, 0, 0.05);
+  --pressed: rgba(60, 60, 67, 0.1);
+  --field: #ffffff;
+  --fill: rgba(0, 0, 0, 0.05);
+  --glass: rgba(255, 255, 255, 0.8);
+  --glass-edge: rgba(0, 0, 0, 0.15);
+  --glass-shadow: 0 3px 9px rgba(0, 0, 0, 0.08);
+  --card: #ffffff;
+  --segment: #ffffff;
+  --accent: #007aff;
+  --accent-tint: rgba(0, 122, 255, 0.06);
+  --on-accent: rgba(255, 255, 255, 0.92);
   --mark: #ff3b30;
-  --ok: #34c759;
-  --warn: #ff9f0a;
-  color-scheme: dark;
+  --ok: #28a745;
+  --warn: #c77700;
+  color-scheme: light;
 }
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --sidebar: rgba(235, 235, 245, 0.03);
+    --canvas: #151515;
+    --inspector: #151515;
+    --text: rgba(255, 255, 255, 0.92);
+    --secondary: rgba(255, 255, 255, 0.64);
+    --tertiary: rgba(255, 255, 255, 0.4);
+    --separator: rgba(255, 255, 255, 0.1);
+    --hover: rgba(255, 255, 255, 0.05);
+    --pressed: rgba(235, 235, 245, 0.1);
+    --field: #1f1f1f;
+    --fill: rgba(255, 255, 255, 0.05);
+    --glass: rgba(30, 30, 30, 0.8);
+    --glass-edge: rgba(255, 255, 255, 0.1);
+    --card: #1f1f1f;
+    --segment: #3a3a3c;
+    --accent-tint: rgba(0, 122, 255, 0.08);
+    --ok: #32d74b;
+    --warn: #ffb340;
+    color-scheme: dark;
+  }
+}
+
 * { box-sizing: border-box; }
-html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
-  font: 13px/1.45 -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif; }
-button, select, textarea { font: inherit; color: inherit; }
+html, body {
+  margin: 0;
+  height: 100%;
+  background: var(--canvas);
+  color: var(--text);
+  font: 13px/1.38462 -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+button, input, textarea { font: inherit; color: inherit; }
+button { cursor: default; }
+[hidden] { display: none !important; }
+[data-icon] { display: inline-grid; place-items: center; }
+[data-icon] svg { width: 18px; height: 18px; }
 
-.bar { height: 48px; display: flex; align-items: center; gap: 10px; padding: 0 14px;
-  border-bottom: 1px solid var(--line); background: var(--panel); }
-.brand { font-weight: 600; letter-spacing: -0.01em; margin-right: 6px; }
-.spacer { flex: 1; }
-select { background: var(--bg); border: 1px solid var(--line); border-radius: 7px; padding: 5px 8px; max-width: 260px; }
-.seg { display: flex; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 2px; }
-.seg button { border: 0; background: none; padding: 4px 12px; border-radius: 6px; color: var(--muted); cursor: pointer; }
-.seg button.on { background: var(--line); color: var(--text); }
+.window { display: flex; height: 100%; overflow: hidden; }
+
+/* ---------- controls ---------- */
+
+.icon-btn {
+  width: 34px;
+  height: 30px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--text);
+  opacity: 0.85;
+  display: grid;
+  place-items: center;
+}
+.icon-btn:hover { background: var(--hover); opacity: 1; }
+.icon-btn:active { background: var(--pressed); }
+.icon-btn:disabled { opacity: 0.3; background: none; }
+.icon-btn.on { background: var(--segment); box-shadow: var(--glass-shadow); opacity: 1; }
 #mode-annotate.on { background: var(--mark); color: #fff; }
-button.ghost { background: none; border: 1px solid var(--line); border-radius: 7px; padding: 5px 10px; cursor: pointer; }
-button.ghost:hover { background: var(--line); }
-button.primary { background: var(--accent); border: 0; border-radius: 7px; padding: 5px 12px; color: #fff; cursor: pointer; }
-button.small { padding: 3px 9px; font-size: 12px; }
-.status { color: var(--muted); font-size: 12px; min-width: 90px; text-align: right; }
 
-main { display: flex; height: calc(100% - 48px); }
-.stage { flex: 1; display: flex; align-items: center; justify-content: center; padding: 24px; min-width: 0; }
-.device { position: relative; height: 100%; max-height: 100%; aspect-ratio: 402 / 874;
-  border-radius: 44px; overflow: hidden; background: #000; box-shadow: 0 0 0 10px #1c1e21, 0 0 0 11px #2c2f34; }
+/* A gray capsule that groups buttons. Only the bar floating over the device
+   (.canvas-bottom) is translucent glass. */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 1000px;
+  background: var(--fill);
+}
+.pill.sdk {
+  gap: 6px;
+  height: 36px;
+  padding: 0 14px;
+  font-weight: 700;
+  font-size: 12px;
+  color: var(--secondary);
+}
+.pill.sdk .dot { width: 7px; height: 7px; border-radius: 50%; border: 1.5px solid currentColor; }
+.pill.sdk.on { color: var(--ok); }
+.pill.sdk.on .dot { background: currentColor; }
+.glass {
+  background: var(--glass);
+  border: 0.5px solid var(--glass-edge);
+  box-shadow: var(--glass-shadow);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+}
+
+/* The App Store's pill buttons: 13px bold, tinted, or key-colored when primary. */
+.text-btn {
+  padding: 7px 16px;
+  border: 0;
+  border-radius: 1000px;
+  background: var(--accent-tint);
+  color: var(--accent);
+  font-weight: 700;
+  line-height: 18px;
+  transition: background-color 0.21s ease-out;
+}
+.text-btn:hover { background: color-mix(in srgb, var(--accent) 10%, transparent); }
+.text-btn.primary { background: var(--accent); color: var(--on-accent); }
+.text-btn.primary:hover { background: color-mix(in srgb, var(--accent), #000 3%); }
+
+/* ---------- sidebar: devices ---------- */
+
+.sidebar {
+  width: 260px;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  background: var(--sidebar);
+  border-right: 1px solid var(--separator);
+}
+.sidebar-top { height: 60px; display: flex; align-items: center; padding: 0 25px; }
+.brand { font-weight: 700; font-size: 17px; line-height: 22px; color: var(--text); }
+
+.search {
+  margin: 0 25px 12px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px;
+  border-radius: 4px;
+  background: var(--field);
+  border: 1px solid var(--separator);
+  color: var(--secondary);
+}
+.search [data-icon] svg { width: 15px; height: 15px; }
+.search input { flex: 1; min-width: 0; border: 0; background: none; outline: none; color: var(--text); }
+.search input::placeholder { color: var(--secondary); }
+.search input::-webkit-search-cancel-button { opacity: 0.5; }
+.search:focus-within { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent); }
+
+.devices { flex: 1; overflow-y: auto; padding: 0 21px 16px 25px; }
+.devices h3 { margin: 14px 6px 4px; font-size: 10px; line-height: 13px; font-weight: 600; color: var(--secondary); }
+.devices .none { margin: 12px 6px; color: var(--secondary); }
+
+/* App Store sidebar items: no hover fill, a gray pill when selected. */
+.device-row {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 28px 1fr auto;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 2px;
+  padding: 4px 6px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  text-align: left;
+}
+.device-row .glyph {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  color: var(--tertiary);
+}
+.device-row .glyph svg { width: 18px; height: 18px; }
+.device-row .glyph img { height: 22px; width: auto; display: block; }
+.device-row.booted .glyph:not(:has(img)) { color: var(--accent); }
+.device-row .text { min-width: 0; } /* lets long names truncate instead of pushing the version out */
+.device-row .name { font-size: 15px; line-height: 20px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.device-row .kind { font-size: 12px; line-height: 15px; color: var(--secondary); }
+.device-row .version { font-size: 12px; color: var(--secondary); font-variant-numeric: tabular-nums; }
+.device-row.selected { background: var(--pressed); }
+
+/* ---------- canvas: device ---------- */
+
+.canvas { position: relative; flex: 1; min-width: 0; display: flex; flex-direction: column; background: var(--canvas); }
+.canvas-top { height: 60px; flex: none; display: flex; align-items: center; gap: 10px; padding: 0 14px; }
+.title { flex: 1; min-width: 0; line-height: 1.25; }
+.title-name { font-weight: 600; font-size: 15px; line-height: 20px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.title-sub { font-size: 12px; line-height: 15px; color: var(--secondary); white-space: nowrap; }
+.title-sub .status:not(:empty)::before { content: " · "; }
+.toolbar { display: flex; align-items: center; gap: 8px; }
+
+.stage {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  display: grid;
+  place-items: center;
+  /* The bottom padding keeps the device clear of the floating button bar and
+     leaves room for its shadow; fit-to-window sizes the device inside it. */
+  padding: 12px 24px 108px;
+}
+.canvas.offline .stage { padding-bottom: 40px; }
+.stage-message { color: var(--secondary); max-width: 320px; text-align: center; }
+
+/* Device: Xcode's DeviceKit chrome artwork, laid out in JS from /api/sims/:udid/chrome.
+   Layers: buttons under the body, the nine-slice body, then the screen. */
+.device-wrap { display: flex; flex-direction: column; align-items: center; gap: 22px; }
+.bezel { position: relative; flex: none; }
+.bezel-art {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: grid;
+  pointer-events: none;
+  filter: drop-shadow(0 10px 22px rgba(0, 0, 0, 0.14));
+}
+.bezel-art img { display: block; width: 100%; height: 100%; }
+.bezel.annotating .bezel-art {
+  filter: drop-shadow(2px 0 0 var(--mark)) drop-shadow(-2px 0 0 var(--mark)) drop-shadow(0 2px 0 var(--mark)) drop-shadow(0 -2px 0 var(--mark));
+}
+.side-button {
+  position: absolute;
+  z-index: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  transition: transform 160ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.side-button.on-top { z-index: 3; }
+.side-button img { display: block; width: 100%; height: 100%; pointer-events: none; }
+.canvas.offline .side-button { pointer-events: none; }
+
+.device {
+  position: absolute;
+  z-index: 2;
+  overflow: hidden;
+  background: #000;
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
+}
+.device.preview { background: #1d1d1f; }
+.device.preview canvas,
+.device.preview #overlay { visibility: hidden; }
 #screen { width: 100%; height: 100%; display: block; }
 #overlay { position: absolute; inset: 0; outline: none; touch-action: none; }
 .device.annotating #overlay { cursor: crosshair; }
-.device.annotating { box-shadow: 0 0 0 10px #1c1e21, 0 0 0 12px var(--mark); }
-#frozen-badge { position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%); white-space: nowrap;
-  background: rgba(0,0,0,.75); backdrop-filter: blur(8px); padding: 5px 12px; border-radius: 999px; font-size: 12px; pointer-events: none; }
+#frozen-badge {
+  position: absolute;
+  left: 50%;
+  bottom: 22px;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 12px;
+  pointer-events: none;
+}
 
+/* Not running: picture, name and Start, like Device Hub. */
+.preview-info { display: flex; flex-direction: column; align-items: center; text-align: center; }
+.preview-name { font-size: 22px; line-height: 26px; font-weight: 700; }
+.preview-sub { margin-top: 4px; font-size: 13px; line-height: 18px; color: var(--secondary); }
+.start-btn {
+  margin-top: 16px;
+  min-width: 80px;
+  padding: 7px 16px;
+  border: 0;
+  border-radius: 1000px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: 700;
+  line-height: 18px;
+  transition: background-color 0.21s ease-out;
+}
+.start-btn:hover { background: color-mix(in srgb, var(--accent), #000 3%); }
+.start-btn:disabled { opacity: 0.6; }
+.canvas.offline .toolbar { opacity: 0.35; pointer-events: none; }
+
+.canvas-bottom {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 76px;
+  display: grid;
+  place-items: center;
+  pointer-events: none; /* floats over the stage; only the pill takes clicks */
+}
+.canvas-bottom .pill {
+  pointer-events: auto;
+  background: var(--glass);
+  border: 0.5px solid var(--glass-edge);
+  box-shadow: var(--glass-shadow);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+}
+
+/* Selection layers on the screen. */
 .hl, .sel, .marker { position: absolute; pointer-events: none; }
-.hl { border: 1.5px solid var(--accent); background: rgba(59,130,246,.12); border-radius: 4px; }
-.hl-label { position: absolute; top: -20px; left: -1px; background: var(--accent); color: #fff; font-size: 11px;
-  padding: 1px 6px; border-radius: 4px; white-space: nowrap; max-width: 260px; overflow: hidden; text-overflow: ellipsis; }
-.sel { border: 2px solid var(--mark); background: rgba(255,59,48,.10); border-radius: 4px; }
-.marker { width: 20px; height: 20px; margin: -10px 0 0 -10px; border-radius: 50%; background: var(--mark); color: #fff;
-  font-size: 11px; font-weight: 600; display: grid; place-items: center; box-shadow: 0 1px 4px rgba(0,0,0,.5); }
+.hl { border: 1.5px solid var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); border-radius: 4px; }
+.hl-label {
+  position: absolute;
+  top: -21px;
+  left: -1px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 11px;
+  padding: 1px 7px;
+  border-radius: 5px;
+  white-space: nowrap;
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sel { border: 2px solid var(--mark); background: rgba(255, 59, 48, 0.1); border-radius: 4px; }
+.marker {
+  width: 20px;
+  height: 20px;
+  margin: -10px 0 0 -10px;
+  border-radius: 50%;
+  background: var(--mark);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+}
 
-.panel { width: 340px; flex: none; border-left: 1px solid var(--line); background: var(--panel); display: flex; flex-direction: column; }
-.panel-head { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; border-bottom: 1px solid var(--line); }
-.panel-head h2 { margin: 0; font-size: 13px; font-weight: 600; }
-.panel-actions { display: flex; gap: 6px; }
-.list { list-style: none; margin: 0; padding: 8px; overflow-y: auto; flex: 1; }
-.empty { color: var(--muted); padding: 0 18px; }
-.item { display: flex; flex-direction: column; gap: 8px; padding: 10px; border-radius: 9px; }
-.item + .item { border-top: 1px solid var(--line); border-radius: 0; }
-.item img { width: 100%; max-height: 110px; object-fit: contain; object-position: left center; background: var(--bg); border-radius: 6px; }
+/* ---------- inspector: annotations ---------- */
+
+.inspector {
+  width: 340px;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  background: var(--inspector);
+  border-left: 1px solid var(--separator);
+}
+.inspector-top { height: 60px; flex: none; display: flex; align-items: center; justify-content: space-between; padding: 0 12px 0 20px; }
+.inspector-top h2 { margin: 0; font-size: 17px; line-height: 22px; font-weight: 700; }
+.count { color: var(--secondary); font-weight: 400; margin-left: 2px; }
+
+.empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 0 36px 60px;
+  text-align: center;
+  color: var(--secondary);
+}
+.empty p { margin: 0; }
+.empty-icon svg { width: 44px; height: 44px; stroke-width: 1.2; color: var(--tertiary); }
+kbd {
+  font: 600 11px/1 -apple-system, system-ui, sans-serif;
+  padding: 2px 5px;
+  border-radius: 4px;
+  border: 0.5px solid var(--separator);
+  background: var(--card);
+  color: var(--text);
+}
+
+.list { list-style: none; margin: 0; padding: 0 12px 16px; overflow-y: auto; flex: 1; }
+/* Cards like the App Store's privacy cards: a gray fill, no shadow. */
+.item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  margin-bottom: 12px;
+  border-radius: 10px;
+  background: var(--fill);
+}
+.item img { width: 100%; max-height: 110px; object-fit: contain; object-position: left center; border-radius: 8px; background: var(--fill); }
 .item-comment { margin: 0 0 4px; white-space: pre-wrap; word-break: break-word; }
-.item-meta { color: var(--muted); font-size: 11px; }
-.pill { display: inline-block; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .03em;
-  padding: 1px 6px; border-radius: 999px; margin-right: 6px; border: 1px solid currentColor; }
-.pill.pending { color: var(--muted); }
-.pill.acknowledged { color: var(--warn); }
-.pill.resolved { color: var(--ok); }
-.pill.dismissed { color: var(--muted); text-decoration: line-through; }
-.item-reply { margin-top: 6px; padding: 6px 8px; background: var(--bg); border-radius: 6px; font-size: 12px; }
+.item-meta { color: var(--secondary); font-size: 12px; line-height: 15px; display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.badge {
+  display: inline-block;
+  font-size: 11px;
+  line-height: 14px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 1000px;
+  background: color-mix(in srgb, currentColor 12%, transparent);
+}
+.badge::first-letter { text-transform: uppercase; }
+.badge.pending { color: var(--secondary); }
+.badge.acknowledged { color: var(--warn); }
+.badge.resolved { color: var(--ok); }
+.badge.dismissed { color: var(--tertiary); text-decoration: line-through; }
+.item-reply { margin-top: 6px; padding: 8px 10px; background: var(--card); border-radius: 9px; font-size: 12px; line-height: 15px; }
 .item-reply b { color: var(--accent); font-weight: 600; }
 
-.composer { position: fixed; z-index: 10; width: 300px; background: var(--panel); border: 1px solid var(--line);
-  border-radius: 12px; padding: 10px; box-shadow: 0 12px 40px rgba(0,0,0,.5); }
-.composer-target { font-size: 11px; color: var(--muted); margin-bottom: 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.composer textarea { width: 100%; resize: vertical; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px; outline: none; }
-.composer textarea:focus { border-color: var(--accent); }
-.composer-row { display: flex; align-items: center; gap: 6px; margin-top: 8px; }
-.composer-row .hint { flex: 1; color: var(--muted); font-size: 11px; }
+/* ---------- composer popover ---------- */
 
-button.toggle { color: var(--muted); }
-button.toggle.on { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 50%, transparent); }
-button.toggle.on::before { content: "● "; }
-button.toggle:not(.on)::before { content: "○ "; }
+.composer {
+  position: fixed;
+  z-index: 10;
+  width: 320px;
+  padding: 16px;
+  border-radius: 12px;
+  background: var(--glass);
+  border: 0.5px solid var(--glass-edge);
+  box-shadow: 0 3px 20px rgba(0, 0, 0, 0.08);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+}
+.composer-target { font-size: 12px; line-height: 15px; color: var(--secondary); margin-bottom: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.composer textarea {
+  width: 100%;
+  resize: vertical;
+  padding: 8px;
+  border-radius: 9px;
+  border: 1px solid var(--separator);
+  background: var(--field);
+  outline: none;
+}
+.composer textarea:focus { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent); }
+.composer-row { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
+.composer-row .hint { flex: 1; color: var(--secondary); font-size: 12px; line-height: 15px; white-space: nowrap; }
+
+/* ---------- narrow windows ---------- */
+
+.window.no-sidebar .sidebar,
+.window.no-inspector .inspector { display: none; }
+/* Panel toggles: round gray buttons, like the App Store's circle buttons. */
+#toggle-sidebar,
+#toggle-inspector {
+  width: 32px;
+  height: 32px;
+  background: var(--fill);
+}
+#toggle-sidebar:hover,
+#toggle-inspector:hover { background: var(--pressed); }
+
+@media (max-width: 1100px) {
+  .sidebar { width: 220px; }
+  .search { margin-inline: 16px; }
+  .devices { padding-inline: 16px 12px; }
+  .inspector { width: 280px; }
+}
+/* Fit-to-window still applies; the zoom buttons give their room to the title. */
+@media (max-width: 1050px) {
+  .toolbar .pill[aria-label="Zoom"] { display: none; }
+}

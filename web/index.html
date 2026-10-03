@@ -7,49 +7,98 @@
 <link rel="stylesheet" href="/web/style.css">
 </head>
 <body>
-<header class="bar">
-  <div class="brand">sim-agentation</div>
-  <select id="device" title="Simulator"></select>
-  <div class="seg" role="tablist">
-    <button id="mode-interact" class="on" title="Use the app (I)">Interact</button>
-    <button id="mode-annotate" title="Freeze the screen and annotate (A)">Annotate</button>
-  </div>
-  <button id="btn-sdk" class="ghost toggle" title="Use SimAgentationPlus data when the app has it (S)" hidden>SDK</button>
-  <div class="spacer"></div>
-  <button id="btn-home" class="ghost" title="Home button">Home</button>
-  <button id="btn-lock" class="ghost" title="Lock button">Lock</button>
-  <span id="status" class="status">Connecting…</span>
-</header>
+<div class="window" id="window">
 
-<main>
-  <section class="stage">
-    <div id="device-frame" class="device">
-      <canvas id="screen"></canvas>
-      <div id="overlay" tabindex="0"></div>
-      <div id="frozen-badge" hidden>Click or drag · ↑ parent · Esc to resume</div>
+  <!-- Devices -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-top">
+      <span class="brand">Sim Agentation</span>
     </div>
-  </section>
+    <label class="search">
+      <span data-icon="search"></span>
+      <input id="device-search" type="search" placeholder="Search" autocomplete="off" spellcheck="false">
+    </label>
+    <nav id="devices" class="devices" aria-label="Simulators"></nav>
+  </aside>
 
-  <aside class="panel">
-    <div class="panel-head">
-      <h2>Annotations</h2>
-      <div class="panel-actions">
-        <button id="btn-copy" class="ghost small" title="Copy pending annotations as Markdown">Copy</button>
-        <button id="btn-clear" class="ghost small" title="Remove resolved and dismissed">Clear done</button>
+  <!-- Device -->
+  <main class="canvas" id="canvas">
+    <header class="canvas-top">
+      <button id="toggle-sidebar" class="icon-btn" title="Show or hide the device list" data-icon="sidebar"></button>
+      <div class="title">
+        <div id="device-name" class="title-name">No simulator</div>
+        <div class="title-sub"><span id="device-runtime"></span><span id="status" class="status"></span></div>
       </div>
+      <div class="toolbar">
+        <div class="pill seg" role="group" aria-label="Mode">
+          <button id="mode-interact" class="icon-btn on" title="Interact: use the app (I)" data-icon="pointer"></button>
+          <button id="mode-annotate" class="icon-btn" title="Annotate: freeze the screen and mark things up (A)" data-icon="annotate"></button>
+        </div>
+        <button id="btn-sdk" class="pill sdk" title="Use SimAgentationPlus data from the app (S)" hidden><span class="dot"></span>SDK</button>
+        <div class="pill" role="group" aria-label="Zoom">
+          <button id="zoom-out" class="icon-btn" title="Zoom out (⌘−)" data-icon="zoom-out"></button>
+          <button id="zoom-fit" class="icon-btn" title="Fit to window (⌘9)" data-icon="zoom-fit"></button>
+          <button id="zoom-actual" class="icon-btn" title="Actual size, 1 point per pixel (⌘0)" data-icon="zoom-actual"></button>
+          <button id="zoom-in" class="icon-btn" title="Zoom in (⌘+)" data-icon="zoom-in"></button>
+        </div>
+      </div>
+      <button id="toggle-inspector" class="icon-btn" title="Show or hide annotations" data-icon="inspector"></button>
+    </header>
+
+    <section class="stage" id="stage">
+      <div class="device-wrap" id="device-wrap">
+        <div class="bezel" id="bezel">
+          <div id="side-buttons"></div>
+          <div id="bezel-art" class="bezel-art"></div>
+          <div id="device-frame" class="device">
+            <canvas id="screen"></canvas>
+            <div id="overlay" tabindex="0"></div>
+            <div id="frozen-badge" class="glass" hidden>Click or drag · ↑ parent · Esc to resume</div>
+          </div>
+        </div>
+        <div id="preview-info" class="preview-info" hidden>
+          <div id="preview-name" class="preview-name"></div>
+          <div id="preview-sub" class="preview-sub"></div>
+          <button id="btn-start" class="start-btn">Start</button>
+        </div>
+      </div>
+      <p id="stage-message" class="stage-message" hidden></p>
+    </section>
+
+    <footer class="canvas-bottom" id="canvas-bottom">
+      <div class="pill" role="group" aria-label="Device">
+        <button id="btn-home" class="icon-btn" title="Home" data-icon="home"></button>
+        <button id="btn-screenshot" class="icon-btn" title="Save screenshot" data-icon="screenshot"></button>
+        <button id="btn-lock" class="icon-btn" title="Lock" data-icon="lock"></button>
+        <button id="btn-switcher" class="icon-btn" title="App switcher" data-icon="app-switcher"></button>
+      </div>
+    </footer>
+  </main>
+
+  <!-- Annotations -->
+  <aside class="inspector" id="inspector">
+    <header class="inspector-top">
+      <h2>Annotations <span id="count" class="count"></span></h2>
+      <div class="pill" role="group" aria-label="Annotations">
+        <button id="btn-copy" class="icon-btn" title="Copy pending annotations as Markdown" data-icon="copy"></button>
+        <button id="btn-clear" class="icon-btn" title="Remove resolved and dismissed" data-icon="clear-done"></button>
+      </div>
+    </header>
+    <div id="empty" class="empty">
+      <span class="empty-icon" data-icon="annotations"></span>
+      <p>Press <kbd>A</kbd> to freeze the screen, then click an element or drag a box around anything.</p>
     </div>
-    <p id="empty" class="empty">Switch to Annotate, then click an element or drag a box around anything on screen.</p>
     <ol id="list" class="list"></ol>
   </aside>
-</main>
+</div>
 
 <form id="composer" class="composer" hidden>
   <div id="composer-target" class="composer-target"></div>
   <textarea id="composer-text" rows="3" placeholder="What should change?"></textarea>
   <div class="composer-row">
     <span class="hint">⌘↩ to add · Esc to cancel</span>
-    <button type="button" id="composer-cancel" class="ghost small">Cancel</button>
-    <button type="submit" class="primary small">Add</button>
+    <button type="button" id="composer-cancel" class="text-btn">Cancel</button>
+    <button type="submit" class="text-btn primary">Add</button>
   </div>
 </form>
 

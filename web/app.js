@@ -1,21 +1,27 @@
 import { hitTest, describe, nodesInRect } from '/web/ax.js';
 import { sampler, warm, containersAround } from '/web/visual.js';
 import { matchesFrontApp, sdkContainers, sourceFor, viewContext } from '/web/sdk.js';
+import { icon, hydrateIcons } from '/web/icons.js';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('screen');
 const ctx = canvas.getContext('2d');
 const overlay = $('overlay');
 const deviceEl = $('device-frame');
+const bezelEl = $('bezel');
+
+hydrateIcons();
 
 const state = {
   udid: null,
   ws: null,
-  layout: null,      // baguette chrome layout (input coordinate space)
+  chrome: null,      // device chrome: body, screen rect and buttons, in points
   frame: null,       // latest ImageBitmap
   frameBytes: null,  // latest JPEG bytes
   frozen: null,      // { bitmap, tree, points: {width, height}, marks: [] }
   mode: 'interact',
+  running: false,    // the selected device is booted; its controls work
+  live: false,       // frames are arriving
   pendingTree: null,
   draft: null,       // selection waiting for a comment
 };
@@ -29,11 +35,6 @@ function connect(udid) {
   const ws = new WebSocket(`ws://${location.host}/ws/${encodeURIComponent(udid)}`);
   ws.binaryType = 'arraybuffer';
   state.ws = ws;
-  let frames = 0;
-  const fpsTimer = setInterval(() => {
-    if (state.ws === ws) setStatus(state.frozen ? state.frozen.status : `${frames} fps`);
-    frames = 0;
-  }, 1000);
 
   ws.onopen = () => {
     ws.send(JSON.stringify({ type: 'snapshot' }));
@@ -42,18 +43,23 @@ function connect(udid) {
   };
   ws.onmessage = async (e) => {
     if (typeof e.data === 'string') return onText(JSON.parse(e.data));
-    frames++;
     const bytes = e.data;
     const bitmap = await createImageBitmap(new Blob([bytes], { type: 'image/jpeg' })).catch(() => null);
     if (!bitmap) return;
     state.frame?.close?.();
     state.frame = bitmap;
     state.frameBytes = bytes;
-    if (!state.frozen) paint(bitmap);
+    if (state.frozen) return;
+    if (!state.live) {
+      state.live = true;
+      setStatus(''); // streaming is the normal state; say nothing
+    }
+    paint(bitmap);
   };
+  state.live = false;
   ws.onclose = () => {
-    clearInterval(fpsTimer);
     if (state.ws === ws) {
+      state.live = false;
       setStatus('Disconnected');
       setTimeout(() => state.ws === ws && connect(udid), 1500);
     }
@@ -68,7 +74,6 @@ function paint(bitmap) {
   if (canvas.width !== bitmap.width || canvas.height !== bitmap.height) {
     canvas.width = bitmap.width;
     canvas.height = bitmap.height;
-    deviceEl.style.aspectRatio = `${bitmap.width} / ${bitmap.height}`;
   }
   ctx.drawImage(bitmap, 0, 0);
 }
@@ -107,7 +112,7 @@ function fraction(e) {
 
 function inputPoint(e) {
   const { fx, fy } = fraction(e);
-  const { width, height } = state.layout.screen;
+  const { width, height } = state.chrome.screen;
   return { x: fx * width, y: fy * height, width, height };
 }
 
@@ -137,7 +142,7 @@ let touching = false;
 overlay.addEventListener('pointerdown', (e) => {
   overlay.focus();
   if (state.mode === 'annotate') return annotateDown(e);
-  if (!state.layout) return;
+  if (!state.running) return;
   touching = true;
   overlay.setPointerCapture(e.pointerId);
   send({ type: 'touch1-down', ...inputPoint(e) });
@@ -180,17 +185,33 @@ overlay.addEventListener('keydown', (e) => {
 
 $('btn-home').onclick = () => send({ type: 'button', button: 'home' });
 $('btn-lock').onclick = () => send({ type: 'button', button: 'lock' });
+$('btn-switcher').onclick = () => send({ type: 'button', button: 'app-switcher' });
+
+// Saves what's on screen (the frozen frame while annotating).
+$('btn-screenshot').onclick = async () => {
+  const bitmap = state.frozen?.bitmap ?? state.frame;
+  if (!bitmap) return;
+  const out = new OffscreenCanvas(bitmap.width, bitmap.height);
+  out.getContext('2d').drawImage(bitmap, 0, 0);
+  const blob = await out.convertToBlob({ type: 'image/png' });
+  const name = $('device-name').textContent;
+  const stamp = new Date().toISOString().slice(0, 19).replace('T', ' at ').replaceAll(':', '.');
+  const link = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: `${name} ${stamp}.png` });
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+};
 
 // ---------- annotate mode ----------
 
 async function setMode(mode) {
   if (mode === state.mode) return;
-  // Nothing to freeze yet (no frame, or the device layout failed to load).
-  if (mode === 'annotate' && (!state.frame || !state.layout)) return;
+  // Nothing to freeze yet: no live frame from a running device.
+  if (mode === 'annotate' && (!state.frame || !state.chrome)) return;
   state.mode = mode;
   $('mode-interact').classList.toggle('on', mode === 'interact');
   $('mode-annotate').classList.toggle('on', mode === 'annotate');
   deviceEl.classList.toggle('annotating', mode === 'annotate');
+  bezelEl.classList.toggle('annotating', mode === 'annotate');
   closeComposer();
 
   if (mode === 'annotate') {
@@ -202,7 +223,7 @@ async function setMode(mode) {
     ]);
     const bitmap = state.frame;
     state.frame = null; // keep the frozen bitmap alive
-    const scale = Math.round(bitmap.width / state.layout.screen.width); // pixels per point
+    const scale = Math.round(bitmap.width / state.chrome.screen.width); // pixels per point
     const f = (state.frozen = {
       bitmap,
       tree: null,
@@ -231,6 +252,7 @@ async function setMode(mode) {
     clearLayer('.hl, .sel, .marker');
     hover = null;
     $('frozen-badge').hidden = true;
+    setStatus(state.live ? '' : 'Connecting…');
     send({ type: 'snapshot' });
   }
   overlay.focus();
@@ -518,6 +540,8 @@ async function refresh() {
   lastList = text;
   const list = JSON.parse(text);
   $('empty').hidden = list.length > 0;
+  const open = list.filter((a) => a.status === 'pending' || a.status === 'acknowledged').length;
+  $('count').textContent = open ? String(open) : '';
   $('list').replaceChildren(...list.slice().reverse().map(renderItem));
 }
 
@@ -527,11 +551,11 @@ function renderItem(a) {
   const img = Object.assign(document.createElement('img'), { src: `/images/${a.id}-crop.jpg`, alt: '' });
   const body = document.createElement('div');
   const target = a.target ? describe(a.target) : 'Area';
-  body.innerHTML = '<p class="item-comment"></p><div class="item-meta"><span class="pill"></span><span class="t"></span></div>';
+  body.innerHTML = '<p class="item-comment"></p><div class="item-meta"><span class="badge"></span><span class="t"></span></div>';
   body.querySelector('.item-comment').textContent = a.comment;
-  const pill = body.querySelector('.pill');
-  pill.classList.add(a.status);
-  pill.textContent = a.status;
+  const badge = body.querySelector('.badge');
+  badge.classList.add(a.status);
+  badge.textContent = a.status;
   body.querySelector('.t').textContent = `${a.id} · ${target}`;
   for (const r of a.replies) addNote(body, r.from, r.message);
   if (a.resolution) addNote(body, a.status === 'dismissed' ? 'dismissed' : 'done', a.resolution);
@@ -557,60 +581,367 @@ $('btn-copy').onclick = async () => {
   const pending = await fetch('/api/annotations?status=pending').then((r) => r.json());
   const full = await Promise.all(pending.map((a) => fetch(`/api/annotations/${a.id}`).then((r) => r.json())));
   await navigator.clipboard.writeText(full.map((a) => a.markdown).join('\n\n'));
-  setStatus(`Copied ${full.length}`);
+  flashStatus(full.length ? `Copied ${full.length} to the clipboard` : 'Nothing pending to copy');
 };
 
 setInterval(refresh, 1500);
 
 // ---------- devices ----------
 
+let statusText = '';
+let flashTimer = null;
+
 function setStatus(text) {
+  statusText = text;
+  if (!flashTimer) $('status').textContent = text;
+}
+
+// Shows a message for a moment, then goes back to the current status.
+function flashStatus(text) {
+  clearTimeout(flashTimer);
   $('status').textContent = text;
+  flashTimer = setTimeout(() => {
+    flashTimer = null;
+    $('status').textContent = statusText;
+  }, 2000);
+}
+
+let sims = [];
+const chromes = new Map(); // udid → Promise<chrome | null>
+
+function chromeOf(udid) {
+  if (!chromes.has(udid)) {
+    chromes.set(udid, fetch(`/api/sims/${udid}/chrome`).then((r) => (r.ok ? r.json() : null)).catch(() => null));
+  }
+  return chromes.get(udid);
 }
 
 async function loadDevices() {
-  const sims = await fetch('/api/sims').then((r) => r.json());
-  const select = $('device');
-  const booted = sims.filter((s) => s.state === 'Booted');
+  sims = await fetch('/api/sims').then((r) => (r.ok ? r.json() : [])).catch(() => []);
   const saved = localStorageGet('udid');
-  select.replaceChildren(
-    ...sims
-      .sort((a, b) => (b.state === 'Booted') - (a.state === 'Booted'))
-      .map((s) => new Option(`${s.state === 'Booted' ? '● ' : ''}${s.name} (${s.runtime})`, s.udid)),
-  );
-  const pick = booted.find((s) => s.udid === saved) ?? booted[0] ?? sims.find((s) => s.udid === saved);
-  if (pick) {
-    select.value = pick.udid;
-    await useDevice(pick.udid, pick.state !== 'Booted');
-  } else {
-    setStatus('Pick a simulator');
-  }
-  select.onchange = () => {
-    const s = sims.find((x) => x.udid === select.value);
-    useDevice(s.udid, s.state !== 'Booted');
-  };
+  const pick = sims.find((s) => s.udid === saved) ?? sims.find((s) => s.state === 'Booted') ?? sims[0];
+  renderDevices();
+  if (pick) await selectDevice(pick);
+  else showMessage('No simulators found. Create one in Xcode first.');
 }
 
-async function useDevice(udid, boot) {
-  await setMode('interact');
-  if (boot) {
-    setStatus('Booting…');
-    await fetch(`/api/sims/${udid}/boot`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' });
+const version = (runtime) => runtime.replace(/^\D+/, '');
+const byVersionThenName = (a, b) =>
+  version(b.runtime).localeCompare(version(a.runtime), undefined, { numeric: true }) || a.name.localeCompare(b.name);
+
+function renderDevices() {
+  const query = $('device-search').value.trim().toLowerCase();
+  const shown = sims.filter((s) => !query || `${s.name} ${s.runtime}`.toLowerCase().includes(query));
+  const sections = [
+    ['Running', shown.filter((s) => s.state === 'Booted')],
+    ['Available', shown.filter((s) => s.state !== 'Booted')],
+  ];
+  const nodes = [];
+  for (const [title, list] of sections) {
+    if (!list.length) continue;
+    nodes.push(Object.assign(document.createElement('h3'), { textContent: title }));
+    for (const sim of list.sort(byVersionThenName)) nodes.push(deviceRow(sim));
   }
-  localStorageSet('udid', udid);
-  const res = await fetch(`/api/sims/${udid}/layout`).catch(() => null);
-  state.layout = res?.ok ? await res.json() : null;
-  state.frame = null;
-  if (!state.layout) {
-    // Stop the previous device's stream so it doesn't keep painting or reconnecting.
-    const ws = state.ws;
-    state.ws = null;
-    ws?.close();
-    const error = (await res?.json().catch(() => null))?.error;
-    setStatus(error ? `Can't read the device layout: ${error}` : "Can't read the device layout");
+  if (!nodes.length) nodes.push(Object.assign(document.createElement('p'), { className: 'none', textContent: 'No simulators match.' }));
+  $('devices').replaceChildren(...nodes);
+}
+
+function deviceRow(sim) {
+  const row = document.createElement('button');
+  row.className = 'device-row';
+  row.classList.toggle('booted', sim.state === 'Booted');
+  row.classList.toggle('selected', sim.udid === state.udid);
+  row.title = `${sim.name}, ${sim.runtime}`;
+  row.innerHTML = `<span class="glyph">${icon('phone')}</span><span class="text"><div class="name"></div><div class="kind">Simulator</div></span><span class="version"></span>`;
+  row.querySelector('.name').textContent = sim.name;
+  row.querySelector('.version').textContent = version(sim.runtime);
+  row.onclick = () => selectDevice(sim);
+  // Swap the generic glyph for a picture of the device once its chrome loads.
+  chromeOf(sim.udid)
+    .then((c) => c && thumbnail(c, THUMB_HEIGHT))
+    .then((url) => {
+      if (url) row.querySelector('.glyph').replaceChildren(Object.assign(new Image(), { src: url, alt: '' }));
+    });
+  return row;
+}
+
+$('device-search').addEventListener('input', renderDevices);
+
+function showMessage(text) {
+  $('device-wrap').hidden = !!text;
+  $('stage-message').hidden = !text;
+  $('stage-message').textContent = text ?? '';
+}
+
+// Selecting shows the device; only a running one streams. Starting is explicit.
+async function selectDevice(sim) {
+  await setMode('interact');
+  stopStream();
+  state.udid = sim.udid;
+  localStorageSet('udid', sim.udid);
+  $('device-name').textContent = sim.name;
+  $('device-runtime').textContent = sim.runtime;
+  setStatus('');
+  renderDevices();
+
+  const chrome = await chromeOf(sim.udid);
+  if (state.udid !== sim.udid) return; // picked another device meanwhile
+  state.chrome = chrome;
+  if (!chrome) {
+    showMessage(`No device artwork for ${sim.name}.`);
     return;
   }
-  connect(udid);
+  showMessage(null);
+  buildBezel(chrome);
+  if (sim.state === 'Booted') {
+    setLive(true);
+    connect(sim.udid);
+  } else {
+    setLive(false);
+    $('preview-name').textContent = sim.name;
+    $('preview-sub').textContent = `${sim.runtime} Simulator`;
+    $('btn-start').disabled = false;
+    $('btn-start').textContent = 'Start';
+  }
+  applyZoom();
+}
+
+async function startDevice() {
+  const sim = sims.find((s) => s.udid === state.udid);
+  if (!sim) return;
+  $('btn-start').disabled = true;
+  $('btn-start').textContent = 'Starting…';
+  const res = await fetch(`/api/sims/${sim.udid}/boot`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' }).catch(() => null);
+  if (!res?.ok) {
+    $('btn-start').disabled = false;
+    $('btn-start').textContent = 'Start';
+    flashStatus((await res?.json().catch(() => null))?.error ?? "Couldn't start the simulator");
+    return;
+  }
+  sim.state = 'Booted';
+  if (state.udid === sim.udid) await selectDevice(sim);
+  else renderDevices();
+}
+
+$('btn-start').onclick = startDevice;
+
+function stopStream() {
+  const ws = state.ws;
+  state.ws = null;
+  state.live = false;
+  state.frame = null;
+  ws?.close();
+}
+
+// Live: the screen streams and the device controls work. Otherwise a preview with Start.
+function setLive(live) {
+  state.running = live;
+  $('canvas').classList.toggle('offline', !live);
+  deviceEl.classList.toggle('preview', !live);
+  $('preview-info').hidden = live;
+  $('canvas-bottom').hidden = !live;
+  if (!live) ctx.clearRect(0, 0, canvas.width, canvas.height);
+}
+
+// ---------- bezel and zoom ----------
+
+// Hardware buttons sit under the body. At rest they show OUTSET points; the
+// chrome's rollover offset slides them further out on hover, as in Device Hub.
+const OUTSET = 13; // pt, measured from Device Hub: |normal offset| 8 → 5 pt showing
+
+function buttonFrame(b, size) {
+  const { width: w, height: h } = b.size;
+  const o = b.normal;
+  const along = (offset, length, total) => (b.align === 'trailing' ? total + offset - length : offset);
+  switch (b.anchor) {
+    case 'left': return { x: o.x - OUTSET, y: along(o.y, h, size.height), w, h };
+    case 'right': return { x: size.width + o.x + OUTSET - w, y: along(o.y, h, size.height), w, h };
+    case 'top': return { x: along(o.x, w, size.width), y: o.y - OUTSET, w, h };
+    default: return { x: along(o.x, w, size.width), y: size.height + o.y + OUTSET - h, w, h };
+  }
+}
+
+function buildBezel(chrome) {
+  const s = chrome.slices;
+  $('bezel-art').replaceChildren(
+    ...['topLeft', 'top', 'topRight', 'left', null, 'right', 'bottomLeft', 'bottom', 'bottomRight'].map((key) =>
+      key ? Object.assign(new Image(), { src: s[key].url, alt: '', draggable: false }) : document.createElement('span'),
+    ),
+  );
+  if (chrome.mask) {
+    deviceEl.style.maskImage = deviceEl.style.webkitMaskImage = `url("${chrome.mask}")`;
+  } else {
+    deviceEl.style.maskImage = deviceEl.style.webkitMaskImage = '';
+  }
+  $('side-buttons').replaceChildren(...chrome.buttons.map((b) => sideButton(b, chrome)));
+}
+
+function sideButton(b, chrome) {
+  const el = document.createElement('button');
+  el.className = 'side-button';
+  el.classList.toggle('on-top', b.onTop);
+  el.title = b.name.replace('-', ' ');
+  el.dataset.name = b.name;
+  const img = Object.assign(new Image(), { src: b.image, alt: '', draggable: false });
+  new Image().src = b.imageDown; // preload so the press swap is instant
+  el.append(img);
+  const rest = () => {
+    el.style.transform = '';
+    img.src = b.image;
+  };
+  const hover = () => {
+    const k = currentScale();
+    el.style.transform = `translate(${(b.rollover.x - b.normal.x) * k}px, ${(b.rollover.y - b.normal.y) * k}px)`;
+    img.src = b.image;
+  };
+  let down = 0;
+  el.onpointerenter = hover;
+  el.onpointerleave = () => {
+    down = 0;
+    rest();
+  };
+  el.onpointerdown = (e) => {
+    if (!state.running) return;
+    down = performance.now();
+    el.setPointerCapture(e.pointerId);
+    el.style.transform = ''; // pressed in, back to the resting position
+    img.src = b.imageDown;
+  };
+  el.onpointerup = () => {
+    if (!down) return;
+    const held = (performance.now() - down) / 1000;
+    down = 0;
+    hover();
+    // Hold to long-press, like the hardware button.
+    send({ type: 'button', button: b.name, ...(held > 0.4 ? { duration: held } : {}) });
+  };
+  return el;
+}
+
+let zoom = localStorageGet('zoom') ?? 'fit'; // 'fit' or CSS pixels per point
+const PREVIEW_HEIGHT = 300; // px, the not-running device picture
+const MARGIN = 14; // pt around the body for buttons that slide out
+
+function fitScale() {
+  const stage = $('stage');
+  const pad = getComputedStyle(stage);
+  const width = stage.clientWidth - parseFloat(pad.paddingLeft) - parseFloat(pad.paddingRight);
+  const height = stage.clientHeight - parseFloat(pad.paddingTop) - parseFloat(pad.paddingBottom);
+  const info = $('preview-info').hidden ? 0 : $('preview-info').offsetHeight + 22;
+  const { size } = state.chrome;
+  return Math.max(0.15, Math.min(width / (size.width + MARGIN * 2), (height - info) / (size.height + MARGIN * 2)));
+}
+
+function currentScale() {
+  if (!state.chrome) return 1;
+  if (!state.running) return Math.min(PREVIEW_HEIGHT / state.chrome.size.height, fitScale());
+  return zoom === 'fit' ? fitScale() : Number(zoom);
+}
+
+function applyZoom() {
+  const chrome = state.chrome;
+  if (!chrome) return;
+  const k = currentScale();
+  const px = (n) => `${n * k}px`;
+  const { size, screen, slices } = chrome;
+  Object.assign(bezelEl.style, { width: px(size.width), height: px(size.height), margin: px(MARGIN) });
+  Object.assign($('bezel-art').style, {
+    gridTemplateColumns: `${px(slices.topLeft.width)} 1fr ${px(slices.topRight.width)}`,
+    gridTemplateRows: `${px(slices.topLeft.height)} 1fr ${px(slices.bottomLeft.height)}`,
+  });
+  Object.assign(deviceEl.style, { left: px(screen.x), top: px(screen.y), width: px(screen.width), height: px(screen.height) });
+  chrome.buttons.forEach((b, i) => {
+    const f = buttonFrame(b, size);
+    const el = $('side-buttons').children[i];
+    Object.assign(el.style, { left: px(f.x), top: px(f.y), width: px(f.w), height: px(f.h) });
+  });
+  $('zoom-fit').classList.toggle('on', zoom === 'fit');
+  $('zoom-actual').classList.toggle('on', zoom !== 'fit' && Number(zoom) === 1);
+}
+
+function setZoom(next) {
+  if (!state.running) return;
+  zoom = next === 'fit' ? 'fit' : String(Math.min(3, Math.max(0.25, Math.round(next * 100) / 100)));
+  localStorageSet('zoom', zoom);
+  closeComposer();
+  applyZoom();
+}
+
+const ZOOM_STEP = 1.25;
+$('zoom-in').onclick = () => setZoom(currentScale() * ZOOM_STEP);
+$('zoom-out').onclick = () => setZoom(currentScale() / ZOOM_STEP);
+$('zoom-fit').onclick = () => setZoom('fit');
+$('zoom-actual').onclick = () => setZoom(1);
+new ResizeObserver(() => (zoom === 'fit' || !state.running) && applyZoom()).observe($('stage'));
+
+document.addEventListener('keydown', (e) => {
+  if (!e.metaKey || e.target === composerText || e.target === $('device-search')) return;
+  const actions = { '=': () => $('zoom-in').click(), '+': () => $('zoom-in').click(), '-': () => $('zoom-out').click(), 0: () => setZoom(1), 9: () => setZoom('fit') };
+  if (actions[e.key]) {
+    e.preventDefault();
+    actions[e.key]();
+  }
+});
+
+// Small device pictures for the list: nine-slice bezel with a blue screen,
+// sitting in a 34 px circle with room around it, as in Device Hub.
+const THUMB_HEIGHT = 20; // px
+const thumbnails = new Map(); // chrome id + screen size → Promise<data URL>
+
+function thumbnail(chrome, height) {
+  const key = `${chrome.id}:${chrome.screen.width}x${chrome.screen.height}:${height}`;
+  if (!thumbnails.has(key)) thumbnails.set(key, drawThumbnail(chrome, height).catch(() => null));
+  return thumbnails.get(key);
+}
+
+async function drawThumbnail(chrome, height) {
+  const load = (url) => fetch(url).then((r) => r.blob()).then((b) => createImageBitmap(b));
+  const dpr = 3;
+  const k = (height / chrome.size.height) * dpr;
+  const { size, screen, slices } = chrome;
+  const canvas = new OffscreenCanvas(Math.ceil(size.width * k), Math.ceil(size.height * k));
+  const g = canvas.getContext('2d');
+  const s = Object.fromEntries(await Promise.all(Object.entries(slices).map(async ([key, v]) => [key, await load(v.url)])));
+  const L = slices.topLeft.width, T = slices.topLeft.height, R = slices.topRight.width, B = slices.bottomLeft.height;
+  const W = size.width, H = size.height;
+  const draw = (img, x, y, w, h) => g.drawImage(img, x * k, y * k, w * k, h * k);
+  draw(s.topLeft, 0, 0, L, T);
+  draw(s.top, L, 0, W - L - R, T);
+  draw(s.topRight, W - R, 0, R, T);
+  draw(s.left, 0, T, L, H - T - B);
+  draw(s.right, W - R, T, R, H - T - B);
+  draw(s.bottomLeft, 0, H - B, L, B);
+  draw(s.bottom, L, H - B, W - L - R, B);
+  draw(s.bottomRight, W - R, H - B, R, B);
+  // Screen: gradient, cut to the device's real screen shape.
+  const sc = new OffscreenCanvas(Math.ceil(screen.width * k), Math.ceil(screen.height * k));
+  const sg = sc.getContext('2d');
+  const grad = sg.createLinearGradient(0, 0, 0, sc.height);
+  grad.addColorStop(0, '#3d8bd9');
+  grad.addColorStop(1, '#62b0ef');
+  sg.fillStyle = grad;
+  sg.fillRect(0, 0, sc.width, sc.height);
+  if (chrome.mask) {
+    sg.globalCompositeOperation = 'destination-in';
+    sg.drawImage(await load(chrome.mask), 0, 0, sc.width, sc.height);
+  }
+  g.drawImage(sc, screen.x * k, screen.y * k);
+  const blob = await canvas.convertToBlob({ type: 'image/png' });
+  return URL.createObjectURL(blob);
+}
+
+// ---------- panels ----------
+
+function setPanel(name, shown) {
+  $('window').classList.toggle(`no-${name}`, !shown);
+  $(`toggle-${name}`).classList.toggle('on', shown);
+  localStorageSet(`panel-${name}`, shown ? 'shown' : 'hidden');
+  if (zoom === 'fit') requestAnimationFrame(applyZoom);
+}
+
+for (const name of ['sidebar', 'inspector']) {
+  setPanel(name, localStorageGet(`panel-${name}`) !== 'hidden');
+  $(`toggle-${name}`).onclick = () => setPanel(name, $('window').classList.contains(`no-${name}`));
 }
 
 function localStorageGet(k) {

@@ -3,6 +3,7 @@ import type { ServerWebSocket } from 'bun';
 import { PORT } from './config';
 import * as store from './store';
 import { toMarkdown } from './format';
+import { chromeFor, chromeImage, maskImage } from './chrome';
 import { hitTest, nodesInRect, screenContext, summarize } from '../web/ax.js';
 
 const BAGUETTE = process.env.BAGUETTE_URL || 'http://127.0.0.1:8421';
@@ -198,9 +199,18 @@ export async function serve() {
           return ok ? undefined : new Response('upgrade failed', { status: 400 });
         }
 
+        // Device chrome artwork: rasterized once, then immutable.
+        const forever = { 'cache-control': 'public, max-age=31536000, immutable' };
+        if (parts[0] === 'chrome' && parts.length === 3 && parts[2].endsWith('.png')) {
+          const png = await chromeImage(parts[1], decodeURIComponent(parts[2].slice(0, -4)));
+          return png ? file(png, forever) : new Response('not found', { status: 404 });
+        }
+
         if (path === '/api/sims') return json(await devices());
-        if (parts[0] === 'api' && parts[1] === 'sims' && parts[3] === 'layout') {
-          return json(JSON.parse(await baguette('chrome', 'layout', '--udid', parts[2])));
+        if (parts[0] === 'api' && parts[1] === 'sims' && parts[3] === 'chrome') return json(await chromeFor(parts[2]));
+        if (parts[0] === 'api' && parts[1] === 'sims' && parts[3] === 'mask.png') {
+          const png = await maskImage(parts[2]);
+          return png ? file(png, forever) : new Response('not found', { status: 404 });
         }
         if (parts[0] === 'api' && parts[1] === 'sims' && parts[3] === 'boot' && req.method === 'POST') {
           await baguette('boot', '--udid', parts[2]);
