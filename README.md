@@ -7,16 +7,19 @@ Your app needs no SDK. Everything comes from the simulator's accessibility tree,
 ## Requirements
 
 - macOS on Apple Silicon, Xcode 26
-- [Bun](https://bun.sh)
+- Node and [pnpm](https://pnpm.io), to build the UI
 
 ## Run
 
 ```sh
-(cd host && swift build)
-bun src/cli.ts serve --open
+pnpm install
+pnpm build    # the UI into web/dist, then the Swift binary
+pnpm start    # host/.build/debug/sim-agentation serve --open
 ```
 
-`host/` is the native part, in Swift: it streams the simulator's screen, sends touches, buttons and keys, and reads the accessibility tree through Xcode's private CoreSimulator, SimulatorKit and AccessibilityPlatformTranslation frameworks. The web server starts it when needed. This opens http://localhost:38470.
+Everything runs in one Swift binary built from `host/`: the web server and API, the MCP server, and the native part that streams the simulator's screen, sends touches, buttons and keys, and reads the accessibility tree through Xcode's private CoreSimulator, SimulatorKit and AccessibilityPlatformTranslation frameworks. It serves the UI from `web/dist` on http://localhost:38470.
+
+The UI is Svelte, in `web/src`. `pnpm dev` rebuilds it on every change; reload the page to see it.
 
 The page is laid out like Xcode's Device Hub: simulators on the left, the device in the middle, annotations on the right. Devices are drawn with Xcode's own DeviceKit chrome artwork (`/Library/Developer/DeviceKit/Chrome`), so the hardware buttons slide out on hover and press in when clicked. Selecting a simulator that isn't running shows it with a **Start** button; nothing boots until you press it.
 
@@ -28,8 +31,10 @@ Click **Copy** to put every pending annotation on the clipboard as Markdown, so 
 ## Connect an agent
 
 ```sh
-claude mcp add sim-agentation -- bun /path/to/Sim-Agentation/src/cli.ts mcp
+claude mcp add sim-agentation -- /path/to/Sim-Agentation/host/.build/debug/sim-agentation mcp
 ```
+
+The MCP server starts the web server if it isn't running.
 
 Tools:
 
@@ -73,7 +78,7 @@ When the app in front has the SDK, the status reads **Frozen · SDK**. Parents t
 |---|---|
 | `SIM_AGENTATION_PORT` | `38470` |
 | `SIM_AGENTATION_HOME` | `~/.sim-agentation` (annotations and screenshots) |
-| `SIM_AGENTATION_HOST_URL` | `http://127.0.0.1:38472` (the native host) |
+| `SIM_AGENTATION_WEB` | the repo's `web/` directory (the UI) |
 | `SIM_AGENTATION_SDK_URL` | `http://127.0.0.1:38471` |
 
 ## Limits

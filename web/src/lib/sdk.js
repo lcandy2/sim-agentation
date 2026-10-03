@@ -12,7 +12,7 @@ const encloses = (outer, inner) =>
   outer.y + outer.height + SNAP >= inner.y + inner.height;
 const same = (a, b) => encloses(a, b) && encloses(b, a);
 
-const fileName = (file) => file.split('/').pop();
+export const fileName = (file) => file.split('/').pop();
 
 // The SDK may belong to an app that isn't in front; only trust it when the
 // accessibility tree names the same app.

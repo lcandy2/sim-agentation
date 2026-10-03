@@ -1,19 +1,23 @@
 import CryptoKit
 import Foundation
-import Network
 
-/// A small HTTP/1.1 server with WebSocket upgrade, on Network.framework.
-/// Loopback only. One request per connection (`Connection: close`), which
+/// A small HTTP/1.1 server with WebSocket upgrade. Loopback only. One request per connection (`Connection: close`), which
 /// keeps parsing simple and costs nothing on localhost.
 final class HTTPServer: @unchecked Sendable {
     struct Request: Sendable {
         let method: String
+        /// The path as a browser's URL parser leaves it: dot segments
+        /// resolved, backslashes as slashes, still percent-encoded.
         let path: String
-        let query: [String: String]
+        /// Query parameters in order, decoded like URLSearchParams.
+        let query: [(name: String, value: String)]
         let headers: [String: String] // lowercased names
         let body: Data
 
         func header(_ name: String) -> String? { headers[name.lowercased()] }
+
+        /// URLSearchParams.get: the first value.
+        func queryValue(_ name: String) -> String? { query.first { $0.name == name }?.value }
     }
 
     struct Response: Sendable {
@@ -21,13 +25,8 @@ final class HTTPServer: @unchecked Sendable {
         var headers: [String: String]
         var body: Data
 
-        static func json(_ object: Any, status: Int = 200) -> Response {
-            let data = (try? JSONSerialization.data(withJSONObject: object, options: [.fragmentsAllowed])) ?? Data("null".utf8)
-            return Response(status: status, headers: ["Content-Type": "application/json"], body: data)
-        }
-
         static func text(_ text: String, status: Int) -> Response {
-            Response(status: status, headers: ["Content-Type": "text/plain; charset=utf-8"], body: Data(text.utf8))
+            Response(status: status, headers: ["Content-Type": "text/plain;charset=utf-8"], body: Data(text.utf8))
         }
     }
 
@@ -39,60 +38,62 @@ final class HTTPServer: @unchecked Sendable {
 
     typealias Handler = @Sendable (Request) async -> Outcome
 
-    private let listener: NWListener
+    private let port: UInt16
     private let handler: Handler
     private let queue = DispatchQueue(label: "sim-agentation.http")
+    private var listener: Listener?
 
     init(port: UInt16, handler: @escaping Handler) throws {
-        let params = NWParameters.tcp
-        params.requiredLocalEndpoint = .hostPort(host: "127.0.0.1", port: NWEndpoint.Port(rawValue: port)!)
-        params.allowLocalEndpointReuse = true
-        listener = try NWListener(using: params)
+        self.port = port
         self.handler = handler
     }
 
     func start() async throws {
-        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-            let resumed = Once()
-            listener.stateUpdateHandler = { state in
-                switch state {
-                case .ready: if resumed.claim() { continuation.resume() }
-                case .failed(let error): if resumed.claim() { continuation.resume(throwing: error) }
-                default: break
-                }
-            }
-            listener.newConnectionHandler = { [weak self] connection in self?.accept(connection) }
-            listener.start(queue: queue)
+        listener = try Listener(port: port, queue: queue) { [weak self] connection in
+            self?.readRequest(connection, buffer: Data(), sentContinue: false)
         }
     }
 
-    private func accept(_ connection: NWConnection) {
-        connection.start(queue: queue)
-        readRequest(connection, buffer: Data())
-    }
-
-    private func readRequest(_ connection: NWConnection, buffer: Data) {
-        connection.receive(minimumIncompleteLength: 1, maximumLength: 1 << 20) { [weak self] data, _, done, error in
+    private func readRequest(_ connection: Connection, buffer: Data, sentContinue: Bool) {
+        connection.receive(maximumLength: 1 << 20) { [weak self] data, done, error in
             guard let self else { return }
             var buffer = buffer
             if let data { buffer.append(data) }
-            if let request = Self.parse(buffer) {
+            var sentContinue = sentContinue
+            switch Self.parse(buffer) {
+            case .complete(let request):
+                // Each request runs in its own task, so a long poll never holds up the others.
                 Task { await self.handle(request, on: connection) }
-            } else if done || error != nil || buffer.count > 64 << 20 {
+                return
+            case .awaitingBody(let expectsContinue):
+                if expectsContinue && !sentContinue {
+                    sentContinue = true
+                    connection.send(Data("HTTP/1.1 100 Continue\r\n\r\n".utf8))
+                }
+            case .incomplete:
+                break
+            }
+            if done || error != nil || buffer.count > 128 << 20 {
                 connection.cancel()
             } else {
-                self.readRequest(connection, buffer: buffer)
+                self.readRequest(connection, buffer: buffer, sentContinue: sentContinue)
             }
         }
     }
 
+    private enum Parsed {
+        case incomplete
+        case awaitingBody(expectsContinue: Bool)
+        case complete(Request)
+    }
+
     /// Returns a request once the headers and the whole body have arrived.
-    private static func parse(_ buffer: Data) -> Request? {
-        guard let end = buffer.range(of: Data("\r\n\r\n".utf8)) else { return nil }
+    private static func parse(_ buffer: Data) -> Parsed {
+        guard let end = buffer.range(of: Data("\r\n\r\n".utf8)) else { return .incomplete }
         let head = String(decoding: buffer[..<end.lowerBound], as: UTF8.self)
         var lines = head.components(separatedBy: "\r\n")
         let requestLine = lines.removeFirst().split(separator: " ")
-        guard requestLine.count >= 2 else { return nil }
+        guard requestLine.count >= 2 else { return .incomplete }
         var headers: [String: String] = [:]
         for line in lines {
             guard let colon = line.firstIndex(of: ":") else { continue }
@@ -100,44 +101,131 @@ final class HTTPServer: @unchecked Sendable {
         }
         let length = Int(headers["content-length"] ?? "0") ?? 0
         let bodyStart = end.upperBound
-        guard buffer.count - bodyStart >= length else { return nil }
-        let target = String(requestLine[1])
-        let components = URLComponents(string: "http://localhost\(target)")
-        var query: [String: String] = [:]
-        for item in components?.queryItems ?? [] { query[item.name] = item.value ?? "" }
-        return Request(
+        guard buffer.count - bodyStart >= length else {
+            return .awaitingBody(expectsContinue: headers["expect"]?.lowercased() == "100-continue")
+        }
+        let (path, query) = splitTarget(String(requestLine[1]))
+        return .complete(Request(
             method: String(requestLine[0]),
-            path: components?.percentEncodedPath ?? target,
+            path: path,
             query: query,
             headers: headers,
             body: buffer.subdata(in: bodyStart..<(bodyStart + length))
-        )
+        ))
     }
 
-    private func handle(_ request: Request, on connection: NWConnection) async {
+    // MARK: - URL parsing, as `new URL(req.url)` does it
+
+    static func splitTarget(_ target: String) -> (path: String, query: [(name: String, value: String)]) {
+        var rest = Substring(target)
+        // Absolute-form targets ("http://host/path") carry the path after the authority.
+        if let scheme = rest.range(of: "://"), rest[..<scheme.lowerBound].allSatisfy({ $0.isLetter }) {
+            let afterAuthority = rest[scheme.upperBound...]
+            rest = afterAuthority.firstIndex(where: { $0 == "/" || $0 == "?" || $0 == "#" }).map { afterAuthority[$0...] } ?? ""
+        }
+        if let hash = rest.firstIndex(of: "#") { rest = rest[..<hash] }
+        var queryString = ""
+        if let question = rest.firstIndex(of: "?") {
+            queryString = String(rest[rest.index(after: question)...])
+            rest = rest[..<question]
+        }
+        return (normalizePath(String(rest)), parseQuery(queryString))
+    }
+
+    /// WHATWG URL path parsing: "\\" is "/", "." and ".." segments (also
+    /// percent-encoded) are resolved, and characters outside the path set
+    /// are percent-encoded.
+    static func normalizePath(_ raw: String) -> String {
+        var parts = raw.replacingOccurrences(of: "\\", with: "/").split(separator: "/", omittingEmptySubsequences: false).map(String.init)
+        if parts.first == "" { parts.removeFirst() }
+        var segments: [String] = []
+        for (i, segment) in parts.enumerated() {
+            let last = i == parts.count - 1
+            switch segment.lowercased() {
+            case "..", ".%2e", "%2e.", "%2e%2e":
+                if !segments.isEmpty { segments.removeLast() }
+                if last { segments.append("") }
+            case ".", "%2e":
+                if last { segments.append("") }
+            default:
+                segments.append(percentEncodePathSegment(segment))
+            }
+        }
+        return "/" + segments.joined(separator: "/")
+    }
+
+    private static func percentEncodePathSegment(_ segment: String) -> String {
+        var out = ""
+        for byte in segment.utf8 {
+            switch byte {
+            case 0..<0x21, 0x22, 0x23, 0x3C, 0x3E, 0x3F, 0x60, 0x7B, 0x7D, 0x7F...:
+                out += String(format: "%%%02X", byte)
+            default:
+                out.unicodeScalars.append(Unicode.Scalar(byte))
+            }
+        }
+        return out
+    }
+
+    /// application/x-www-form-urlencoded parsing, as URLSearchParams does it.
+    static func parseQuery(_ query: String) -> [(name: String, value: String)] {
+        query.split(separator: "&").map { pair in
+            if let equals = pair.firstIndex(of: "=") {
+                return (formDecode(pair[..<equals]), formDecode(pair[pair.index(after: equals)...]))
+            }
+            return (formDecode(pair), "")
+        }
+    }
+
+    private static func formDecode(_ s: Substring) -> String {
+        let bytes = Array(s.utf8)
+        var out: [UInt8] = []
+        out.reserveCapacity(bytes.count)
+        var i = 0
+        while i < bytes.count {
+            let byte = bytes[i]
+            if byte == UInt8(ascii: "+") {
+                out.append(0x20)
+            } else if byte == UInt8(ascii: "%"), i + 2 < bytes.count,
+                      let hi = JS.asciiHexValue(bytes[i + 1]), let lo = JS.asciiHexValue(bytes[i + 2]) {
+                out.append(UInt8(hi << 4 | lo))
+                i += 2
+            } else {
+                out.append(byte)
+            }
+            i += 1
+        }
+        return String(decoding: out, as: UTF8.self)
+    }
+
+    // MARK: - responses
+
+    private func handle(_ request: Request, on connection: Connection) async {
         switch await handler(request) {
         case .respond(let response):
-            send(response, on: connection)
+            send(response, on: connection, headOnly: request.method == "HEAD")
         case .upgrade(let session):
             guard request.header("upgrade")?.lowercased() == "websocket", let key = request.header("sec-websocket-key") else {
-                send(.text("expected a WebSocket upgrade", status: 400), on: connection)
+                send(.text("upgrade failed", status: 400), on: connection, headOnly: false)
                 return
             }
             let accept = Data(Insecure.SHA1.hash(data: Data((key + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11").utf8))).base64EncodedString()
             let head = "HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: \(accept)\r\n\r\n"
-            connection.send(content: Data(head.utf8), completion: .contentProcessed { _ in })
+            connection.send(Data(head.utf8))
             session(WebSocket(connection: connection, queue: queue))
         }
     }
 
-    private func send(_ response: Response, on connection: NWConnection) {
+    /// HEAD gets the headers only.
+    private func send(_ response: Response, on connection: Connection, headOnly: Bool) {
         var head = "HTTP/1.1 \(response.status) \(Self.reason(response.status))\r\n"
         var headers = response.headers
-        headers["Content-Length"] = String(response.body.count)
+        if response.status != 204 && response.status != 304 { headers["Content-Length"] = String(response.body.count) }
         headers["Connection"] = "close"
-        for (name, value) in headers { head += "\(name): \(value)\r\n" }
+        for (name, value) in headers.sorted(by: { $0.key < $1.key }) { head += "\(name): \(value)\r\n" }
         head += "\r\n"
-        connection.send(content: Data(head.utf8) + response.body, completion: .contentProcessed { _ in connection.cancel() })
+        let body = headOnly || response.status == 204 ? Data() : response.body
+        connection.send(Data(head.utf8) + body) { _ in connection.cancel() }
     }
 
     private static func reason(_ status: Int) -> String {
@@ -148,22 +236,12 @@ final class HTTPServer: @unchecked Sendable {
         case 400: "Bad Request"
         case 403: "Forbidden"
         case 404: "Not Found"
+        case 405: "Method Not Allowed"
+        case 413: "Payload Too Large"
         case 415: "Unsupported Media Type"
+        case 500: "Internal Server Error"
         default: status < 500 ? "Error" : "Internal Server Error"
         }
-    }
-}
-
-/// Resumes a continuation at most once.
-final class Once: @unchecked Sendable {
-    private let lock = NSLock()
-    private var done = false
-
-    func claim() -> Bool {
-        lock.lock(); defer { lock.unlock() }
-        if done { return false }
-        done = true
-        return true
     }
 }
 
@@ -172,7 +250,7 @@ final class Once: @unchecked Sendable {
 final class WebSocket: @unchecked Sendable {
     enum Message: Sendable { case text(String), binary(Data) }
 
-    private let connection: NWConnection
+    private let connection: Connection
     private let queue: DispatchQueue
     private var buffer = Data()
     private var fragments = Data()
@@ -186,7 +264,7 @@ final class WebSocket: @unchecked Sendable {
     private let writesLock = NSLock()
     private var pendingWrites = 0
 
-    init(connection: NWConnection, queue: DispatchQueue) {
+    init(connection: Connection, queue: DispatchQueue) {
         self.connection = connection
         self.queue = queue
     }
@@ -235,15 +313,15 @@ final class WebSocket: @unchecked Sendable {
         queue.async {
             guard !self.closed else { return }
             self.adjustPending(1)
-            self.connection.send(content: bytes, completion: .contentProcessed { [weak self] error in
+            self.connection.send(bytes) { [weak self] error in
                 self?.adjustPending(-1)
                 if error != nil { self?.finish(sendClose: false) }
-            })
+            }
         }
     }
 
     private func receive() {
-        connection.receive(minimumIncompleteLength: 1, maximumLength: 1 << 20) { [weak self] data, _, done, error in
+        connection.receive(maximumLength: 1 << 20) { [weak self] data, done, error in
             guard let self else { return }
             if let data { self.buffer.append(data) }
             while let (opcode, fin, payload) = self.nextFrame() { self.handle(opcode: opcode, fin: fin, payload: payload) }
@@ -299,7 +377,7 @@ final class WebSocket: @unchecked Sendable {
         guard !closed else { return }
         closed = true
         if sendClose {
-            connection.send(content: Data([0x88, 0x00]), completion: .contentProcessed { [connection] _ in connection.cancel() })
+            connection.send(Data([0x88, 0x00])) { [connection] _ in connection.cancel() }
         } else {
             connection.cancel()
         }

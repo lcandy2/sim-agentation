@@ -4,7 +4,7 @@ import PackageDescription
 
 // No third-party dependencies: CoreSimulator and SimulatorKit are private
 // frameworks loaded at runtime with dlopen, and HTTP/WebSocket is built on
-// Network.framework.
+// BSD sockets.
 let package = Package(
     name: "SimAgentationHost",
     platforms: [.macOS(.v15)],

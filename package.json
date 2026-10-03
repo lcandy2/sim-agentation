@@ -1,17 +1,14 @@
 {
   "name": "sim-agentation",
   "version": "0.1.0",
+  "private": true,
   "description": "Annotate a running iOS simulator in the browser and hand the feedback to coding agents over MCP.",
   "type": "module",
-  "bin": {
-    "sim-agentation": "src/cli.ts"
-  },
   "scripts": {
-    "dev": "bun src/cli.ts serve --open",
-    "mcp": "bun src/cli.ts mcp"
-  },
-  "engines": {
-    "bun": ">=1.1"
+    "build": "vite build && swift build --package-path host",
+    "dev": "vite build --watch",
+    "start": "host/.build/debug/sim-agentation serve --open",
+    "mcp": "host/.build/debug/sim-agentation mcp"
   },
   "license": "MIT",
   "devDependencies": {

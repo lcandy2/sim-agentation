@@ -1,54 +1,67 @@
 import Foundation
 import SimBridge
 
-// sim-agentation host. For now it serves the simulator side the web UI
-// needs (device list, boot, the stream socket); the annotation server moves
-// here next.
+// sim-agentation: the browser UI's server and the MCP server, in one binary.
+//
+//   sim-agentation serve [--port 38470] [--open]
+//   sim-agentation mcp
 
-let arguments = CommandLine.arguments.dropFirst()
-let port = arguments.firstIndex(of: "--port").flatMap { arguments.index(after: $0) < arguments.endIndex ? UInt16(arguments[arguments.index(after: $0)]) : nil } ?? 38472
+let arguments = Array(CommandLine.arguments.dropFirst())
+// No command means serve.
+let command = arguments.first.flatMap { $0.hasPrefix("-") ? nil : $0 } ?? "serve"
 
-func deviceJSON(_ d: SimulatorDevice) -> [String: Any] {
-    ["udid": d.udid, "name": d.name, "runtime": d.runtime, "state": d.state.rawValue, "deviceType": d.deviceType]
+func option(_ name: String) -> String? {
+    guard let i = arguments.firstIndex(of: name), i + 1 < arguments.count else { return nil }
+    return arguments[i + 1]
 }
 
-/// Matches a path against a pattern like "/api/devices/:udid/boot" and
-/// returns the captured segments, or nil.
-func route(_ request: HTTPServer.Request, _ method: String, _ pattern: String) -> [String]? {
-    guard request.method == method else { return nil }
-    let path = request.path.split(separator: "/").map(String.init)
-    let want = pattern.split(separator: "/").map(String.init)
-    guard path.count == want.count else { return nil }
-    var captured: [String] = []
-    for (segment, expected) in zip(path, want) {
-        if expected.hasPrefix(":") { captured.append(segment.removingPercentEncoding ?? segment) }
-        else if segment != expected { return nil }
-    }
-    return captured
+func fail(_ message: String) -> Never {
+    FileHandle.standardError.write(Data("\(message)\n".utf8))
+    exit(1)
 }
 
-let server = try HTTPServer(port: port) { request in
-    if route(request, "GET", "/simulators") != nil || route(request, "GET", "/health") != nil {
-        return .respond(.json(["ok": true]))
+switch command {
+case "serve":
+    var port = Config.defaultPort
+    if let value = option("--port") {
+        guard let parsed = UInt16(value) else { fail("sim-agentation: bad --port \(value)") }
+        port = parsed
     }
-    if route(request, "GET", "/api/devices") != nil {
-        return .respond(.json(Simulators.shared.all().map(deviceJSON)))
+    let store = Store(home: Config.home)
+    let dist = Config.webDirectory.map { Path.join($0, "dist") }
+        .flatMap { FileManager.default.fileExists(atPath: Path.join($0, "index.html")) ? $0 : nil }
+    let app = AppServer(port: port, store: store, chrome: ChromeService(home: Config.home), dist: dist)
+    let server: HTTPServer
+    do {
+        server = try HTTPServer(port: port) { request in await app.handle(request) }
+        try await server.start()
+    } catch {
+        fail("sim-agentation: could not listen on 127.0.0.1:\(port) (\(error)). Is the port in use?")
     }
-    if let udid = route(request, "POST", "/api/devices/:udid/boot")?.first {
-        do {
-            try Simulators.shared.boot(udid)
-            return .respond(.json(["ok": true]))
-        } catch {
-            return .respond(.json(["error": "\(error)"], status: 500))
-        }
+    if Config.webDirectory == nil {
+        FileHandle.standardError.write(Data("sim-agentation: no web/ directory found; set SIM_AGENTATION_WEB\n".utf8))
+    } else if dist == nil {
+        FileHandle.standardError.write(Data("sim-agentation: the UI isn't built; run `pnpm build` in the repo\n".utf8))
     }
-    if let udid = route(request, "GET", "/simulators/:udid/stream")?.first {
-        guard Simulators.shared.find(udid) != nil else { return .respond(.text("no simulator \(udid)", status: 404)) }
-        return .upgrade { socket in DeviceSession(udid: udid, socket: socket).start() }
+    FileHandle.standardError.write(Data("sim-agentation: http://localhost:\(port)  (data in \(store.home))\n".utf8))
+    if arguments.contains("--open") {
+        let open = Process()
+        open.executableURL = URL(fileURLWithPath: "/usr/bin/open")
+        open.arguments = ["http://localhost:\(port)"]
+        try? open.run()
     }
-    return .respond(.text("not found", status: 404))
-}
+    // Accessibility (DeviceSession) runs on the main queue, which top-level
+    // async code keeps serviced while it sleeps here.
+    while true { try await Task.sleep(for: .seconds(3600)) }
 
-try await server.start()
-FileHandle.standardError.write(Data("sim-agentation host on http://127.0.0.1:\(port)\n".utf8))
-while true { try await Task.sleep(for: .seconds(3600)) }
+case "mcp":
+    await MCPServer(port: Config.defaultPort).run()
+    exit(0)
+
+default:
+    fail("""
+    Usage:
+      sim-agentation serve [--port N] [--open]   Start the browser UI on http://localhost:\(Config.defaultPort)
+      sim-agentation mcp                         Run the MCP server over stdio (for Claude Code, Codex, …)
+    """)
+}
