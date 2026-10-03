@@ -1,7 +1,7 @@
 <script>
   import { onMount, untrack } from 'svelte';
   import {
-    ui, MARGIN, ROTATION, attachStage, onStageResize, startDevice, pressButton, saveScreenshot, toggleRecording, rotate,
+    ui, MARGIN, ROTATION, attachStage, onStageResize, startDevice, saveScreenshot, toggleRecording, rotate,
     onPointerDown, onPointerMove, onPointerUp, onWheel, onScreenKey,
   } from '../lib/app.svelte.js';
   import { icon } from '../lib/icons.js';
@@ -26,23 +26,33 @@
   });
 
   // Device Hub brings a device in small and grows it to size: a device that
-  // appears grows in from 85%, and Start grows the picture from its preview
-  // size to its running size. Zooming and resizing don't animate.
+  // appears grows in from 85%, with its name and Start when it's shut down,
+  // and Start grows the picture from its preview size to its running size.
+  // Zooming and resizing don't animate. Going back within REPLAY_AFTER to a
+  // running device that has just been shown doesn't play it again.
+  const REPLAY_AFTER = 3000; // ms
+  let wrap = $state(null);
   let rotor = $state(null);
   let last = null; // { udid, running, scale } as last shown
+  const leftAt = new Map(); // udid → when another device replaced it
   $effect(() => {
     ui.shown;
     untrack(() => {
       const prev = last;
       last = { udid: ui.udid, running: ui.running, scale: ui.scale };
-      if (!rotor || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
       const same = prev?.udid === ui.udid;
-      if (same && prev.running === ui.running) return;
-      rotor.getAnimations().forEach((a) => a.cancel());
-      rotor.animate(
-        [{ transform: `scale(${same ? prev.scale / ui.scale : 0.85})`, opacity: same ? 1 : 0 }, { transform: 'none', opacity: 1 }],
-        { duration: 450, easing: 'cubic-bezier(0.2, 0.9, 0.25, 1)' },
-      );
+      if (prev && !same) leftAt.set(prev.udid, performance.now());
+      if (!rotor || !wrap || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      const easing = { duration: 450, easing: 'cubic-bezier(0.2, 0.9, 0.25, 1)' };
+      if (same) {
+        if (prev.running === ui.running) return;
+        rotor.getAnimations().forEach((a) => a.cancel());
+        rotor.animate([{ transform: `scale(${prev.scale / ui.scale})` }, { transform: 'none' }], easing);
+        return;
+      }
+      if (ui.running && performance.now() - (leftAt.get(ui.udid) ?? -Infinity) < REPLAY_AFTER) return;
+      wrap.getAnimations().forEach((a) => a.cancel());
+      wrap.animate([{ transform: 'scale(0.85)', opacity: 0 }, { transform: 'none', opacity: 1 }], easing);
     });
   });
 
@@ -83,7 +93,7 @@
 </script>
 
 <section class="stage" bind:this={stage}>
-  <div class="device-wrap" hidden={!!ui.message || !chrome}>
+  <div class="device-wrap" bind:this={wrap} hidden={!!ui.message || !chrome}>
     <div class="rotor" bind:this={rotor} style:width={px(sideways ? outer.h : outer.w)} style:height={px(sideways ? outer.w : outer.h)}>
       <div
         class="bezel"
@@ -165,7 +175,6 @@
   <footer class="canvas-bottom">
     <div class="bottom-row">
       <div class="pill" role="group" aria-label="Device">
-        <button class="icon-btn" title="Home" data-icon="home" onclick={() => pressButton('home')}>{@html icon('home')}</button>
         <button class="icon-btn" title="Save screenshot" data-icon="screenshot" onclick={saveScreenshot}>{@html icon('screenshot')}</button>
         <button
           class="icon-btn"

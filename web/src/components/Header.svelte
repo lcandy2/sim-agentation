@@ -45,8 +45,6 @@
     <div class="title-name">{ui.simName}</div>
     <div class="title-sub">
       <span>{ui.runtime}</span><span class="status">{status}</span>
-      <!-- In Design Mode, how to use it, with the rest of the status. -->
-      {#if ui.frozen && !ui.flash}<span class="status hint">Click or drag · ↑ parent · Esc to leave</span>{/if}
     </div>
   </div>
   <div class="toolbar">
