@@ -640,7 +640,10 @@ kbd {
   box-shadow: var(--menu-shadow);
   -webkit-backdrop-filter: blur(12.5px);
   backdrop-filter: blur(12.5px);
-  color: var(--control-label);
+  /* Figma's vibrant labels (#1a1a1a, plus-darker): burned into the glass
+     they come out black, which Chrome can't blend through glass, so the
+     color they land on. */
+  color: var(--menu-label);
   text-align: left;
 }
 .notice.glass-filtered { background: none; }
