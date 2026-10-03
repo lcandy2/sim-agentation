@@ -31,8 +31,8 @@ async function drawThumbnail(chrome, height) {
   const sc = new OffscreenCanvas(Math.ceil(screen.width * k), Math.ceil(screen.height * k));
   const sg = sc.getContext('2d');
   const grad = sg.createLinearGradient(0, 0, 0, sc.height);
-  grad.addColorStop(0, '#3d8bd9');
-  grad.addColorStop(1, '#62b0ef');
+  grad.addColorStop(0, '#3b8ed0'); // --preview-screen
+  grad.addColorStop(1, '#5aaced');
   sg.fillStyle = grad;
   sg.fillRect(0, 0, sc.width, sc.height);
   if (chrome.mask) {

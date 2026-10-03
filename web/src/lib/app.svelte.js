@@ -790,7 +790,7 @@ export async function submitComposer(comment) {
   const full = new OffscreenCanvas(img.width, img.height);
   const fc = full.getContext('2d');
   fc.drawImage(img, 0, 0);
-  fc.strokeStyle = '#ff3b30';
+  fc.strokeStyle = '#ff383c'; // --mark
   fc.lineWidth = Math.max(3, scale * 1.5);
   // Just outside the box, as on screen, so the line doesn't cover the text.
   const out = 1 + fc.lineWidth / scale / 2;

@@ -49,32 +49,38 @@
   --menu-label: #000000;
   --menu-disabled: rgba(0, 0, 0, 0.28); /* #bfbfbf */
   --menu-separator: rgba(0, 0, 0, 0.11); /* #e6e6e6 */
-  --menu-highlight: #0069f9;
+  --menu-highlight: var(--selection);
   /* macOS 27's small dialog (Figma, node 690:10197). */
   --sheet: #ffffff;
   --sheet-shadow: 0 0 0.4px rgba(0, 0, 0, 0.8), 0 18px 21.6px rgba(0, 0, 0, 0.3);
   --sheet-fill: rgba(0, 0, 0, 0.08);
   --sheet-field-border: rgba(0, 0, 0, 0.08);
-  --sheet-default: #0080f7; /* #08f under #f7f7f7 plus-darker */
-  --sheet-focus: rgba(0, 136, 255, 0.5);
+  --sheet-default: var(--accent);
+  --sheet-focus: color-mix(in srgb, var(--accent) 50%, transparent);
   --popup-chevrons: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='rgba(0,0,0,0.85)' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 9.5l3-3 3 3M9 14.5l3 3 3-3'/%3E%3C/svg%3E");
   --menu: #ffffff;
   --card: #ffffff;
   --segment: #ffffff;
-  --selection: #2962d9;
+  /* One palette, the Figma file's macOS 27 colors (Colors/Accents, and
+     Tables/BG - Selected + Active for anything selected): blue for what you
+     act on (buttons, links, focus, the caret, switches), the selection blue
+     behind what's selected (the device row, the menu's highlight). Device
+     Hub's row measures #2962d9 only because macOS's sidebar vibrancy
+     softens this same blue. */
+  --selection: #0165e2;
   --on-selection: #ffffff;
   --thumb: #ffffff;
   --thumb-off: rgba(0, 0, 0, 0.045);
   --start: rgba(0, 0, 0, 0.14);
   --on-start: rgba(0, 0, 0, 0.87);
-  --accent: #007aff;
-  --accent-tint: rgba(0, 122, 255, 0.06);
+  --accent: #0088ff;
+  --accent-tint: color-mix(in srgb, var(--accent) 6%, transparent);
   --on-accent: rgba(255, 255, 255, 0.92);
   --preview-screen: linear-gradient(#3b8ed0, #5aaced);
-  --mark: #ff3b30; /* annotations: the selection, markers */
-  --design: #5856d6; /* Design Mode: its button and the frozen device's outline */
-  --ok: #28a745;
-  --warn: #c77700;
+  --mark: #ff383c; /* red; annotations: the selection, markers */
+  --design: #6155f5; /* indigo; Design Mode: its button and the frozen device's outline */
+  --ok: #34c759; /* green */
+  --warn: #ff8d28; /* orange */
   --glass: rgba(255, 255, 255, 0.8);
   --glass-edge: rgba(0, 0, 0, 0.15);
   --glass-shadow: 0 3px 9px rgba(0, 0, 0, 0.08);
@@ -83,7 +89,10 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --design: #5e5ce6;
+    --design: #6d7cff;
+    --accent: #0091ff;
+    --selection: #0158d2;
+    --mark: #ff4245;
     /* Not yet measured against Device Hub in dark mode: macOS dark equivalents. */
     --window: #1c1c1c;
     --sidebar: #262626;
@@ -124,9 +133,9 @@
     --card: #1f1f1f;
     --segment: #3a3a3c;
     --thumb: rgba(255, 255, 255, 0.9);
-    --accent-tint: rgba(0, 122, 255, 0.08);
-    --ok: #32d74b;
-    --warn: #ffb340;
+    --accent-tint: color-mix(in srgb, var(--accent) 8%, transparent);
+    --ok: #30d158;
+    --warn: #ff9230;
     --glass: rgba(30, 30, 30, 0.8);
     --glass-edge: rgba(255, 255, 255, 0.1);
     color-scheme: dark;
@@ -376,7 +385,7 @@ button { cursor: default; }
   font-size: 13px;
   font-weight: 500;
 }
-.sheet .field { padding: 0 8px; background: var(--canvas); box-shadow: 0 0 0 1px var(--sheet-field-border); caret-color: #08f; }
+.sheet .field { padding: 0 8px; background: var(--canvas); box-shadow: 0 0 0 1px var(--sheet-field-border); caret-color: var(--accent); }
 .sheet .field:focus { box-shadow: 0 0 0 1px var(--sheet-field-border), 0 0 0 3.5px var(--sheet-focus), inset 0 0 0 1px var(--sheet-focus); }
 /* macOS 27's pop-up button (the dialog's, node 690:10197), here and in the
    inspector's settings. */
@@ -639,7 +648,7 @@ kbd {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.sel { outline: 2px solid var(--mark); outline-offset: 1px; background: rgba(255, 59, 48, 0.1); border-radius: 3px; }
+.sel { outline: 2px solid var(--mark); outline-offset: 1px; background: color-mix(in srgb, var(--mark) 10%, transparent); border-radius: 3px; }
 .marker {
   width: 20px;
   height: 20px;
@@ -740,7 +749,7 @@ kbd {
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
   transition: transform 0.15s;
 }
-.switch:checked { background: var(--ok); }
+.switch:checked { background: var(--accent); } /* macOS switches take the accent */
 .switch:checked::after { transform: translateX(13px); }
 
 .info { display: grid; grid-template-columns: auto 1fr; gap: 8px 14px; margin: 12px 0 0; }
