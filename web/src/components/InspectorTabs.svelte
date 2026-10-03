@@ -3,8 +3,8 @@
   import { icon } from '../lib/icons.js';
 
   // The inspector's tabs, which also open and close it: a tab opens the
-  // inspector on it, and the open tab closes it. In the inspector while it's
-  // open, at the end of the canvas's top bar while it's closed.
+  // inspector on it, and the open tab closes it. They stay at the window's
+  // top right either way.
   const TABS = [
     { id: 'info', icon: 'info', title: 'Info and Settings' },
     { id: 'annotations', icon: 'doc', title: 'Annotations' },

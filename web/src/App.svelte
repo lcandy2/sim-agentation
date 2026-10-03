@@ -6,6 +6,7 @@
   import Header from './components/Header.svelte';
   import DeviceStage from './components/DeviceStage.svelte';
   import Inspector from './components/Inspector.svelte';
+  import InspectorTabs from './components/InspectorTabs.svelte';
   import Composer from './components/Composer.svelte';
 
   onMount(() => {
@@ -23,6 +24,9 @@
     <DeviceStage />
   </main>
   <Inspector />
+  <!-- The inspector's tabs stay at the window's top right whether it's open
+       or closed; closing takes only the panel away. -->
+  <div class="inspector-tabs"><InspectorTabs /></div>
 </div>
 
 {#if ui.draft}

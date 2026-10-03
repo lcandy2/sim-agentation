@@ -4,7 +4,6 @@
     copyPending, clearDone, saveScreenshot, pressButton,
   } from '../lib/app.svelte.js';
   import { icon } from '../lib/icons.js';
-  import InspectorTabs from './InspectorTabs.svelte';
   import Popover from './Popover.svelte';
 
   const status = $derived(ui.flash ?? ui.status);
@@ -44,7 +43,11 @@
   </div>
   <div class="title">
     <div class="title-name">{ui.simName}</div>
-    <div class="title-sub"><span>{ui.runtime}</span><span class="status">{status}</span></div>
+    <div class="title-sub">
+      <span>{ui.runtime}</span><span class="status">{status}</span>
+      <!-- In Design Mode, how to use it, with the rest of the status. -->
+      {#if ui.frozen && !ui.flash}<span class="status hint">Click or drag · ↑ parent · Esc to leave</span>{/if}
+    </div>
   </div>
   <div class="toolbar">
     <div class="pill segmented" role="group" aria-label="Mode">
@@ -101,7 +104,5 @@
         {/snippet}
       </Popover>
     </div>
-    <!-- The inspector's tabs come out here while it's closed, to open it again. -->
-    {#if !ui.panels.inspector}<InspectorTabs />{/if}
   </div>
 </header>

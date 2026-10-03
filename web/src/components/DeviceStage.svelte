@@ -163,9 +163,6 @@
 
 {#if ui.running}
   <footer class="canvas-bottom">
-    {#if ui.frozen}
-      <div id="frozen-badge" class="glass">Click or drag · ↑ parent · Esc to resume</div>
-    {/if}
     <div class="bottom-row">
       <div class="pill" role="group" aria-label="Device">
         <button class="icon-btn" title="Home" data-icon="home" onclick={() => pressButton('home')}>{@html icon('home')}</button>

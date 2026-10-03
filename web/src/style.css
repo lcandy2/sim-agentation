@@ -619,12 +619,6 @@ kbd {
 .bottom-row { display: flex; gap: 8px; }
 .canvas-bottom .pill { pointer-events: auto; }
 .icon-btn.recording { color: var(--mark); opacity: 1; }
-#frozen-badge {
-  white-space: nowrap;
-  padding: 6px 14px;
-  border-radius: 999px;
-  font-size: 12px;
-}
 
 /* Selection layers on the screen. --unrotate turns labels and markers back
    upright when the device is turned. */
@@ -671,7 +665,15 @@ kbd {
   background: var(--inspector);
   border-left: 1px solid var(--separator);
 }
-.inspector-top { height: 52px; flex: none; display: flex; align-items: center; justify-content: flex-end; padding: 0 9px; }
+.inspector-top { height: 52px; flex: none; }
+/* The inspector's tabs stay where they are, at the window's top right;
+   closing the inspector takes only the panel away, and the canvas's toolbar
+   moves over beside them, in the panel's motion. */
+.window { --inspector-tabs-w: 75px; }
+.inspector-tabs { position: absolute; z-index: 6; top: 8px; right: 9px; }
+.canvas-top { transition: padding-right 320ms cubic-bezier(0.4, 0, 0.2, 1); }
+.window.no-inspector .canvas-top { padding-right: calc(9px + var(--inspector-tabs-w) + 8px); }
+@media (prefers-reduced-motion: reduce) { .canvas-top { transition: none; } }
 .tab-badge {
   position: absolute;
   top: 2px;
