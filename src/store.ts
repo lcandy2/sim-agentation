@@ -1,9 +1,10 @@
-import { mkdirSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, existsSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 
-export type Status = 'pending' | 'acknowledged' | 'resolved' | 'dismissed';
+export const STATUSES = ['pending', 'acknowledged', 'resolved', 'dismissed'] as const;
+export type Status = (typeof STATUSES)[number];
 
 export interface NodeSummary {
   role: string;
@@ -58,7 +59,11 @@ function load(): Annotation[] {
   if (!existsSync(FILE)) return [];
   try {
     return JSON.parse(readFileSync(FILE, 'utf8'));
-  } catch {
+  } catch (err) {
+    // Keep the unreadable file for recovery rather than overwriting it on the next save.
+    const aside = FILE.replace(/\.json$/, `.corrupt-${Date.now()}.json`);
+    renameSync(FILE, aside);
+    console.error(`sim-agentation: could not read ${FILE} (${(err as Error).message}); moved it to ${aside}`);
     return [];
   }
 }
@@ -67,7 +72,9 @@ let annotations = load();
 const listeners = new Set<() => void>();
 
 function save() {
-  writeFileSync(FILE, JSON.stringify(annotations, null, 2));
+  // Write then rename, so a crash mid-write never leaves a truncated file.
+  writeFileSync(`${FILE}.tmp`, JSON.stringify(annotations, null, 2));
+  renameSync(`${FILE}.tmp`, FILE);
   for (const fn of listeners) fn();
 }
 
@@ -80,8 +87,12 @@ export function list(status?: Status) {
   return status ? annotations.filter((a) => a.status === status) : annotations;
 }
 
+// By full id, or by a prefix of at least 4 characters that matches exactly one annotation.
 export function get(id: string) {
-  return annotations.find((a) => a.id === id || a.id.startsWith(id)) ?? null;
+  const exact = annotations.find((a) => a.id === id);
+  if (exact || id.length < 4) return exact ?? null;
+  const matches = annotations.filter((a) => a.id.startsWith(id));
+  return matches.length === 1 ? matches[0] : null;
 }
 
 export function newId() {
@@ -104,6 +115,9 @@ export function update(id: string, patch: Partial<Annotation>, reply?: Reply) {
 }
 
 export function clearFinished() {
-  annotations = annotations.filter((a) => a.status === 'pending' || a.status === 'acknowledged');
+  const open = (a: Annotation) => a.status === 'pending' || a.status === 'acknowledged';
+  const finished = annotations.filter((a) => !open(a));
+  annotations = annotations.filter(open);
   save();
+  for (const a of finished) for (const path of [a.images.full, a.images.crop]) rmSync(path, { force: true });
 }

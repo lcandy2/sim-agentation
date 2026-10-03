@@ -1,6 +1,6 @@
 // Minimal MCP stdio server. Every tool is a thin call into the HTTP API,
 // so the browser UI and the agent always see the same store.
-import { PORT } from './server';
+import { PORT } from './config';
 import { toMarkdown } from './format';
 import type { Annotation } from './store';
 
@@ -88,16 +88,31 @@ function send(msg: object) {
   process.stdout.write(JSON.stringify(msg) + '\n');
 }
 
-async function handle(msg: any) {
-  const { id, method, params } = msg;
+// Newest first. This server only uses tools, which work the same in all of them.
+const PROTOCOL_VERSIONS = ['2025-11-25', '2025-06-18', '2025-03-26', '2024-11-05'];
+
+class RpcError extends Error {
+  constructor(readonly code: number, message: string) {
+    super(message);
+  }
+}
+
+async function handle(msg: unknown) {
+  if (typeof msg !== 'object' || msg === null || Array.isArray(msg)) {
+    return send({ jsonrpc: '2.0', id: null, error: { code: -32600, message: 'invalid request' } });
+  }
+  const { id, method, params } = msg as { id?: string | number | null; method?: unknown; params?: any };
   if (id === undefined) return; // notification
   try {
+    if (typeof method !== 'string') throw new RpcError(-32600, 'invalid request: method must be a string');
     if (method === 'initialize') {
+      const requested = params?.protocolVersion;
       return send({
         jsonrpc: '2.0',
         id,
         result: {
-          protocolVersion: params?.protocolVersion ?? '2025-06-18',
+          // Echo the client's version when we support it, otherwise offer our newest.
+          protocolVersion: PROTOCOL_VERSIONS.includes(requested) ? requested : PROTOCOL_VERSIONS[0],
           capabilities: { tools: {} },
           serverInfo: { name: 'sim-agentation', version: '0.1.0' },
           instructions:
@@ -121,8 +136,9 @@ async function handle(msg: any) {
       });
     }
     if (method === 'tools/call') {
-      const tool = tools[params.name];
-      if (!tool) throw new Error(`unknown tool ${params.name}`);
+      const name = params?.name;
+      const tool = typeof name === 'string' && Object.hasOwn(tools, name) ? tools[name] : undefined;
+      if (!tool) throw new RpcError(-32602, `unknown tool: ${name}`);
       await ensureServer();
       try {
         const text = await tool.run(params.arguments ?? {});
@@ -133,7 +149,8 @@ async function handle(msg: any) {
     }
     send({ jsonrpc: '2.0', id, error: { code: -32601, message: `method not found: ${method}` } });
   } catch (err) {
-    send({ jsonrpc: '2.0', id, error: { code: -32603, message: (err as Error).message } });
+    const code = err instanceof RpcError ? err.code : -32603;
+    send({ jsonrpc: '2.0', id, error: { code, message: (err as Error).message } });
   }
 }
 
@@ -146,7 +163,15 @@ export async function mcp() {
     while ((nl = buffer.indexOf('\n')) >= 0) {
       const line = buffer.slice(0, nl).trim();
       buffer = buffer.slice(nl + 1);
-      if (line) handle(JSON.parse(line));
+      if (!line) continue;
+      let msg: unknown;
+      try {
+        msg = JSON.parse(line);
+      } catch {
+        send({ jsonrpc: '2.0', id: null, error: { code: -32700, message: 'parse error' } });
+        continue;
+      }
+      handle(msg);
     }
   }
 }

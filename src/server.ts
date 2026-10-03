@@ -1,12 +1,12 @@
 import { join } from 'node:path';
 import type { ServerWebSocket } from 'bun';
+import { PORT } from './config';
 import * as store from './store';
 import { toMarkdown } from './format';
 import { hitTest, nodesInRect, screenContext, summarize } from '../web/ax.js';
 
-export const PORT = Number(process.env.SIM_AGENTATION_PORT || 4848);
 const BAGUETTE = process.env.BAGUETTE_URL || 'http://127.0.0.1:8421';
-const SDK = process.env.SIM_AGENTATION_SDK_URL || 'http://127.0.0.1:4850';
+const SDK = process.env.SIM_AGENTATION_SDK_URL || 'http://127.0.0.1:38471';
 const WEB = join(import.meta.dir, '..', 'web');
 
 async function baguetteUp() {
@@ -47,6 +47,33 @@ async function devices() {
 
 const json = (data: unknown, status = 200) => Response.json(data, { status });
 
+// Only this UI may talk to us. Host stops DNS rebinding; Origin stops other
+// pages in the user's browser (WebSockets and "simple" POSTs skip CORS).
+// Non-browser clients such as the MCP server send no Origin and are allowed.
+const LOCAL_HOSTS = new Set([`localhost:${PORT}`, `127.0.0.1:${PORT}`]);
+const LOCAL_ORIGINS = new Set([...LOCAL_HOSTS].map((h) => `http://${h}`));
+
+function rejectForeign(req: Request) {
+  if (!LOCAL_HOSTS.has(req.headers.get('host') ?? '')) return new Response('forbidden host', { status: 403 });
+  const origin = req.headers.get('origin');
+  if (origin && !LOCAL_ORIGINS.has(origin)) return new Response('forbidden origin', { status: 403 });
+  const writes = req.method === 'POST' || req.method === 'PATCH';
+  if (writes && !req.headers.get('content-type')?.startsWith('application/json')) {
+    return new Response('expected application/json', { status: 415 });
+  }
+  return null;
+}
+
+async function file(path: string, headers: HeadersInit) {
+  const f = Bun.file(path);
+  return (await f.exists()) ? new Response(f, { headers }) : new Response('not found', { status: 404 });
+}
+
+class BadRequest extends Error {}
+
+const isObject = (v: unknown): v is Record<string, any> => typeof v === 'object' && v !== null && !Array.isArray(v);
+const isRect = (r: any) => isObject(r) && ['x', 'y', 'width', 'height'].every((k) => Number.isFinite(r[k]));
+
 interface CreateBody {
   udid: string;
   comment: string;
@@ -63,17 +90,18 @@ interface CreateBody {
 }
 
 async function createAnnotation(body: CreateBody) {
-  if (!body.comment?.trim()) throw new Error('comment is required');
-  const id = store.newId();
-  const full = join(store.IMAGES, `${id}-full.jpg`);
-  const crop = join(store.IMAGES, `${id}-crop.jpg`);
-  await Bun.write(full, Buffer.from(body.full, 'base64'));
-  await Bun.write(crop, Buffer.from(body.crop, 'base64'));
+  if (!isObject(body)) throw new BadRequest('expected a JSON object');
+  if (typeof body.comment !== 'string' || !body.comment.trim()) throw new BadRequest('comment is required');
+  if (typeof body.udid !== 'string' || !isRect(body.rect)) throw new BadRequest('udid and rect are required');
+  if (typeof body.full !== 'string' || typeof body.crop !== 'string') throw new BadRequest('full and crop images are required');
+  const tree = isObject(body.tree) ? body.tree : null;
+  const point = isObject(body.point) && Number.isFinite(body.point.x) && Number.isFinite(body.point.y) ? body.point : null;
 
-  const hit = body.kind === 'element' && body.point ? hitTest(body.tree, body.point.x, body.point.y) : null;
+  const hit = body.kind === 'element' && point && tree ? hitTest(tree, point.x, point.y) : null;
   const device = (await devices().catch(() => [])).find((d: any) => d.udid === body.udid);
+  const id = store.newId();
   const now = new Date().toISOString();
-  return store.add({
+  const annotation: store.Annotation = {
     id,
     createdAt: now,
     updatedAt: now,
@@ -84,16 +112,42 @@ async function createAnnotation(body: CreateBody) {
     rect: body.rect,
     target: hit ? summarize(hit.node) : null,
     targetPath: hit ? hit.path.slice(1) : [],
-    inside: nodesInRect(body.tree, body.rect).slice(0, 20).map((e: any) => summarize(e.node)),
-    screen: screenContext(body.tree),
-    app: body.app ?? { bundleId: null, name: body.tree?.label?.trim() || null },
-    source: body.source ?? [],
-    views: body.views ?? [],
-    controller: body.controller ?? null,
-    images: { full, crop },
+    inside: tree ? nodesInRect(tree, body.rect).slice(0, 20).map((e: any) => summarize(e.node)) : [],
+    screen: screenContext(tree),
+    app: isObject(body.app) ? body.app as store.Annotation['app'] : { bundleId: null, name: tree?.label?.trim() || null },
+    source: Array.isArray(body.source) ? body.source : [],
+    views: Array.isArray(body.views) ? body.views : [],
+    controller: typeof body.controller === 'string' ? body.controller : null,
+    images: { full: join(store.IMAGES, `${id}-full.jpg`), crop: join(store.IMAGES, `${id}-crop.jpg`) },
     replies: [],
     resolution: null,
-  });
+  };
+  // Images last, so a rejected request leaves nothing behind.
+  await Bun.write(annotation.images.full, Buffer.from(body.full, 'base64'));
+  await Bun.write(annotation.images.crop, Buffer.from(body.crop, 'base64'));
+  return store.add(annotation);
+}
+
+function parsePatch(body: unknown) {
+  if (!isObject(body)) throw new BadRequest('expected a JSON object');
+  const patch: Partial<store.Annotation> = {};
+  if (body.status !== undefined) {
+    if (!store.STATUSES.includes(body.status)) throw new BadRequest(`bad status ${body.status}`);
+    patch.status = body.status;
+  }
+  if (body.resolution !== undefined) {
+    if (body.resolution !== null && typeof body.resolution !== 'string') throw new BadRequest('resolution must be a string or null');
+    patch.resolution = body.resolution;
+  }
+  let reply: store.Reply | undefined;
+  if (body.reply !== undefined) {
+    const r = body.reply;
+    if (!isObject(r) || (r.from !== 'agent' && r.from !== 'human') || typeof r.message !== 'string' || !r.message.trim()) {
+      throw new BadRequest('reply must be { from: "agent" | "human", message: string }');
+    }
+    reply = { from: r.from, message: r.message.trim(), at: new Date().toISOString() };
+  }
+  return { patch, reply };
 }
 
 // Resolves on the next store change or after the timeout.
@@ -118,18 +172,24 @@ export async function serve() {
     port: PORT,
     hostname: '127.0.0.1',
     idleTimeout: 120,
+    development: false, // no error pages with stack traces and local paths
 
     async fetch(req, server) {
+      const forbidden = rejectForeign(req);
+      if (forbidden) return forbidden;
       const url = new URL(req.url);
       const path = url.pathname;
       const parts = path.split('/').filter(Boolean);
 
       try {
         // no-store: the UI changes often during development and stale modules break it silently.
-        const fresh = { headers: { 'cache-control': 'no-store' } };
-        if (path === '/' || path === '/index.html') return new Response(Bun.file(join(WEB, 'index.html')), fresh);
-        if (parts[0] === 'web' && parts.length === 2) return new Response(Bun.file(join(WEB, parts[1])), fresh);
-        if (parts[0] === 'images' && parts.length === 2) return new Response(Bun.file(join(store.IMAGES, parts[1])));
+        const fresh = { 'cache-control': 'no-store' };
+        if (path === '/' || path === '/index.html') return file(join(WEB, 'index.html'), fresh);
+        if (parts[0] === 'web' && parts.length === 2) return file(join(WEB, parts[1]), fresh);
+        // Image names carry the annotation id and never change.
+        if (parts[0] === 'images' && parts.length === 2) {
+          return file(join(store.IMAGES, parts[1]), { 'cache-control': 'private, max-age=31536000, immutable' });
+        }
 
         // Stream proxy. baguette refuses cross-origin sockets, so the
         // browser talks to us and we talk to baguette.
@@ -168,7 +228,8 @@ export async function serve() {
           return json({ ok: true });
         }
         if (path === '/api/wait') {
-          const timeout = Math.min(Number(url.searchParams.get('timeout') || 60), 110) * 1000;
+          const requested = Number(url.searchParams.get('timeout'));
+          const timeout = Math.min(requested > 0 ? requested : 60, 110) * 1000;
           const deadline = Date.now() + timeout;
           while (!store.list('pending').length && Date.now() < deadline) {
             await nextChange(deadline - Date.now());
@@ -180,22 +241,14 @@ export async function serve() {
           if (!a) return json({ error: 'not found' }, 404);
           if (req.method === 'GET') return json({ ...a, markdown: toMarkdown(a) });
           if (req.method === 'PATCH') {
-            const body = await req.json();
-            const patch: Partial<store.Annotation> = {};
-            if (body.status) {
-              if (!['pending', 'acknowledged', 'resolved', 'dismissed'].includes(body.status)) {
-                return json({ error: `bad status ${body.status}` }, 400);
-              }
-              patch.status = body.status;
-            }
-            if (body.resolution !== undefined) patch.resolution = body.resolution;
-            const reply = body.reply ? { ...body.reply, at: new Date().toISOString() } : undefined;
+            const { patch, reply } = parsePatch(await req.json());
             return json(store.update(a.id, patch, reply));
           }
         }
         return new Response('not found', { status: 404 });
       } catch (err) {
-        return json({ error: (err as Error).message }, 500);
+        const bad = err instanceof BadRequest || err instanceof SyntaxError; // SyntaxError: body isn't JSON
+        return json({ error: (err as Error).message }, bad ? 400 : 500);
       }
     },
 

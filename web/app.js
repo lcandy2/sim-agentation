@@ -185,6 +185,8 @@ $('btn-lock').onclick = () => send({ type: 'button', button: 'lock' });
 
 async function setMode(mode) {
   if (mode === state.mode) return;
+  // Nothing to freeze yet (no frame, or the device layout failed to load).
+  if (mode === 'annotate' && (!state.frame || !state.layout)) return;
   state.mode = mode;
   $('mode-interact').classList.toggle('on', mode === 'interact');
   $('mode-annotate').classList.toggle('on', mode === 'annotate');
@@ -192,7 +194,6 @@ async function setMode(mode) {
   closeComposer();
 
   if (mode === 'annotate') {
-    if (!state.frame) return;
     // Freeze the frame on screen right now, then fetch the accessibility tree
     // and SDK data and warm the pixel regions while those requests are out.
     const data = Promise.all([
@@ -469,14 +470,15 @@ async function submit(draft, comment) {
     crop: await toBase64(crop),
   };
   const res = await fetch('/api/annotations', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
-  if (!res.ok) return setStatus((await res.json()).error || 'Save failed');
+  if (!res.ok) return setStatus((await res.json().catch(() => null))?.error || 'Save failed');
+  refresh();
+  if (state.frozen !== f) return; // resumed while saving: no marker on the live screen
 
   f.marks.push(r);
   const marker = Object.assign(document.createElement('div'), { className: 'marker', textContent: f.marks.length });
   marker.style.left = `${(r.x / f.points.width) * 100}%`;
   marker.style.top = `${(r.y / f.points.height) * 100}%`;
   overlay.append(marker);
-  refresh();
 }
 
 async function toBase64(offscreen) {
@@ -508,8 +510,13 @@ document.addEventListener('keydown', (e) => {
 
 // ---------- sidebar ----------
 
+let lastList = null;
+
 async function refresh() {
-  const list = await fetch('/api/annotations').then((r) => r.json()).catch(() => []);
+  const text = await fetch('/api/annotations').then((r) => (r.ok ? r.text() : null)).catch(() => null);
+  if (text === null || text === lastList) return; // unchanged: keep the DOM and thumbnails
+  lastList = text;
+  const list = JSON.parse(text);
   $('empty').hidden = list.length > 0;
   $('list').replaceChildren(...list.slice().reverse().map(renderItem));
 }
@@ -588,11 +595,21 @@ async function useDevice(udid, boot) {
   await setMode('interact');
   if (boot) {
     setStatus('Booting…');
-    await fetch(`/api/sims/${udid}/boot`, { method: 'POST' });
+    await fetch(`/api/sims/${udid}/boot`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' });
   }
   localStorageSet('udid', udid);
-  state.layout = await fetch(`/api/sims/${udid}/layout`).then((r) => r.json());
+  const res = await fetch(`/api/sims/${udid}/layout`).catch(() => null);
+  state.layout = res?.ok ? await res.json() : null;
   state.frame = null;
+  if (!state.layout) {
+    // Stop the previous device's stream so it doesn't keep painting or reconnecting.
+    const ws = state.ws;
+    state.ws = null;
+    ws?.close();
+    const error = (await res?.json().catch(() => null))?.error;
+    setStatus(error ? `Can't read the device layout: ${error}` : "Can't read the device layout");
+    return;
+  }
   connect(udid);
 }
 
