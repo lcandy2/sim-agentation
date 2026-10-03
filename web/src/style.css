@@ -18,7 +18,11 @@
   --pressed: rgba(0, 0, 0, 0.1);
   --field: rgba(0, 0, 0, 0.07);
   --fill: rgba(0, 0, 0, 0.05);
-  /* macOS 27's Segmented Control (Figma, macOS 27 Community, node 4370:41840).
+  /* Figma's shadow radii are 0.8 of a CSS blur's: its menu's 48 falls off
+     as CSS's 38 does (measured against its render, within 1 level of 255).
+     The shadows below are converted so.
+
+     macOS 27's Segmented Control (Figma, macOS 27 Community, node 4370:41840).
      Its Fill is white 25% over black 25%, then #444 60% plus-lighter, then
      #f8f8f8 20% luminosity; over any backdrop the first two come to exactly
      #efefef at 43.75%. Its selection (#e6e6e6) and separators (#d9d9d9)
@@ -29,7 +33,7 @@
   --control-luminosity: rgba(248, 248, 248, 0.2);
   /* Its drop shadows: hairlines that Linear Burn #e8e8e8 and #d0d0d0 into
      what's behind (black at what they take away), then a soft shadow. */
-  --control-shadow: 1.25px 0 0 -0.75px rgba(0, 0, 0, 0.184), -1.25px 0 0 -0.75px rgba(0, 0, 0, 0.184), 0 0 0 0.5px rgba(0, 0, 0, 0.09), 0 8px 15px rgba(0, 0, 0, 0.02);
+  --control-shadow: 1.25px 0 0 -0.75px rgba(0, 0, 0, 0.184), -1.25px 0 0 -0.75px rgba(0, 0, 0, 0.184), 0 0 0 0.5px rgba(0, 0, 0, 0.09), 0 8px 12px rgba(0, 0, 0, 0.02);
   --control-label: #1a1a1a;
   --control-secondary: #727272;
   --control-on: rgba(0, 0, 0, 0.1);
@@ -38,7 +42,7 @@
      behind; this is the fallback), hairlines that Linear Burn #dbdbdb, and
      a deep shadow. */
   --menu-fill: linear-gradient(rgba(217, 217, 217, 0.4) 0 0), rgba(217, 217, 217, 0.55);
-  --menu-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.141), 1.25px 0 0 -0.75px rgba(0, 0, 0, 0.141), -1.25px 0 0 -0.75px rgba(0, 0, 0, 0.141), 0 8px 48px rgba(0, 0, 0, 0.25);
+  --menu-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.141), 1.25px 0 0 -0.75px rgba(0, 0, 0, 0.141), -1.25px 0 0 -0.75px rgba(0, 0, 0, 0.141), 0 8px 38px rgba(0, 0, 0, 0.25);
   /* Its labels and separators are vibrant, burned in (plus-darker), which
      Chrome can't blend through the glass: these land where Figma's do on
      the menu over a white page (#1a1a1a burns to black). */
@@ -48,7 +52,7 @@
   --menu-highlight: #0069f9;
   /* macOS 27's small dialog (Figma, node 690:10197). */
   --sheet: #ffffff;
-  --sheet-shadow: 0 0 0.5px rgba(0, 0, 0, 0.8), 0 18px 27px rgba(0, 0, 0, 0.3);
+  --sheet-shadow: 0 0 0.4px rgba(0, 0, 0, 0.8), 0 18px 21.6px rgba(0, 0, 0, 0.3);
   --sheet-fill: rgba(0, 0, 0, 0.08);
   --sheet-field-border: rgba(0, 0, 0, 0.08);
   --sheet-default: #0080f7; /* #08f under #f7f7f7 plus-darker */
@@ -477,13 +481,13 @@ kbd {
   display: grid;
   place-items: center;
   /* The bottom padding keeps the device clear of the floating button bar and
-  /* The device is a picture to click and drag on, never a selection. */
-  -webkit-user-select: none;
-  user-select: none;
      leaves room for its shadow; fit-to-window sizes the device inside it. */
   /* Fit to window as in Device Hub: the bezel 21 pt under the toolbar and
      20 pt over the button bar (the 14 pt button margin is inside this). */
   padding: 5px 24px 48px;
+  /* The device is a picture to click and drag on, never a selection. */
+  -webkit-user-select: none;
+  user-select: none;
 }
 /* Shut down, Device Hub centers the picture, name and Start on the window's middle. */
 .canvas.offline .stage { padding-bottom: 61px; }
