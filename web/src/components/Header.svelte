@@ -11,21 +11,21 @@
   // The … menu: what has no button of its own in Device Hub's toolbar.
   const menu = $derived([
     [
-      { label: 'Copy Pending Annotations', run: copyPending },
-      { label: 'Remove Resolved Annotations', run: clearDone },
+      { label: 'Copy Pending Annotations', icon: 'copy', run: copyPending },
+      { label: 'Remove Resolved Annotations', icon: 'clear-done', run: clearDone },
     ],
     [
-      { label: 'Save Screenshot', run: saveScreenshot, disabled: !ui.running },
-      { label: 'Lock', run: () => pressButton('lock'), disabled: !ui.running },
-      { label: 'App Switcher', run: () => pressButton('app-switcher'), disabled: !ui.running },
+      { label: 'Save Screenshot', icon: 'screenshot', run: saveScreenshot, disabled: !ui.running },
+      { label: 'Lock', icon: 'lock', run: () => pressButton('lock'), disabled: !ui.running },
+      { label: 'App Switcher', icon: 'app-switcher', run: () => pressButton('app-switcher'), disabled: !ui.running },
     ],
     [
-      { label: 'Stream Settings', run: () => setInspectorTab('settings') },
-      { label: 'Device Info', run: () => setInspectorTab('info') },
+      { label: 'Stream Settings', icon: 'sliders', run: () => setInspectorTab('settings') },
+      { label: 'Device Info', icon: 'info', run: () => setInspectorTab('info') },
     ],
     [
-      { label: ui.panels.sidebar ? 'Hide Device List' : 'Show Device List', run: () => togglePanel('sidebar') },
-      { label: ui.panels.inspector ? 'Hide Inspector' : 'Show Inspector', run: () => togglePanel('inspector') },
+      { label: ui.panels.sidebar ? 'Hide Device List' : 'Show Device List', icon: 'sidebar', run: () => togglePanel('sidebar') },
+      { label: ui.panels.inspector ? 'Hide Inspector' : 'Show Inspector', icon: 'inspector', run: () => togglePanel('inspector') },
     ],
   ]);
 </script>
@@ -89,7 +89,7 @@
             {#each menu as group, i (i)}
               {#if i}<hr>{/if}
               {#each group as item (item.label)}
-                <button class="menu-item" role="menuitem" disabled={item.disabled} onclick={() => { close(); item.run(); }}>{item.label}</button>
+                <button class="menu-item" role="menuitem" disabled={item.disabled} onclick={() => { close(); item.run(); }}>{@html icon(item.icon)}{item.label}</button>
               {/each}
             {/each}
           </div>
