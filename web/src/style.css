@@ -71,7 +71,8 @@
   --accent-tint: rgba(0, 122, 255, 0.06);
   --on-accent: rgba(255, 255, 255, 0.92);
   --preview-screen: linear-gradient(#3b8ed0, #5aaced);
-  --mark: #ff3b30;
+  --mark: #ff3b30; /* annotations: the selection, markers */
+  --design: #5856d6; /* Design Mode: its button and the frozen device's outline */
   --ok: #28a745;
   --warn: #c77700;
   --glass: rgba(255, 255, 255, 0.8);
@@ -82,6 +83,7 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
+    --design: #5e5ce6;
     /* Not yet measured against Device Hub in dark mode: macOS dark equivalents. */
     --window: #1c1c1c;
     --sidebar: #262626;
@@ -172,7 +174,7 @@ button { cursor: default; }
 .icon-btn.open { background: var(--pressed); opacity: 1; }
 .icon-btn.small { width: 28px; height: 28px; }
 .icon-btn.small svg { width: 16px; height: 16px; }
-#mode-annotate.on { background: var(--mark); color: #fff; }
+#mode-annotate.on { background: var(--design); color: #fff; }
 /* Design Mode: the annotate button grows its name while it's on and folds
    back to a symbol when it's off, in the sidebar's motion (320 ms, the same
    curve). The name's column eases from 0fr to 1fr, i.e. exactly to its own
@@ -495,7 +497,13 @@ kbd {
 .device-row.selected { background: var(--selection); color: var(--on-selection); }
 .device-row.selected .kind,
 .device-row.selected .version { color: rgba(255, 255, 255, 0.85); }
+/* Selected, Device Hub's circle shows whether the device runs: 70% white
+   behind the lit picture, or 20% white behind a white silhouette of it
+   (its dark frame brightest), measured from its window. */
 .device-row.selected .thumb { background: rgba(255, 255, 255, 0.2); }
+.device-row.selected.booted .thumb { background: rgba(255, 255, 255, 0.7); }
+.device-row.selected:not(.booted) .thumb img { filter: grayscale(1) invert(1) brightness(1.35); mix-blend-mode: screen; opacity: 0.34; }
+.device-row.selected:not(.booted) .thumb svg { color: rgba(255, 255, 255, 0.5); }
 
 /* ---------- canvas: device ---------- */
 
@@ -547,7 +555,7 @@ kbd {
 }
 .bezel-art img { display: block; width: 100%; height: 100%; }
 .bezel.annotating .bezel-art {
-  filter: drop-shadow(2px 0 0 var(--mark)) drop-shadow(-2px 0 0 var(--mark)) drop-shadow(0 2px 0 var(--mark)) drop-shadow(0 -2px 0 var(--mark));
+  filter: drop-shadow(2px 0 0 var(--design)) drop-shadow(-2px 0 0 var(--design)) drop-shadow(0 2px 0 var(--design)) drop-shadow(0 -2px 0 var(--design));
 }
 .side-button {
   position: absolute;
