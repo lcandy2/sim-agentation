@@ -6,10 +6,10 @@
   import Popover from './Popover.svelte';
 
   const FILTERS = [
-    { id: 'all', label: 'All Simulators', heading: 'Available' },
-    { id: 'running', label: 'Running', heading: 'Running' },
-    { id: 'iphone', label: 'iPhone', heading: 'iPhone' },
-    { id: 'ipad', label: 'iPad', heading: 'iPad' },
+    { id: 'all', label: 'All Simulators', heading: 'Available', icon: 'devices' },
+    { id: 'running', label: 'Running', heading: 'Running', icon: 'running' },
+    { id: 'iphone', label: 'iPhone', heading: 'iPhone', icon: 'phone' },
+    { id: 'ipad', label: 'iPad', heading: 'iPad', icon: 'ipad' },
   ];
   const matches = {
     all: () => true,
@@ -45,7 +45,7 @@
           <div class="menu" role="menu">
             {#each FILTERS as f (f.id)}
               <button class="menu-item" role="menuitemradio" aria-checked={ui.filter === f.id} onclick={() => { setFilter(f.id); close(); }}>
-                <span class="check">{ui.filter === f.id ? '✓' : ''}</span>{f.label}
+                <span class="check">{ui.filter === f.id ? '✓' : ''}</span>{@html icon(f.icon)}{f.label}
               </button>
             {/each}
           </div>

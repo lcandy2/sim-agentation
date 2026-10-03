@@ -6,6 +6,10 @@ const paths = {
   sidebar: '<rect x="3" y="4" width="18" height="16" rx="3"/><path d="M9 4v16"/>',
   inspector: '<rect x="3" y="4" width="18" height="16" rx="3"/><path d="M15 4v16"/>',
   phone: '<rect x="6.5" y="2.5" width="11" height="19" rx="2.5"/><path d="M10.5 5h3"/>',
+  ipad: '<rect x="3.5" y="3" width="17" height="18" rx="2.5"/><path d="M11 5.5h2"/>',
+  // The device list's filters: every device (an iPad behind an iPhone), running.
+  devices: '<path d="M15.5 6.5V5a2 2 0 0 0-2-2h-9a2 2 0 0 0-2 2v12.5a2 2 0 0 0 2 2H12"/><rect x="14.5" y="9" width="7" height="12" rx="1.8"/>',
+  running: '<circle cx="12" cy="12" r="9"/><path d="M10.2 8.6v6.8l5.6-3.4z" fill="currentColor"/>',
   pointer: '<path d="M5 3.5 18.5 10l-6 1.8-2.4 6.2z"/><path d="m12.5 11.8 5 5"/>',
   annotate: '<path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z"/><path d="m13.5 6.5 4 4"/><path d="M14 20h6"/>',
   'zoom-out': '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5M8 11h6"/>',
