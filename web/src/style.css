@@ -641,7 +641,7 @@ kbd {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.sel { outline: 2px solid var(--mark); outline-offset: 1px; background: color-mix(in srgb, var(--mark) 10%, transparent); border-radius: 3px; }
+.sel { outline: 2px solid var(--mark); outline-offset: 0.5px; background: color-mix(in srgb, var(--mark) 10%, transparent); border-radius: 3px; }
 .marker {
   width: 20px;
   height: 20px;
