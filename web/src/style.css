@@ -53,9 +53,8 @@
   /* macOS 27's small dialog (Figma, node 690:10197). */
   /* macOS 27's Popover (Figma, Popovers page): white at 70% under #bfbfbf at
      10% (lib/glass.js draws them through its glass; this is the fallback),
-     corners of 20, a deep shadow. */
+     corners of 20; its shadow is drawn by components/Composer.svelte. */
   --popover-fill: linear-gradient(rgba(191, 191, 191, 0.1) 0 0), rgba(255, 255, 255, 0.7);
-  --popover-shadow: 0 8px 38px rgba(0, 0, 0, 0.25);
   --sheet: #ffffff;
   --sheet-shadow: 0 0 0.4px rgba(0, 0, 0, 0.8), 0 18px 21.6px rgba(0, 0, 0, 0.3);
   --sheet-fill: rgba(0, 0, 0, 0.08);
@@ -124,7 +123,6 @@
     --menu-disabled: rgba(255, 255, 255, 0.25);
     --menu-separator: rgba(255, 255, 255, 0.1);
     --popover-fill: #262626;
-    --popover-shadow: 0 10px 40px rgba(0, 0, 0, 0.4), 0 0 0 0.5px rgba(255, 255, 255, 0.1);
     --sheet: #2a2a2a;
     --sheet-shadow: 0 0 0.5px rgba(0, 0, 0, 0.8), 0 18px 27px rgba(0, 0, 0, 0.5);
     --sheet-fill: rgba(255, 255, 255, 0.1);
@@ -820,20 +818,25 @@ kbd {
 
 /* macOS 27's Popover (Figma, Popovers page): its glass (lib/glass.js), 20 pt
    in with 8 pt between; the target as a headline, the note in a text field,
-   push buttons at the bottom right. */
+   push buttons at the bottom right. Its box takes in its pointer, Figma's
+   Cartouche, 10.5 by 46, on the edge facing the selection: the box's
+   clip-path is body and pointer as one (components/Composer.svelte). */
+.composer-at { position: fixed; z-index: 10; }
+.composer-shadow { position: absolute; pointer-events: none; }
 .composer {
-  position: fixed;
-  z-index: 10;
-  width: 320px;
+  position: relative;
+  width: 370.5px;
   display: grid;
+  grid-template-columns: minmax(0, 1fr); /* the row can't widen it past its edges */
   gap: 8px;
   padding: 20px;
   border-radius: 20px;
   background: var(--popover-fill);
-  box-shadow: var(--popover-shadow);
   -webkit-backdrop-filter: blur(13px);
   backdrop-filter: blur(13px);
 }
+.composer.pointer-left { padding-left: 30.5px; }
+.composer.pointer-right { padding-right: 30.5px; }
 .composer.glass-filtered { background: none; }
 .composer.glass-on::after {
   content: "";
@@ -847,7 +850,7 @@ kbd {
 .composer-target { font-size: 13px; line-height: 16px; font-weight: 700; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .composer .field { height: auto; padding: 4px 8px; line-height: 16px; resize: none; }
 .composer-row { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
-.composer-row .hint { flex: 1; color: var(--secondary); font-size: 11px; line-height: 14px; white-space: nowrap; }
+.composer-row .hint { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; color: var(--secondary); font-size: 11px; line-height: 14px; white-space: nowrap; }
 
 /* ---------- narrow windows ---------- */
 

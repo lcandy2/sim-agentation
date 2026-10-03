@@ -122,24 +122,89 @@ function shapeSDF(x, y, w, h, r, n) {
   return Math.min(Math.max(dx, dy), 0) + Math.hypot(Math.max(dx, 0), Math.max(dy, 0));
 }
 
+// A popover's pointer: Figma's Cartouche, 10.5 by 46, pointing right with its
+// base on x = 0. A popover's box takes it in on one side, and its outline
+// is the body and the pointer as one, as Figma draws them.
+const POINTER_PATH = 'M10.5 23C10.5 21.65 10.2 20.4 8.81 19.07L5.5 15.76 2.85 13.11C1.92 12.17.94 11.15.5 10.03.06 8.9 0 7.78 0 5.28V0 46 40.72C0 38.22.06 37.1.5 35.97.94 34.84 1.92 33.83 2.85 32.89L5.5 30.24 8.81 26.93C10.19 25.6 10.5 24.35 10.5 23Z';
+export const POINTER = { depth: 10.5, span: 46 };
+
+// The pointer with its base at x = base, centered at y, pointing out of that side.
+function pointerPath(side, base, y) {
+  let command = '';
+  let pair = 0;
+  return POINTER_PATH.replace(/[MCLVZ]|-?(?:\d+\.?\d*|\.\d+)/g, (t) => {
+    if (/[A-Z]/.test(t)) { command = t; pair = 0; return t; }
+    const v = Number(t);
+    const isY = command === 'V' || pair++ % 2 === 1;
+    const out = isY ? v + y - POINTER.span / 2 : side === 'left' ? base - v : base + v;
+    return ` ${+out.toFixed(3)}`;
+  });
+}
+const roundedRect = (x, w, h, r) => `M${x + r} 0H${x + w - r}A${r} ${r} 0 0 1 ${x + w} ${r}V${h - r}A${r} ${r} 0 0 1 ${x + w - r} ${h}H${x + r}A${r} ${r} 0 0 1 ${x} ${h - r}V${r}A${r} ${r} 0 0 1 ${x + r} 0Z`;
+
+/** A glass's outline in CSS px, for a box w by h with corners r and maybe a
+ *  pointer ({ side: 'left' | 'right', y }), which the box's width includes. */
+export function outlinePath(w, h, r, pointer) {
+  if (!pointer) return roundedRect(0, w, h, r);
+  const body = w - POINTER.depth;
+  const x = pointer.side === 'left' ? POINTER.depth : 0;
+  return roundedRect(x, body, h, r) + pointerPath(pointer.side, pointer.side === 'left' ? POINTER.depth : body, pointer.y);
+}
+
+// Distance from each pixel inside a mask to the nearest pixel outside it, in
+// px (Felzenszwalb and Huttenlocher's exact transform, squared, rows then
+// columns), on a grid padded by one outside pixel all round.
+function distanceInside(alpha, W, H) {
+  const GW = W + 2;
+  const GH = H + 2;
+  const BIG = 1e12;
+  const grid = new Float64Array(GW * GH);
+  for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) grid[(j + 1) * GW + i + 1] = alpha[(j * W + i) * 4 + 3] >= 128 ? BIG : 0;
+  const n = Math.max(GW, GH);
+  const f = new Float64Array(n), d = new Float64Array(n), v = new Int32Array(n), z = new Float64Array(n + 1);
+  const pass = (len) => {
+    let k = 0;
+    v[0] = 0; z[0] = -Infinity; z[1] = Infinity;
+    for (let q = 1; q < len; q++) {
+      let s;
+      while ((s = (f[q] + q * q - (f[v[k]] + v[k] * v[k])) / (2 * q - 2 * v[k])) <= z[k]) k--;
+      k++; v[k] = q; z[k] = s; z[k + 1] = Infinity;
+    }
+    k = 0;
+    for (let q = 0; q < len; q++) { while (z[k + 1] < q) k++; d[q] = (q - v[k]) ** 2 + f[v[k]]; }
+  };
+  for (let x = 0; x < GW; x++) { for (let y = 0; y < GH; y++) f[y] = grid[y * GW + x]; pass(GH); for (let y = 0; y < GH; y++) grid[y * GW + x] = d[y]; }
+  for (let y = 0; y < GH; y++) { for (let x = 0; x < GW; x++) f[x] = grid[y * GW + x]; pass(GW); for (let x = 0; x < GW; x++) grid[y * GW + x] = Math.sqrt(d[x]); }
+  return (i, j) => grid[(j + 1) * GW + i + 1];
+}
+
 // An inner shadow's strength (0..1) per pixel, drawn the way Figma and CSS
-// draw one: a frame around the spread hole, shadowed into the shape.
-function innerShadow(W, H, r, dpr, { y, blur, spread }) {
+// draw one: a frame around the spread hole, shadowed into the shape. With a
+// pointer the hole takes it in too, as Figma's outline does, so no rim runs
+// across the pointer's base.
+function innerShadow(W, H, r, dpr, { y, blur, spread }, pointer) {
   const canvas = new OffscreenCanvas(W, H);
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
   const s = -spread * dpr;
   const far = Math.abs(s) * 4 + Math.abs(y * dpr) + blur * dpr * 2 + W + H;
-  ctx.beginPath();
-  ctx.roundRect(0, 0, W, H, r);
-  ctx.clip();
+  if (pointer) {
+    const outline = new Path2D();
+    outline.addPath(new Path2D(outlinePath(W / dpr, H / dpr, r / dpr, pointer)), new DOMMatrix([dpr, 0, 0, dpr, 0, 0]));
+    ctx.clip(outline);
+  } else {
+    ctx.beginPath();
+    ctx.roundRect(0, 0, W, H, r);
+    ctx.clip();
+  }
   ctx.shadowColor = '#fff';
   ctx.shadowBlur = blur * dpr;
   ctx.shadowOffsetY = y * dpr;
-  ctx.beginPath();
-  ctx.rect(-far, -far, W + 2 * far, H + 2 * far);
-  ctx.roundRect(-s, -s, W + 2 * s, H + 2 * s, Math.max(0, r + s));
+  const frame = new Path2D();
+  frame.rect(-far, -far, W + 2 * far, H + 2 * far);
+  if (pointer) frame.addPath(new Path2D(outlinePath(W / dpr, H / dpr, r / dpr, pointer)), new DOMMatrix([dpr, 0, 0, dpr, 0, 0]));
+  else frame.roundRect(-s, -s, W + 2 * s, H + 2 * s, Math.max(0, r + s));
   ctx.fillStyle = '#fff';
-  ctx.fill('evenodd');
+  ctx.fill(frame, 'evenodd');
   const alpha = ctx.getImageData(0, 0, W, H).data;
   return (o) => alpha[o + 3] / 255;
 }
@@ -149,7 +214,7 @@ function innerShadow(W, H, r, dpr, { y, blur, spread }) {
  *  for feDisplacementMap at scale 2 × REACH, in CSS px; add and burn are the
  *  inner shadows, opaque, to add (Linear Dodge) and to burn in (Linear Burn:
  *  white is none). */
-export function renderGlass(width, height, radius, dpr, dark, material) {
+export function renderGlass(width, height, radius, dpr, dark, material, pointer = null) {
   const W = Math.round(width * dpr);
   const H = Math.round(height * dpr);
   const r = Math.min(radius, width / 2, height / 2) * dpr;
@@ -159,8 +224,23 @@ export function renderGlass(width, height, radius, dpr, dark, material) {
   const map = new ImageData(W, H);
   const add = new ImageData(W, H);
   const burn = new ImageData(W, H);
-  const inner = dark ? [] : material.inner.map((s) => ({ ...s, at: innerShadow(W, H, r, dpr, s) }));
-  const sdf = (x, y) => shapeSDF(x - W / 2, y - H / 2, W, H, r, ROUNDNESS);
+  const inner = dark ? [] : material.inner.map((s) => ({ ...s, at: innerShadow(W, H, r, dpr, s, pointer) }));
+  let sdf = (x, y) => shapeSDF(x - W / 2, y - H / 2, W, H, r, ROUNDNESS);
+  let cover = null;
+  if (pointer) {
+    // With a pointer the outline isn't a rounded rect: its edge distances
+    // come from a distance transform of it, its coverage from drawing it.
+    const canvas = new OffscreenCanvas(W, H);
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    const outline = new Path2D();
+    outline.addPath(new Path2D(outlinePath(width, height, r / dpr, pointer)), new DOMMatrix([dpr, 0, 0, dpr, 0, 0]));
+    ctx.fill(outline);
+    const alpha = ctx.getImageData(0, 0, W, H).data;
+    const dist = distanceInside(alpha, W, H);
+    const at = (i, j) => (i < 0 || j < 0 || i >= W || j >= H ? 0 : dist(i, j));
+    sdf = (x, y) => 0.5 - at(Math.floor(x), Math.floor(y));
+    cover = (i, j) => alpha[(j * W + i) * 4 + 3] / 255;
+  }
 
   for (let j = 0; j < H; j++) {
     for (let i = 0; i < W; i++) {
@@ -184,11 +264,12 @@ export function renderGlass(width, height, radius, dpr, dark, material) {
       const x = i + 0.5;
       const y = j + 0.5;
       const d = sdf(x, y);                 // device px, negative inside
-      const coverage = clamp01(0.5 - d);   // one-pixel antialiased edge
+      const coverage = cover ? cover(i, j) : clamp01(0.5 - d); // one-pixel antialiased edge
       if (coverage <= 0) continue;
       const inset = Math.max(0, -d) / dpr; // CSS px from the edge
-      let nx = sdf(x + 0.5, y) - sdf(x - 0.5, y);
-      let ny = sdf(x, y + 0.5) - sdf(x, y - 0.5); // y down
+      const step = cover ? 1 : 0.5; // a distance transform changes per whole pixel
+      let nx = sdf(x + step, y) - sdf(x - step, y);
+      let ny = sdf(x, y + step) - sdf(x, y - step); // y down
       const len = Math.hypot(nx, ny) || 1;
       nx /= len;
       ny /= len;
@@ -284,12 +365,12 @@ function filterFor(material, urls, width, height) {
   return id;
 }
 
-function glassFor(name, width, height, radius, dpr, dark) {
-  const key = `${name}:${width}x${height}r${radius}@${dpr}:${dark}`;
+function glassFor(name, width, height, radius, dpr, dark, pointer) {
+  const key = `${name}:${width}x${height}r${radius}@${dpr}:${dark}:${pointer ? `${pointer.side}${pointer.y}` : ''}`;
   if (!glasses.has(key)) {
     glasses.set(key, (async () => {
       const material = MATERIALS[name];
-      const { light, map, add, burn } = renderGlass(width, height, radius, dpr, dark, material);
+      const { light, map, add, burn } = renderGlass(width, height, radius, dpr, dark, material, pointer);
       const lightURL = URL.createObjectURL(await pngOf(light));
       const filter = refracts && !dark
         ? filterFor(material, { map: await dataURLOf(map), add: await dataURLOf(add), burn: await dataURLOf(burn) }, width, height)
@@ -307,7 +388,10 @@ async function paint(el, name) {
   if (!w || !h) return;
   const dark = matchMedia('(prefers-color-scheme: dark)').matches;
   const radius = parseFloat(getComputedStyle(el).borderTopLeftRadius) || h / 2;
-  const { lightURL, filter } = await glassFor(name, w, h, radius, devicePixelRatio || 1, dark);
+  // data-pointer="left 64": a popover's pointer, on that edge, centered 64 px down.
+  const [side, at] = (el.dataset.pointer ?? '').split(' ');
+  const pointer = side ? { side, y: Math.round(Number(at)) } : null;
+  const { lightURL, filter } = await glassFor(name, w, h, radius, devicePixelRatio || 1, dark, pointer);
   el.style.setProperty('--glass-light', `url("${lightURL}")`);
   // Figma's frost radius as a CSS blur, which takes half: then the filter.
   const backdrop = `blur(${MATERIALS[name].glass.frost / 2}px)${filter ? ` url(#${filter})` : ''}`;
@@ -330,7 +414,10 @@ export function attachGlass(root = document.body) {
   };
   each(root, watch);
   new MutationObserver((records) => {
-    for (const r of records) for (const n of r.addedNodes) if (n.nodeType === 1) each(n, watch);
-  }).observe(root, { childList: true, subtree: true });
+    for (const r of records) {
+      if (r.type === 'attributes') { if (names.has(r.target)) paint(r.target, names.get(r.target)); continue; }
+      for (const n of r.addedNodes) if (n.nodeType === 1) each(n, watch);
+    }
+  }).observe(root, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-pointer'] });
   matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => each(root, paint));
 }

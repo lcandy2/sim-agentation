@@ -47,7 +47,7 @@ export const ui = $state({
   orientation: 'portrait', // the device's, as sent to it: see ROTATION
   recording: false,
   annotations: [],
-  draft: null,        // { label, x, y } while the composer is open (viewport px)
+  draft: null,        // { label, box } while the composer is open: the selection's box, viewport px
   stream: {
     choice: storage.get('stream-format') ?? 'auto', // 'auto', or a format to always use
     format: null,     // the format streaming now: 'hevc', 'hevc422', 'avcc' (H.264) or 'mjpeg'
@@ -803,7 +803,7 @@ function highlight() {
 function openComposer(draft) {
   rt.draft = draft;
   const box = rt.overlay.querySelector('.sel').getBoundingClientRect();
-  ui.draft = { label: draft.label, x: box.right + 12, y: box.top };
+  ui.draft = { label: draft.label, box: { left: box.left, right: box.right, top: box.top, bottom: box.bottom } };
 }
 
 export function closeComposer() {
