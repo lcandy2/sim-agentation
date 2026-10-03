@@ -66,7 +66,7 @@
       ],
       [
         { label: 'Interact', icon: 'pointer', run: () => setMode('interact'), disabled: off, keys: 'KeyI' },
-        { label: 'Design Mode', icon: 'annotate', run: () => setMode('annotate'), disabled: off, keys: 'KeyA' },
+        { label: ui.mode === 'annotate' ? 'Leave Design Mode' : 'Design Mode', icon: 'annotate', run: () => setMode(ui.mode === 'annotate' ? 'interact' : 'annotate'), disabled: off, keys: 'shift+meta+KeyD' },
       ],
       [
         { label: 'Zoom In', icon: 'zoom-in', run: zoomIn, keys: 'meta+Equal' },
@@ -110,7 +110,7 @@
         id="mode-annotate"
         class="icon-btn"
         class:on={ui.mode === 'annotate'}
-        title={ui.mode === 'annotate' ? 'Leave Design Mode (Esc)' : 'Design Mode: freeze the screen and mark things up (A)'}
+        title={ui.mode === 'annotate' ? 'Leave Design Mode (⇧⌘D)' : 'Design Mode: freeze the screen and mark things up (⇧⌘D)'}
         aria-pressed={ui.mode === 'annotate'}
         data-icon="annotate"
         disabled={!ui.running}

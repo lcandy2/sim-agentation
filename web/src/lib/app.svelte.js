@@ -567,6 +567,7 @@ const SHORTCUTS = {
   'alt+shift+meta+Minus': () => feature('text-smaller'),    // Features ▸ Decrease Preferred Text Size
   'alt+meta+KeyM': () => feature('biometric-match'),        // Features ▸ Face ID ▸ Matching Face
   'alt+meta+KeyN': () => feature('biometric-mismatch'),     // Features ▸ Face ID ▸ Non-matching Face
+  'shift+meta+KeyD': () => setMode(ui.mode === 'annotate' ? 'interact' : 'annotate'), // Design Mode, in and out
   'meta+Digit4': () => setZoom('fit'),                      // Window ▸ Fit Screen
   'meta+Digit9': () => setZoom('fit'),
   'meta+Equal': () => zoomIn(),

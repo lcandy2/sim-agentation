@@ -29,6 +29,6 @@
 {:else}
   <div class="empty">
     <span class="empty-icon" data-icon="doc">{@html icon('doc')}</span>
-    <p>{#if ui.frozen}No annotations yet.{:else}No annotations. Press <kbd>A</kbd> for Design Mode, then click an element or drag a box around anything.{/if}</p>
+    <p>{#if ui.frozen}No annotations yet.{:else}No annotations. Press <kbd>⇧⌘D</kbd> for Design Mode, then click an element or drag a box around anything.{/if}</p>
   </div>
 {/if}
