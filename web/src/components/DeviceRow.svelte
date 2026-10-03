@@ -5,10 +5,16 @@
 
   let { sim, version } = $props();
 
-  // Sits in a 34 px circle with room around it, as in Device Hub.
-  const THUMB_HEIGHT = 20;
+  // The device picture inside a 32 px circle, as in Device Hub: lit when
+  // the simulator runs, grayed out when it's shut down.
+  const THUMB_HEIGHT = 24;
 
-  // A picture of the device once its chrome loads; a generic glyph until then.
+  let row = $state(null);
+  const selected = $derived(sim.udid === ui.udid);
+  $effect(() => {
+    if (selected) row?.scrollIntoView({ block: 'nearest' });
+  });
+
   let picture = $state(null);
   $effect(() => {
     let current = true;
@@ -20,18 +26,19 @@
 </script>
 
 <button
+  bind:this={row}
   class="device-row"
   class:booted={sim.state === 'Booted'}
-  class:selected={sim.udid === ui.udid}
-  title="{sim.name}, {sim.runtime}"
+  class:selected
+  title="{sim.name}, {sim.runtime}{sim.state === 'Booted' ? ', running' : ''}"
   onclick={() => selectDevice(sim)}
 >
-  <span class="glyph">
+  <span class="thumb">
     {#if picture}<img src={picture} alt="">{:else}{@html icon('phone')}{/if}
   </span>
   <span class="text">
-    <div class="name">{sim.name}</div>
-    <div class="kind">Simulator</div>
+    <span class="name">{sim.name}</span>
+    <span class="kind">Simulator</span>
   </span>
   <span class="version">{version}</span>
 </button>

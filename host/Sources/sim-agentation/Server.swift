@@ -124,7 +124,11 @@ final class AppServer: @unchecked Sendable {
                 return .respond(png != nil ? await Self.file(png!, forever) : Self.notFound)
             }
 
+            if path == "/api/sims" && req.method == "POST" {
+                return .respond(Self.json(try await createDevice(try Self.parseBody(req.body)), status: 201))
+            }
             if path == "/api/sims" { return .respond(Self.json(try await devices())) }
+            if path == "/api/sims/new" { return .respond(Self.json(try await deviceOptions())) }
             if part(0) == "api" && part(1) == "sims" && part(3) == "chrome" {
                 return .respond(Self.json(try await chrome.chrome(for: parts[2])))
             }
@@ -223,6 +227,32 @@ final class AppServer: @unchecked Sendable {
                 "state": .string(d.state.rawValue), "deviceType": .string(d.deviceType),
             ]))
         })
+    }
+
+    /// What a new simulator can be: device types, and the available
+    /// runtimes with the device types each supports.
+    private func deviceOptions() async throws -> JSON {
+        let list = try await blocking { try JSON.parse(try run(["xcrun", "simctl", "list", "devicetypes", "runtimes", "-j"])) }
+        let types = (list["devicetypes"]?.arrayValue ?? []).compactMap { t -> JSON? in
+            guard let id = t["identifier"]?.stringValue, let name = t["name"]?.stringValue else { return nil }
+            return .object(JSONObject(["identifier": .string(id), "name": .string(name), "family": t["productFamily"] ?? .null]))
+        }
+        let runtimes = (list["runtimes"]?.arrayValue ?? []).compactMap { r -> JSON? in
+            guard case .bool(true)? = r["isAvailable"], let id = r["identifier"]?.stringValue, let name = r["name"]?.stringValue else { return nil }
+            let supported = (r["supportedDeviceTypes"]?.arrayValue ?? []).compactMap { $0["identifier"] }
+            return .object(JSONObject(["identifier": .string(id), "name": .string(name), "platform": r["platform"] ?? .null, "deviceTypes": .array(supported)]))
+        }
+        return .object(JSONObject(["deviceTypes": .array(types), "runtimes": .array(runtimes)]))
+    }
+
+    /// `simctl create`; the new device starts shut down.
+    private func createDevice(_ body: JSON) async throws -> JSONObject {
+        guard let name = body["name"]?.stringValue.map(JS.trim), !name.isEmpty,
+              let type = body["deviceType"]?.stringValue, type.hasPrefix("com.apple.CoreSimulator.SimDeviceType."),
+              let runtime = body["runtime"]?.stringValue, runtime.hasPrefix("com.apple.CoreSimulator.SimRuntime.")
+        else { throw BadRequest("name, deviceType and runtime are required") }
+        let udid = try await blocking { try run(["xcrun", "simctl", "create", name, type, runtime]) }
+        return JSONObject(["udid": .string(JS.trim(udid))])
     }
 
     private func boot(_ udid: String) async throws {

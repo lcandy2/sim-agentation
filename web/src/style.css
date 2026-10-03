@@ -1,10 +1,11 @@
-/* Layout modelled on Xcode's Devices and Simulators window:
-   device list | device with toolbars | annotations inspector.
-   Colors, type, and radii follow the App Store on the web (apps.apple.com,
-   measured 2026-10-03): one page gray, a sidebar set off by a hairline, gray
-   fills instead of shadows, and blur only on controls that float over the device. */
+/* Laid out after Xcode's Device Hub (reference screenshots, 2026-10-03): the
+   device list | the device with its toolbar | an inspector with three tabs.
+   Sizes are the screenshots' proportions on a 13 px sidebar font; colors are
+   the earlier App Store palette. */
 
 :root {
+  /* The earlier, softer palette (after the App Store on the web): one page
+     gray, hairline-separated panels, gray fills, white raised segments. */
   --sidebar: rgba(60, 60, 67, 0.03);
   --canvas: #f5f5f7;
   --inspector: #f5f5f7;
@@ -16,17 +17,27 @@
   --pressed: rgba(60, 60, 67, 0.1);
   --field: #ffffff;
   --fill: rgba(0, 0, 0, 0.05);
-  --glass: rgba(255, 255, 255, 0.8);
-  --glass-edge: rgba(0, 0, 0, 0.15);
-  --glass-shadow: 0 3px 9px rgba(0, 0, 0, 0.08);
+  --control: var(--fill);
+  --control-edge: transparent;
+  --control-shadow: none;
+  --menu: #ffffff;
   --card: #ffffff;
   --segment: #ffffff;
+  --selection: var(--pressed);
+  --on-selection: var(--text);
+  --menu-highlight: #007aff;
+  --thumb: #ffffff;
+  --thumb-off: var(--fill);
   --accent: #007aff;
   --accent-tint: rgba(0, 122, 255, 0.06);
   --on-accent: rgba(255, 255, 255, 0.92);
+  --preview-screen: linear-gradient(#3b8ed0, #5aaced);
   --mark: #ff3b30;
   --ok: #28a745;
   --warn: #c77700;
+  --glass: rgba(255, 255, 255, 0.8);
+  --glass-edge: rgba(0, 0, 0, 0.15);
+  --glass-shadow: 0 3px 9px rgba(0, 0, 0, 0.08);
   color-scheme: light;
 }
 
@@ -43,13 +54,15 @@
     --pressed: rgba(235, 235, 245, 0.1);
     --field: #1f1f1f;
     --fill: rgba(255, 255, 255, 0.05);
-    --glass: rgba(30, 30, 30, 0.8);
-    --glass-edge: rgba(255, 255, 255, 0.1);
+    --menu: #262626;
     --card: #1f1f1f;
     --segment: #3a3a3c;
+    --thumb: rgba(255, 255, 255, 0.9);
     --accent-tint: rgba(0, 122, 255, 0.08);
     --ok: #32d74b;
     --warn: #ffb340;
+    --glass: rgba(30, 30, 30, 0.8);
+    --glass-edge: rgba(255, 255, 255, 0.1);
     color-scheme: dark;
   }
 }
@@ -60,10 +73,10 @@ html, body {
   height: 100%;
   background: var(--canvas);
   color: var(--text);
-  font: 13px/1.38462 -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font: 13px/1.3 -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
-button, input, textarea { font: inherit; color: inherit; }
+button, input, textarea, select { font: inherit; color: inherit; }
 button { cursor: default; }
 [hidden] { display: none !important; }
 [data-icon] { display: inline-grid; place-items: center; }
@@ -74,98 +87,51 @@ button { cursor: default; }
 /* ---------- controls ---------- */
 
 .icon-btn {
+  position: relative;
   width: 34px;
-  height: 30px;
+  height: 32px;
   border: 0;
   border-radius: 999px;
   background: none;
   color: var(--text);
-  opacity: 0.85;
+  opacity: 0.8;
   display: grid;
   place-items: center;
+  flex: none;
 }
+.icon-btn svg { width: 18px; height: 18px; }
 .icon-btn:hover { background: var(--hover); opacity: 1; }
 .icon-btn:active { background: var(--pressed); }
-.icon-btn:disabled { opacity: 0.3; background: none; }
+.icon-btn:disabled { opacity: 0.25; background: none; }
 .icon-btn.on { background: var(--segment); box-shadow: var(--glass-shadow); opacity: 1; }
+.icon-btn.open { background: var(--pressed); opacity: 1; }
+.icon-btn.small { width: 28px; height: 28px; }
+.icon-btn.small svg { width: 16px; height: 16px; }
 #mode-annotate.on { background: var(--mark); color: #fff; }
 
-/* A gray capsule that groups buttons. Only the bar floating over the device
-   (.canvas-bottom) is translucent glass. */
+/* A gray capsule that groups buttons; only the bar over the device is glass. */
 .pill {
   display: inline-flex;
   align-items: center;
   gap: 2px;
-  padding: 3px;
+  height: 40px;
+  padding: 0 3px;
   border-radius: 1000px;
-  background: var(--fill);
+  background: var(--control);
+  border: 1px solid var(--control-edge);
+  box-shadow: var(--control-shadow);
 }
-.pill.sdk {
-  gap: 6px;
-  height: 36px;
-  padding: 0 14px;
-  font-weight: 700;
-  font-size: 12px;
-  color: var(--secondary);
+.pill .sep { width: 1px; height: 18px; background: var(--separator); flex: none; }
+.circle-btn {
+  width: 40px;
+  height: 40px;
+  background: var(--control);
+  border: 1px solid var(--control-edge);
+  box-shadow: var(--control-shadow);
+  opacity: 1;
 }
-.pill.sdk .dot { width: 7px; height: 7px; border-radius: 50%; border: 1.5px solid currentColor; }
-.pill.sdk.on { color: var(--ok); }
-.pill.sdk.on .dot { background: currentColor; }
-/* Stream settings: a pill naming the codec, opening a small glass menu. */
-.stream-settings { position: relative; }
-.pill.stream-pill {
-  gap: 6px;
-  height: 36px;
-  padding: 0 14px;
-  border: 0;
-  font-weight: 700;
-  font-size: 12px;
-  color: var(--secondary);
-}
-.pill.stream-pill:hover, .pill.stream-pill.open { color: var(--text); }
-.stream-fps { font-weight: 500; font-variant-numeric: tabular-nums; }
-.stream-menu {
-  position: absolute;
-  top: calc(100% + 8px);
-  right: 0;
-  z-index: 20;
-  display: grid;
-  gap: 10px;
-  padding: 14px;
-  border-radius: 12px;
-  background: var(--card);
-  border: 0.5px solid var(--glass-edge);
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.12);
-  white-space: nowrap;
-}
-.menu-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; font-size: 13px; }
-.seg-text { padding: 2px; }
-.seg-text button {
-  padding: 4px 11px;
-  border: 0;
-  border-radius: 999px;
-  background: none;
-  color: var(--text);
-  font-size: 12px;
-  font-weight: 600;
-  opacity: 0.85;
-}
-.seg-text button:hover { background: var(--hover); opacity: 1; }
-.seg-text button.on { background: var(--segment); box-shadow: var(--glass-shadow); opacity: 1; }
-.seg-text button:disabled { opacity: 0.3; background: none; }
-.menu-stats { display: grid; gap: 3px; font-size: 12px; color: var(--secondary); font-variant-numeric: tabular-nums; }
-.menu-stats p { margin: 0; }
-.menu-skip { color: var(--warn); }
-.stream-auto {
-  padding: 1px 6px;
-  border-radius: 999px;
-  background: var(--accent-tint);
-  color: var(--accent);
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
-}
+.circle-btn:hover { background: var(--pressed); }
+.circle-btn svg { opacity: 0.8; }
 
 .glass {
   background: var(--glass);
@@ -175,20 +141,97 @@ button { cursor: default; }
   -webkit-backdrop-filter: saturate(180%) blur(20px);
 }
 
-/* The App Store's pill buttons: 13px bold, tinted, or key-colored when primary. */
+/* Pill text buttons: tinted, or key-colored when primary. */
 .text-btn {
-  padding: 7px 16px;
+  padding: 5px 14px;
   border: 0;
   border-radius: 1000px;
   background: var(--accent-tint);
   color: var(--accent);
-  font-weight: 700;
+  font-weight: 600;
   line-height: 18px;
-  transition: background-color 0.21s ease-out;
 }
-.text-btn:hover { background: color-mix(in srgb, var(--accent) 10%, transparent); }
+.text-btn:hover { background: color-mix(in srgb, var(--accent) 14%, transparent); }
 .text-btn.primary { background: var(--accent); color: var(--on-accent); }
-.text-btn.primary:hover { background: color-mix(in srgb, var(--accent), #000 3%); }
+.text-btn.primary:hover { background: color-mix(in srgb, var(--accent), #000 4%); }
+.text-btn:disabled { opacity: 0.5; }
+
+/* Segmented text buttons, used in Settings. */
+.seg-text { height: 30px; padding: 0 2px; }
+.seg-text button {
+  height: 24px;
+  padding: 0 9px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 500;
+  opacity: 0.8;
+  white-space: nowrap;
+}
+.seg-text button:hover { background: var(--hover); opacity: 1; }
+.seg-text button.on { background: var(--segment); box-shadow: var(--glass-shadow); opacity: 1; font-weight: 600; }
+.seg-text button:disabled { opacity: 0.3; background: none; }
+
+/* Popovers and menus. */
+.popover-anchor { position: relative; display: inline-grid; }
+.popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: -4px;
+  z-index: 30;
+  min-width: 220px;
+  padding: 6px;
+  border-radius: 12px;
+  background: var(--menu);
+  border: 0.5px solid var(--glass-edge);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.16);
+}
+.popover.align-left { right: auto; left: -4px; }
+.menu { display: grid; }
+.menu hr { margin: 5px 8px; border: 0; border-top: 1px solid var(--separator); }
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 26px;
+  padding: 0 10px 0 8px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  text-align: left;
+  white-space: nowrap;
+}
+.menu-item:hover:not(:disabled) { background: var(--menu-highlight); color: #fff; }
+.menu-item:disabled { color: var(--tertiary); }
+.menu-item .check { width: 14px; font-size: 12px; }
+
+.new-sim { display: grid; gap: 10px; width: 280px; padding: 8px; }
+.new-sim h4 { margin: 0 0 2px; font-size: 13px; font-weight: 600; }
+.new-sim label { display: grid; grid-template-columns: 56px 1fr; align-items: center; gap: 8px; color: var(--secondary); }
+.new-sim select, .new-sim input {
+  min-width: 0;
+  height: 26px;
+  padding: 0 8px;
+  border-radius: 6px;
+  border: 1px solid var(--separator);
+  background: var(--canvas);
+  color: var(--text);
+  outline: none;
+}
+.new-sim input:focus, .new-sim select:focus { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent); }
+.new-sim .hint { margin: 0; color: var(--secondary); }
+.form-row { display: flex; justify-content: flex-end; gap: 8px; margin-top: 2px; }
+
+kbd {
+  font: 600 11px/1 -apple-system, system-ui, sans-serif;
+  padding: 2px 5px;
+  border-radius: 4px;
+  border: 0.5px solid var(--separator);
+  background: var(--card);
+  color: var(--text);
+}
 
 /* ---------- sidebar: devices ---------- */
 
@@ -200,17 +243,20 @@ button { cursor: default; }
   background: var(--sidebar);
   border-right: 1px solid var(--separator);
 }
-.sidebar-top { height: 60px; display: flex; align-items: center; padding: 0 25px; }
-.brand { font-weight: 700; font-size: 17px; line-height: 22px; color: var(--text); }
+/* Device Hub's top bar: + and filter in a capsule, then the sidebar toggle. */
+.sidebar-top { height: 56px; flex: none; display: flex; align-items: center; justify-content: flex-end; gap: 8px; padding: 0 11px; }
+.bar-pill { gap: 0; }
+.bar-pill .icon-btn { width: 36px; }
 
 .search {
-  margin: 0 25px 12px;
-  height: 32px;
+  margin: 4px 12px 0 13px;
+  height: 30px;
+  flex: none;
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 0 8px;
-  border-radius: 4px;
+  padding: 0 10px;
+  border-radius: 1000px;
   background: var(--field);
   border: 1px solid var(--separator);
   color: var(--secondary);
@@ -219,49 +265,53 @@ button { cursor: default; }
 .search input { flex: 1; min-width: 0; border: 0; background: none; outline: none; color: var(--text); }
 .search input::placeholder { color: var(--secondary); }
 .search input::-webkit-search-cancel-button { opacity: 0.5; }
-.search:focus-within { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent); }
+.search:focus-within { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent); }
 
-.devices { flex: 1; overflow-y: auto; padding: 0 21px 16px 25px; }
-.devices h3 { margin: 14px 6px 4px; font-size: 10px; line-height: 13px; font-weight: 600; color: var(--secondary); }
+.devices { flex: 1; overflow-y: auto; padding: 0 12px 16px 14px; }
+.devices h3 { margin: 22px 6px 7px; font-size: 12px; line-height: 15px; font-weight: 500; color: var(--tertiary); }
 .devices .none { margin: 12px 6px; color: var(--secondary); }
 
-/* App Store sidebar items: no hover fill, a gray pill when selected. */
 .device-row {
   width: 100%;
+  height: 47px;
   display: grid;
-  grid-template-columns: 28px 1fr auto;
+  grid-template-columns: 32px 1fr auto;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 2px;
-  padding: 4px 6px;
+  gap: 11px;
+  margin-bottom: 1px;
+  padding: 0 10px 0 6px;
   border: 0;
-  border-radius: 6px;
+  border-radius: 10px;
   background: none;
   text-align: left;
 }
-.device-row .glyph {
-  width: 28px;
-  height: 28px;
+.device-row .thumb {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
   display: grid;
   place-items: center;
+  background: var(--thumb-off);
   color: var(--tertiary);
 }
-.device-row .glyph svg { width: 18px; height: 18px; }
-.device-row .glyph img { height: 22px; width: auto; display: block; }
-.device-row.booted .glyph:not(:has(img)) { color: var(--accent); }
-.device-row .text { min-width: 0; } /* lets long names truncate instead of pushing the version out */
-.device-row .name { font-size: 15px; line-height: 20px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.device-row .kind { font-size: 12px; line-height: 15px; color: var(--secondary); }
-.device-row .version { font-size: 12px; color: var(--secondary); font-variant-numeric: tabular-nums; }
-.device-row.selected { background: var(--pressed); }
+.device-row.booted .thumb { background: var(--thumb); }
+.device-row .thumb img { height: 24px; width: auto; display: block; filter: grayscale(1) opacity(0.45); }
+.device-row.booted .thumb img { filter: none; }
+.device-row .thumb svg { width: 18px; height: 18px; }
+.device-row .text { min-width: 0; display: grid; } /* lets long names truncate instead of pushing the version out */
+.device-row .name { font-weight: 600; line-height: 17px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.device-row .kind { font-size: 11px; line-height: 14px; color: var(--secondary); }
+.device-row .version { font-size: 12px; color: var(--tertiary); font-variant-numeric: tabular-nums; }
+.device-row.selected { background: var(--selection); color: var(--on-selection); }
 
 /* ---------- canvas: device ---------- */
 
 .canvas { position: relative; flex: 1; min-width: 0; display: flex; flex-direction: column; background: var(--canvas); }
-.canvas-top { height: 60px; flex: none; display: flex; align-items: center; gap: 10px; padding: 0 14px; }
-.title { flex: 1; min-width: 0; line-height: 1.25; }
-.title-name { font-weight: 600; font-size: 15px; line-height: 20px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.title-sub { font-size: 12px; line-height: 15px; color: var(--secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.canvas-top { height: 56px; flex: none; display: flex; align-items: center; gap: 10px; padding: 0 10px 0 22px; }
+.window.no-sidebar .canvas-top { padding-left: 12px; }
+.title { flex: 1; min-width: 0; }
+.title-name { font-weight: 600; font-size: 14px; line-height: 18px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.title-sub { font-size: 11px; line-height: 14px; color: var(--secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .title-sub .status:not(:empty)::before { content: " · "; }
 .toolbar { display: flex; align-items: center; gap: 8px; }
 
@@ -273,22 +323,29 @@ button { cursor: default; }
   place-items: center;
   /* The bottom padding keeps the device clear of the floating button bar and
      leaves room for its shadow; fit-to-window sizes the device inside it. */
-  padding: 12px 24px 108px;
+  padding: 44px 24px 110px; /* Device Hub leaves the device about 70% of the canvas height */
 }
 .canvas.offline .stage { padding-bottom: 40px; }
 .stage-message { color: var(--secondary); max-width: 320px; text-align: center; }
 
 /* Device: Xcode's DeviceKit chrome artwork, laid out in JS from /api/sims/:udid/chrome.
-   Layers: buttons under the body, the nine-slice body, then the screen. */
-.device-wrap { display: flex; flex-direction: column; align-items: center; gap: 22px; }
-.bezel { position: relative; flex: none; }
+   Layers: buttons under the body, the nine-slice body, then the screen. The
+   rotor is the turned outline; the bezel turns inside it. */
+.device-wrap { display: flex; flex-direction: column; align-items: center; gap: 24px; }
+.rotor { position: relative; flex: none; }
+.bezel {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transition: transform 280ms cubic-bezier(0.3, 0.7, 0.2, 1);
+}
 .bezel-art {
   position: absolute;
   inset: 0;
   z-index: 1;
   display: grid;
   pointer-events: none;
-  filter: drop-shadow(0 10px 22px rgba(0, 0, 0, 0.14));
+  filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.12));
 }
 .bezel-art img { display: block; width: 100%; height: 100%; }
 .bezel.annotating .bezel-art {
@@ -314,55 +371,45 @@ button { cursor: default; }
   -webkit-mask-size: 100% 100%;
   mask-size: 100% 100%;
 }
-.device.preview { background: #1d1d1f; }
+/* Shut down: Device Hub's blue screen. */
+.device.preview { background: var(--preview-screen); }
 .device.preview canvas,
 .device.preview #overlay { visibility: hidden; }
 #screen { width: 100%; height: 100%; display: block; }
 #overlay { position: absolute; inset: 0; outline: none; touch-action: none; }
 .float-layer { position: absolute; z-index: 4; pointer-events: none; }
 .device.annotating #overlay { cursor: crosshair; }
-#frozen-badge {
-  position: absolute;
-  left: 50%;
-  bottom: 22px;
-  transform: translateX(-50%);
-  white-space: nowrap;
-  padding: 6px 14px;
-  border-radius: 999px;
-  font-size: 12px;
-  pointer-events: none;
-}
 
-/* Not running: picture, name and Start, like Device Hub. */
+/* Not running: picture, name and Start. */
 .preview-info { display: flex; flex-direction: column; align-items: center; text-align: center; }
-.preview-name { font-size: 22px; line-height: 26px; font-weight: 700; }
-.preview-sub { margin-top: 4px; font-size: 13px; line-height: 18px; color: var(--secondary); }
+.preview-name { font-size: 17px; line-height: 21px; font-weight: 600; }
+.preview-sub { margin-top: 5px; font-size: 13.5px; line-height: 17px; color: var(--secondary); }
 .start-btn {
-  margin-top: 16px;
-  min-width: 80px;
-  padding: 7px 16px;
+  margin-top: 23px;
+  min-width: 83px;
+  height: 30px;
+  padding: 0 18px;
   border: 0;
   border-radius: 1000px;
   background: var(--accent);
   color: var(--on-accent);
   font-weight: 700;
-  line-height: 18px;
-  transition: background-color 0.21s ease-out;
 }
 .start-btn:hover { background: color-mix(in srgb, var(--accent), #000 3%); }
 .start-btn:disabled { opacity: 0.6; }
-.canvas.offline .toolbar { opacity: 0.35; pointer-events: none; }
 
 .canvas-bottom {
   position: absolute;
   left: 0;
   right: 0;
-  bottom: 0;
-  height: 76px;
-  display: grid;
-  place-items: center;
-  pointer-events: none; /* floats over the stage; only the pill takes clicks */
+  bottom: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  pointer-events: none; /* floats over the stage; only its controls take clicks */
 }
+.bottom-row { display: flex; gap: 10px; }
 .canvas-bottom .pill {
   pointer-events: auto;
   background: var(--glass);
@@ -371,14 +418,22 @@ button { cursor: default; }
   backdrop-filter: saturate(180%) blur(20px);
   -webkit-backdrop-filter: saturate(180%) blur(20px);
 }
+.icon-btn.recording { color: var(--mark); opacity: 1; }
+#frozen-badge {
+  white-space: nowrap;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 12px;
+}
 
-/* Selection layers on the screen. */
+/* Selection layers on the screen. --unrotate turns labels and markers back
+   upright when the device is turned. */
 .hl, .hl-label, .sel, .marker { position: absolute; pointer-events: none; }
 .hl { border: 1.5px solid var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); border-radius: 4px; }
 .hl-label {
-  position: absolute;
   z-index: 1;
-  transform: translate(-1px, calc(-100% - 3px));
+  transform-origin: 0 0;
+  transform: rotate(var(--unrotate, 0deg)) translate(-1px, calc(-100% - 3px));
   background: var(--accent);
   color: #fff;
   font-size: 11px;
@@ -394,6 +449,7 @@ button { cursor: default; }
   width: 20px;
   height: 20px;
   margin: -10px 0 0 -10px;
+  transform: rotate(var(--unrotate, 0deg));
   border-radius: 50%;
   background: var(--mark);
   color: #fff;
@@ -404,19 +460,32 @@ button { cursor: default; }
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
 }
 
-/* ---------- inspector: annotations ---------- */
+/* ---------- inspector ---------- */
 
 .inspector {
-  width: 340px;
+  width: 300px;
   flex: none;
   display: flex;
   flex-direction: column;
   background: var(--inspector);
   border-left: 1px solid var(--separator);
 }
-.inspector-top { height: 60px; flex: none; display: flex; align-items: center; justify-content: space-between; padding: 0 12px 0 20px; }
-.inspector-top h2 { margin: 0; font-size: 17px; line-height: 22px; font-weight: 700; }
-.count { color: var(--secondary); font-weight: 400; margin-left: 2px; }
+.inspector-top { height: 56px; flex: none; display: flex; align-items: center; justify-content: flex-end; padding: 0 10px; }
+.tabs { gap: 2px; }
+.tab-badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--mark);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 15px;
+}
 
 .empty {
   flex: 1;
@@ -424,35 +493,70 @@ button { cursor: default; }
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  padding: 0 36px 60px;
+  gap: 12px;
+  padding: 0 40px 40px;
   text-align: center;
-  color: var(--secondary);
+  color: var(--tertiary);
 }
-.empty p { margin: 0; }
-.empty-icon svg { width: 44px; height: 44px; stroke-width: 1.2; color: var(--tertiary); }
-kbd {
-  font: 600 11px/1 -apple-system, system-ui, sans-serif;
-  padding: 2px 5px;
-  border-radius: 4px;
-  border: 0.5px solid var(--separator);
-  background: var(--card);
-  color: var(--text);
+.empty p { margin: 0; line-height: 16px; }
+.empty-icon svg { width: 36px; height: 36px; stroke-width: 1.3; color: var(--tertiary); }
+
+.pane { flex: 1; overflow-y: auto; padding: 4px 16px 16px; }
+.pane-head { display: flex; align-items: center; gap: 2px; padding: 0 10px 6px 18px; }
+.pane-head h3, .pane-title, .settings-group h3 { margin: 0; font-size: 12px; line-height: 15px; font-weight: 500; color: var(--tertiary); }
+.pane-head h3 { flex: 1; }
+.count { margin-left: 6px; color: var(--secondary); }
+
+.settings-group { padding: 6px 0 14px; display: grid; gap: 10px; }
+.settings-group + .settings-group { border-top: 1px solid var(--separator); padding-top: 16px; }
+.setting { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.setting > span { white-space: nowrap; }
+.setting-note { display: grid; gap: 3px; font-size: 11.5px; line-height: 15px; color: var(--secondary); font-variant-numeric: tabular-nums; }
+.setting-note p { margin: 0; }
+.setting-note .warn { color: var(--warn); }
+.switch {
+  appearance: none;
+  width: 32px;
+  height: 19px;
+  margin: 0;
+  border-radius: 999px;
+  background: var(--pressed);
+  position: relative;
+  transition: background-color 0.15s;
+  flex: none;
 }
+.switch::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  transition: transform 0.15s;
+}
+.switch:checked { background: var(--ok); }
+.switch:checked::after { transform: translateX(13px); }
+
+.info { display: grid; grid-template-columns: auto 1fr; gap: 8px 14px; margin: 12px 0 0; }
+.info dt { color: var(--secondary); }
+.info dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.link { padding: 0; border: 0; background: none; color: var(--accent); text-align: left; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; }
 
 .list { list-style: none; margin: 0; padding: 0 12px 16px; overflow-y: auto; flex: 1; }
-/* Cards like the App Store's privacy cards: a gray fill, no shadow. */
 .item {
   position: relative;
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 16px;
-  margin-bottom: 12px;
+  padding: 14px;
+  margin-bottom: 10px;
   border-radius: 10px;
   background: var(--fill);
 }
-.item img { width: 100%; max-height: 110px; object-fit: contain; object-position: left center; border-radius: 8px; background: var(--fill); }
+.item img { width: 100%; max-height: 110px; object-fit: contain; object-position: left center; border-radius: 6px; background: var(--hover); }
 .item-delete {
   position: absolute;
   top: 8px;
@@ -488,7 +592,7 @@ kbd {
 .badge.acknowledged { color: var(--warn); }
 .badge.resolved { color: var(--ok); }
 .badge.dismissed { color: var(--tertiary); text-decoration: line-through; }
-.item-reply { margin-top: 6px; padding: 8px 10px; background: var(--card); border-radius: 9px; font-size: 12px; line-height: 15px; }
+.item-reply { margin-top: 6px; padding: 8px 10px; background: var(--hover); border-radius: 9px; font-size: 12px; line-height: 15px; }
 .item-reply b { color: var(--accent); font-weight: 600; }
 
 /* ---------- composer popover ---------- */
@@ -499,23 +603,21 @@ kbd {
   width: 320px;
   padding: 16px;
   border-radius: 12px;
-  background: var(--glass);
+  background: var(--menu);
   border: 0.5px solid var(--glass-edge);
-  box-shadow: 0 3px 20px rgba(0, 0, 0, 0.08);
-  backdrop-filter: saturate(180%) blur(20px);
-  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.14);
 }
 .composer-target { font-size: 12px; line-height: 15px; color: var(--secondary); margin-bottom: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .composer textarea {
   width: 100%;
   resize: vertical;
   padding: 8px;
-  border-radius: 9px;
+  border-radius: 8px;
   border: 1px solid var(--separator);
-  background: var(--field);
+  background: var(--canvas);
   outline: none;
 }
-.composer textarea:focus { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent); }
+.composer textarea:focus { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent); }
 .composer-row { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
 .composer-row .hint { flex: 1; color: var(--secondary); font-size: 12px; line-height: 15px; white-space: nowrap; }
 
@@ -523,23 +625,12 @@ kbd {
 
 .window.no-sidebar .sidebar,
 .window.no-inspector .inspector { display: none; }
-/* Panel toggles: round gray buttons, like the App Store's circle buttons. */
-#toggle-sidebar,
-#toggle-inspector {
-  width: 32px;
-  height: 32px;
-  background: var(--fill);
-}
-#toggle-sidebar:hover,
-#toggle-inspector:hover { background: var(--pressed); }
 
 @media (max-width: 1100px) {
   .sidebar { width: 220px; }
-  .search { margin-inline: 16px; }
-  .devices { padding-inline: 16px 12px; }
-  .inspector { width: 280px; }
+  .inspector { width: 270px; }
 }
 /* Fit-to-window still applies; the zoom buttons give their room to the title. */
-@media (max-width: 1050px) {
+@media (max-width: 1000px) {
   .toolbar .pill[aria-label="Zoom"] { display: none; }
 }

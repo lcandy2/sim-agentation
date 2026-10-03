@@ -1,36 +1,68 @@
 <script>
-  import { ui } from '../lib/app.svelte.js';
+  import { ui, togglePanel, setFilter } from '../lib/app.svelte.js';
   import { icon } from '../lib/icons.js';
   import DeviceRow from './DeviceRow.svelte';
+  import NewSimulator from './NewSimulator.svelte';
+  import Popover from './Popover.svelte';
+
+  const FILTERS = [
+    { id: 'all', label: 'All Simulators', heading: 'Available' },
+    { id: 'running', label: 'Running', heading: 'Running' },
+    { id: 'iphone', label: 'iPhone', heading: 'iPhone' },
+    { id: 'ipad', label: 'iPad', heading: 'iPad' },
+  ];
+  const matches = {
+    all: () => true,
+    running: (s) => s.state === 'Booted',
+    iphone: (s) => s.deviceType.includes('iPhone'),
+    ipad: (s) => s.deviceType.includes('iPad'),
+  };
 
   const version = (runtime) => runtime.replace(/^\D+/, '');
   const byVersionThenName = (a, b) =>
     version(b.runtime).localeCompare(version(a.runtime), undefined, { numeric: true }) || a.name.localeCompare(b.name);
 
-  const sections = $derived.by(() => {
+  // One list, as in Device Hub: a running device shows by its lit picture.
+  const filter = $derived(FILTERS.find((f) => f.id === ui.filter) ?? FILTERS[0]);
+  const list = $derived.by(() => {
     const query = ui.query.trim().toLowerCase();
-    const shown = ui.sims.filter((s) => !query || `${s.name} ${s.runtime}`.toLowerCase().includes(query));
-    return [
-      ['Running', shown.filter((s) => s.state === 'Booted').sort(byVersionThenName)],
-      ['Available', shown.filter((s) => s.state !== 'Booted').sort(byVersionThenName)],
-    ].filter(([, list]) => list.length);
+    return ui.sims
+      .filter((s) => (matches[filter.id] ?? matches.all)(s))
+      .filter((s) => !query || `${s.name} ${s.runtime}`.toLowerCase().includes(query))
+      .sort(byVersionThenName);
   });
 </script>
 
 <aside class="sidebar" id="sidebar">
   <div class="sidebar-top">
-    <span class="brand">Sim Agentation</span>
+    <div class="pill bar-pill" role="group" aria-label="Simulators">
+      <Popover icon="plus" title="New simulator" align="left">
+        {#snippet children(close)}<NewSimulator {close} />{/snippet}
+      </Popover>
+      <Popover icon="filter" title="Filter simulators" align="left">
+        {#snippet children(close)}
+          <div class="menu" role="menu">
+            {#each FILTERS as f (f.id)}
+              <button class="menu-item" role="menuitemradio" aria-checked={ui.filter === f.id} onclick={() => { setFilter(f.id); close(); }}>
+                <span class="check">{ui.filter === f.id ? '✓' : ''}</span>{f.label}
+              </button>
+            {/each}
+          </div>
+        {/snippet}
+      </Popover>
+    </div>
+    <button class="icon-btn circle-btn" title="Hide the device list" aria-label="Hide the device list" onclick={() => togglePanel('sidebar', false)}>
+      {@html icon('sidebar')}
+    </button>
   </div>
   <label class="search">
     <span data-icon="search">{@html icon('search')}</span>
     <input type="search" placeholder="Search" autocomplete="off" spellcheck="false" bind:value={ui.query}>
   </label>
   <nav class="devices" aria-label="Simulators">
-    {#each sections as [title, list] (title)}
-      <h3>{title}</h3>
-      {#each list as sim (sim.udid)}
-        <DeviceRow {sim} version={version(sim.runtime)} />
-      {/each}
+    <h3>{filter.heading}</h3>
+    {#each list as sim (sim.udid)}
+      <DeviceRow {sim} version={version(sim.runtime)} />
     {:else}
       <p class="none">No simulators match.</p>
     {/each}

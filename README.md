@@ -21,14 +21,16 @@ Everything runs in one Swift binary built from `host/`: the web server and API, 
 
 The UI is Svelte, in `web/src`. `pnpm dev` rebuilds it on every change; reload the page to see it.
 
-The page is laid out like Xcode's Device Hub: simulators on the left, the device in the middle, annotations on the right. Devices are drawn with Xcode's own DeviceKit chrome artwork (`/Library/Developer/DeviceKit/Chrome`), so the hardware buttons slide out on hover and press in when clicked. Selecting a simulator that isn't running shows it with a **Start** button; nothing boots until you press it.
+The page is laid out like Xcode's Device Hub. On the left, the simulators, with **+** to create one and a filter (all, running, iPhone, iPad). In the middle, the device, drawn with Xcode's own DeviceKit chrome artwork (`/Library/Developer/DeviceKit/Chrome`), so the hardware buttons slide out on hover and press in when clicked; below it, Home, screenshot, screen recording (MP4) and rotate. On the right, an inspector with three tabs: settings, annotations and device info. Selecting a simulator that isn't running shows it with a **Start** button; nothing boots until you press it. The collapse button shows the device alone, and **…** has the rest (copy annotations, lock, app switcher, panels).
 
 - **Interact** (`I`): use the app. Click and drag to touch, scroll with the wheel, type with the keyboard.
 - **Annotate** (`A`): freezes the screen. Hover to see elements, click one to annotate it, or drag a box over any area. Press ⌘↩ to add the note and Esc to go back to the live screen.
 
-The stream picks its codec automatically: H.265, else H.264, else JPEG, taking the first this browser decodes in hardware, and moving on if the host can't encode it or nothing decodes within a few seconds. Both video codecs are encoded by VideoToolbox in hardware with no frame reordering and decoded by WebCodecs in hardware: about 60 fps (the simulator's own rate) at 3–8 Mbit/s while scrolling, against about 85 Mbit/s for JPEG. The codec pill in the toolbar (**AUTO H.265 · 60 fps**) shows what's running and lets you pin a codec, turn on 4:2:2 chroma for H.265 (sharper colored text, about twice the bitrate, no low-latency rate control), halve the resolution or set the bitrate. The pipeline follows [baguette](https://github.com/tddworks/baguette)'s.
+The stream picks its codec automatically: H.265, else H.264, else JPEG, taking the first this browser decodes in hardware, and moving on if the host can't encode it or nothing decodes within a few seconds. Both video codecs are encoded by VideoToolbox in hardware with no frame reordering and decoded by WebCodecs in hardware: about 60 fps (the simulator's own rate) at 3–8 Mbit/s while scrolling, against about 85 Mbit/s for JPEG. The inspector's settings tab shows what's running and lets you pin a codec, turn on 4:2:2 chroma for H.265 (sharper colored text, about twice the bitrate, no low-latency rate control), halve the resolution or set the bitrate. The pipeline follows [baguette](https://github.com/tddworks/baguette)'s.
 
-Click **Copy** to put every pending annotation on the clipboard as Markdown, so you can paste it into any agent without MCP.
+Rotating turns the device on the page and sends iOS the orientation change, as Simulator.app does; annotating works turned too, and the screenshots go to the agent upright.
+
+Click **Copy** in the annotations tab to put every pending annotation on the clipboard as Markdown, so you can paste it into any agent without MCP.
 
 ## Connect an agent
 

@@ -221,6 +221,10 @@ final class DeviceSession: @unchecked Sendable {
             capture.requestFrame()
         case "set_fps", "set_bitrate", "set_scale":
             reconfigure(type, msg)
+        case "orientation":
+            guard let name = msg["orientation"] as? String, let orientation = DeviceOrientation(wireName: name) else { return }
+            let ok = Orientation.set(orientation, udid: udid)
+            socket.send(json: ["type": "orientation_result", "ok": ok, "orientation": name])
         case "describe_ui":
             describe(msg)
         default:

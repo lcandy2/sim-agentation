@@ -7,6 +7,7 @@ import { hitTest, describe, nodesInRect } from './ax.js';
 import { sampler, warm, containersAround } from './visual.js';
 import { matchesFrontApp, sdkContainers, sourceFor, viewContext } from './sdk.js';
 import { createDecoder, decodeCapabilities, formatLabel, pickFormat } from './stream.js';
+import { sdkToPortrait, treeToPortrait, uprightDegrees } from './rotation.js';
 
 export const storage = {
   get(k) {
@@ -39,7 +40,11 @@ export const ui = $state({
   panels: {
     sidebar: storage.get('panel-sidebar') !== 'hidden',
     inspector: storage.get('panel-inspector') !== 'hidden',
+    tab: storage.get('inspector-tab') ?? 'annotations', // 'settings', 'annotations' or 'info'
   },
+  filter: storage.get('filter') ?? 'all', // the device list: 'all', 'running', 'iphone' or 'ipad'
+  orientation: 'portrait', // the device's, as sent to it: see ROTATION
+  recording: false,
   annotations: [],
   draft: null,        // { label, x, y } while the composer is open (viewport px)
   stream: {
@@ -138,14 +143,19 @@ function connect(udid) {
 
   ws.onopen = () => {
     ws.send(JSON.stringify({ type: 'snapshot' }));
+    ws.send(JSON.stringify({ type: 'orientation', orientation: ui.orientation }));
     // Nudge with a harmless scroll so an idle screen still emits a frame.
     setTimeout(() => !rt.frame && send({ type: 'scroll', deltaX: 0, deltaY: 0 }), 600);
-    // The server re-encodes the screen 60 times a second even when it's
-    // still, so a working video stream decodes something within moments.
-    clearTimeout(rt.watchdog);
-    rt.watchdog = setTimeout(() => {
-      if (rt.ws === ws && !rt.decoder?.stats.decoded) fallBack(format, 'no frames decoded');
-    }, 4000);
+    // Once video arrives, a working decoder shows something within moments
+    // (the host re-encodes even a still screen 60 times a second). No video
+    // at all, as while a simulator boots, is the host's to report.
+    clearInterval(rt.watchdog);
+    const watchdog = setInterval(() => {
+      const stats = rt.decoder?.stats;
+      if (rt.ws !== ws || stats?.decoded) return clearInterval(watchdog);
+      if (stats?.received && performance.now() - stats.firstAt > 3000) fallBack(format, 'frames arrive but none decode');
+    }, 500);
+    rt.watchdog = watchdog;
   };
   ws.onmessage = (e) => {
     if (typeof e.data === 'string') return onText(JSON.parse(e.data));
@@ -165,7 +175,7 @@ function connect(udid) {
 function stopStream() {
   const ws = rt.ws;
   rt.ws = null;
-  clearTimeout(rt.watchdog);
+  clearInterval(rt.watchdog);
   ui.live = false;
   rt.decoder?.dispose();
   rt.decoder = null;
@@ -293,12 +303,12 @@ function fetchTree() {
 
 // ---------- coordinates ----------
 
+// offsetX/Y are in the overlay's own coordinates, so they hold when the
+// device is rotated: the framebuffer, touches and the tree stay portrait.
 function fraction(e) {
-  const r = rt.overlay.getBoundingClientRect();
-  return {
-    fx: Math.min(Math.max((e.clientX - r.left) / r.width, 0), 1),
-    fy: Math.min(Math.max((e.clientY - r.top) / r.height, 0), 1),
-  };
+  const el = rt.overlay;
+  const clamp = (v) => Math.min(Math.max(v, 0), 1);
+  return { fx: clamp(e.offsetX / el.clientWidth), fy: clamp(e.offsetY / el.clientHeight) };
 }
 
 function inputPoint(e) {
@@ -414,11 +424,55 @@ export async function saveScreenshot() {
   const { width, height } = frameSize(frame);
   const out = new OffscreenCanvas(width, height);
   out.getContext('2d').drawImage(frame, 0, 0);
-  const blob = await out.convertToBlob({ type: 'image/png' });
+  download(await out.convertToBlob({ type: 'image/png' }), 'png');
+}
+
+function download(blob, extension) {
   const stamp = new Date().toISOString().slice(0, 19).replace('T', ' at ').replaceAll(':', '.');
-  const link = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: `${ui.simName} ${stamp}.png` });
+  const link = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: `${ui.simName} ${stamp}.${extension}` });
   link.click();
   setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+}
+
+// Records the screen as the page shows it, as baguette's recorder.js does:
+// MP4 where MediaRecorder can, else WebM.
+const RECORDING_TYPES = ['video/mp4;codecs=avc1.640033', 'video/mp4;codecs=avc1.42E01E', 'video/webm;codecs=vp9', 'video/webm'];
+let recorder = null;
+
+export function toggleRecording() {
+  if (recorder) return recorder.stop();
+  if (!ui.running || !rt.canvas || typeof MediaRecorder === 'undefined') return;
+  const type = RECORDING_TYPES.find((t) => MediaRecorder.isTypeSupported(t)) ?? '';
+  const stream = rt.canvas.captureStream(60);
+  const chunks = [];
+  recorder = new MediaRecorder(stream, { ...(type && { mimeType: type }), videoBitsPerSecond: 12_000_000 });
+  recorder.ondataavailable = (e) => e.data.size && chunks.push(e.data);
+  recorder.onstop = () => {
+    stream.getTracks().forEach((t) => t.stop());
+    download(new Blob(chunks, { type: recorder.mimeType }), recorder.mimeType.startsWith('video/mp4') ? 'mp4' : 'webm');
+    recorder = null;
+    ui.recording = false;
+  };
+  recorder.start(1000);
+  ui.recording = true;
+}
+
+// ---------- rotation ----------
+
+/** Degrees the device turns on screen for each orientation (UIDeviceOrientation names). */
+export const ROTATION = { portrait: 0, 'landscape-right': 90, 'portrait-upside-down': 180, 'landscape-left': -90 };
+const TURN_ORDER = ['portrait', 'landscape-right', 'portrait-upside-down', 'landscape-left']; // clockwise
+
+export const isLandscape = () => ui.running && ui.orientation.startsWith('landscape');
+
+/** Turns the device a quarter clockwise: iOS rotates its interface, the page rotates the device. */
+export async function rotate() {
+  if (!ui.running) return;
+  await setMode('interact');
+  ui.orientation = TURN_ORDER[(TURN_ORDER.indexOf(ui.orientation) + 1) % TURN_ORDER.length];
+  send({ type: 'orientation', orientation: ui.orientation });
+  await tick();
+  updateScale();
 }
 
 // ---------- annotate mode ----------
@@ -461,9 +515,13 @@ export async function setMode(mode) {
 
     const [tree, sdk] = await data;
     if (rt.frozen !== f) return; // left annotate mode meanwhile
-    f.tree = tree;
-    if (tree?.frame?.width) f.points = { width: tree.frame.width, height: tree.frame.height };
-    f.sdkAvailable = matchesFrontApp(sdk, tree) ? sdk : null;
+    // A turned interface reports turned coordinates; bring them into the
+    // framebuffer's, where the overlay, pixels and touches live.
+    const screen = ui.chrome.screen;
+    f.turned = tree?.frame && tree.frame.width > tree.frame.height ? ui.orientation : null;
+    f.tree = treeToPortrait(tree, ui.orientation, screen);
+    if (f.tree?.frame?.width) f.points = { width: f.tree.frame.width, height: f.tree.frame.height };
+    f.sdkAvailable = matchesFrontApp(sdk, tree) ? sdkToPortrait(sdk, ui.orientation, screen) : null;
     applySdk();
   } else {
     rt.frozen?.bitmap.close?.();
@@ -492,10 +550,11 @@ function applySdk() {
   }
 }
 
+/** The preference applies to the next freeze too, so it works from Settings any time. */
 export function toggleSdk() {
-  if (!rt.frozen?.sdkAvailable) return;
   ui.sdkEnabled = !ui.sdkEnabled;
   storage.set('sdk', ui.sdkEnabled ? 'on' : 'off');
+  if (!rt.frozen?.sdkAvailable) return;
   applySdk();
   rt.overlay?.focus();
 }
@@ -605,9 +664,13 @@ function highlight() {
   // The label sits on the unmasked layer so it stays whole above the top of the screen.
   if (!label) rt.float.append((label = Object.assign(document.createElement('span'), { className: 'hl-label' })));
   placeBox(hl, target.rect);
+  // Anchor at the box corner that is top-left on screen; the label then turns
+  // back upright (--unrotate), so it reads level however the device is turned.
   const { width, height } = rt.frozen.points;
-  label.style.left = `${(target.rect.x / width) * 100}%`;
-  label.style.top = `${(target.rect.y / height) * 100}%`;
+  const { x, y, width: w, height: h } = target.rect;
+  const [ax, ay] = { 90: [x, y + h], 180: [x + w, y + h], [-90]: [x + w, y] }[ROTATION[ui.orientation]] ?? [x, y];
+  label.style.left = `${(ax / width) * 100}%`;
+  label.style.top = `${(ay / height) * 100}%`;
   const more = hover.level < hover.targets.length - 1 ? '  ↑ parent' : '';
   label.textContent = target.label + more;
 }
@@ -657,6 +720,8 @@ export async function submitComposer(comment) {
   const ch = Math.min(img.height - cy, (r.height + pad * 2) * scale);
   const crop = new OffscreenCanvas(Math.max(1, cw), Math.max(1, ch));
   crop.getContext('2d').drawImage(img, cx, cy, cw, ch, 0, 0, cw, ch);
+  // Screenshots go to the agent upright, as the interface was showing.
+  const degrees = f.turned ? uprightDegrees(f.turned) : 0;
 
   const body = {
     udid: ui.udid,
@@ -668,8 +733,8 @@ export async function submitComposer(comment) {
     app: f.sdk ? { bundleId: f.sdk.bundleId, name: f.sdk.appName } : undefined,
     source: f.sdk ? sourceFor(f.sdk, r) : undefined,
     ...(f.sdk ? viewContext(f.sdk, r) : {}),
-    full: await toBase64(full),
-    crop: await toBase64(crop),
+    full: await toBase64(turn(full, degrees)),
+    crop: await toBase64(turn(crop, degrees)),
   };
   const res = await fetch('/api/annotations', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
   if (!res.ok) return setStatus((await res.json().catch(() => null))?.error || 'Save failed');
@@ -681,6 +746,17 @@ export async function submitComposer(comment) {
   marker.style.left = `${(r.x / f.points.width) * 100}%`;
   marker.style.top = `${(r.y / f.points.height) * 100}%`;
   rt.float.append(marker);
+}
+
+/** The canvas turned a quarter, for landscape screenshots. */
+function turn(canvas, degrees) {
+  if (!degrees) return canvas;
+  const out = new OffscreenCanvas(canvas.height, canvas.width);
+  const g = out.getContext('2d');
+  g.translate(out.width / 2, out.height / 2);
+  g.rotate((degrees * Math.PI) / 180);
+  g.drawImage(canvas, -canvas.width / 2, -canvas.height / 2);
+  return out;
 }
 
 async function toBase64(offscreen) {
@@ -752,6 +828,8 @@ export async function selectDevice(sim) {
   storage.set('udid', sim.udid);
   ui.simName = sim.name;
   ui.runtime = sim.runtime;
+  ui.orientation = 'portrait';
+  if (recorder) recorder.stop();
   setStatus('');
 
   const chrome = await chromeOf(sim.udid);
@@ -786,7 +864,7 @@ export async function startDevice() {
 
 // ---------- zoom ----------
 
-const PREVIEW_HEIGHT = 300; // px, the not-running device picture
+const PREVIEW_HEIGHT = 210; // px, the not-running device picture, as in Device Hub
 export const MARGIN = 14; // pt around the body for buttons that slide out
 const ZOOM_STEP = 1.25;
 
@@ -796,9 +874,10 @@ function fitScale() {
   const pad = getComputedStyle(stage);
   const width = stage.clientWidth - parseFloat(pad.paddingLeft) - parseFloat(pad.paddingRight);
   const height = stage.clientHeight - parseFloat(pad.paddingTop) - parseFloat(pad.paddingBottom);
-  const info = rt.previewInfo ? rt.previewInfo.offsetHeight + 22 : 0;
+  const info = rt.previewInfo ? rt.previewInfo.offsetHeight + 24 : 0;
   const { size } = ui.chrome;
-  return Math.max(0.15, Math.min(width / (size.width + MARGIN * 2), (height - info) / (size.height + MARGIN * 2)));
+  const [w, h] = isLandscape() ? [size.height, size.width] : [size.width, size.height];
+  return Math.max(0.15, Math.min(width / (w + MARGIN * 2), (height - info) / (h + MARGIN * 2)));
 }
 
 function currentScale() {
@@ -829,11 +908,50 @@ export const zoomOut = () => setZoom(currentScale() / ZOOM_STEP);
 
 // ---------- panels ----------
 
-export async function togglePanel(name) {
-  ui.panels[name] = !ui.panels[name];
-  storage.set(`panel-${name}`, ui.panels[name] ? 'shown' : 'hidden');
+export async function togglePanel(name, show = !ui.panels[name]) {
+  ui.panels[name] = show;
+  storage.set(`panel-${name}`, show ? 'shown' : 'hidden');
   await tick();
   onStageResize();
+}
+
+/** Device Hub's collapse button: the device alone, then both panels back. */
+export async function toggleFocus() {
+  const show = !ui.panels.sidebar && !ui.panels.inspector;
+  await Promise.all([togglePanel('sidebar', show), togglePanel('inspector', show)]);
+}
+
+export function setInspectorTab(tab) {
+  ui.panels.tab = tab;
+  storage.set('inspector-tab', tab);
+  if (!ui.panels.inspector) togglePanel('inspector', true);
+}
+
+export function setFilter(filter) {
+  ui.filter = filter;
+  storage.set('filter', filter);
+}
+
+// ---------- new simulators ----------
+
+export const simulatorOptions = () => fetch('/api/sims/new').then((r) => (r.ok ? r.json() : null)).catch(() => null);
+
+/** `simctl create`, then select it; it starts shut down, ready for Start. */
+export async function createSimulator({ name, deviceType, runtime }) {
+  const res = await fetch('/api/sims', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ name, deviceType, runtime }),
+  }).catch(() => null);
+  const body = await res?.json().catch(() => null);
+  if (!res?.ok) {
+    flashStatus(body?.error ?? "Couldn't create the simulator", 6000);
+    return false;
+  }
+  ui.sims = await fetch('/api/sims').then((r) => (r.ok ? r.json() : ui.sims)).catch(() => ui.sims);
+  const sim = ui.sims.find((s) => s.udid === body.udid);
+  if (sim) await selectDevice(sim);
+  return true;
 }
 
 // ---------- start ----------

@@ -1,32 +1,54 @@
 <script>
-  import { ui, setMode, toggleSdk, setZoom, zoomIn, zoomOut, togglePanel } from '../lib/app.svelte.js';
+  import {
+    ui, setMode, setZoom, zoomIn, zoomOut, togglePanel, toggleFocus, setInspectorTab,
+    copyPending, clearDone, saveScreenshot, pressButton,
+  } from '../lib/app.svelte.js';
   import { icon } from '../lib/icons.js';
-  import StreamSettings from './StreamSettings.svelte';
+  import Popover from './Popover.svelte';
 
   const status = $derived(ui.flash ?? ui.status);
+
+  // The … menu: what has no button of its own in Device Hub's toolbar.
+  const menu = $derived([
+    [
+      { label: 'Copy Pending Annotations', run: copyPending },
+      { label: 'Remove Resolved Annotations', run: clearDone },
+    ],
+    [
+      { label: 'Save Screenshot', run: saveScreenshot, disabled: !ui.running },
+      { label: 'Lock', run: () => pressButton('lock'), disabled: !ui.running },
+      { label: 'App Switcher', run: () => pressButton('app-switcher'), disabled: !ui.running },
+    ],
+    [
+      { label: 'Stream Settings', run: () => setInspectorTab('settings') },
+      { label: 'Device Info', run: () => setInspectorTab('info') },
+    ],
+    [
+      { label: ui.panels.sidebar ? 'Hide Device List' : 'Show Device List', run: () => togglePanel('sidebar') },
+      { label: ui.panels.inspector ? 'Hide Inspector' : 'Show Inspector', run: () => togglePanel('inspector') },
+    ],
+  ]);
 </script>
 
 <header class="canvas-top">
-  <button
-    id="toggle-sidebar"
-    class="icon-btn"
-    class:on={ui.panels.sidebar}
-    title="Show or hide the device list"
-    data-icon="sidebar"
-    onclick={() => togglePanel('sidebar')}
-  >{@html icon('sidebar')}</button>
+  {#if !ui.panels.sidebar}
+    <button id="toggle-sidebar" class="icon-btn circle-btn" title="Show the device list" aria-label="Show the device list" onclick={() => togglePanel('sidebar', true)}>
+      {@html icon('sidebar')}
+    </button>
+  {/if}
   <div class="title">
     <div class="title-name">{ui.simName}</div>
     <div class="title-sub"><span>{ui.runtime}</span><span class="status">{status}</span></div>
   </div>
   <div class="toolbar">
-    <div class="pill seg" role="group" aria-label="Mode">
+    <div class="pill" role="group" aria-label="Mode">
       <button
         id="mode-interact"
         class="icon-btn"
-        class:on={ui.mode === 'interact'}
+        class:on={ui.mode === 'interact' && ui.running}
         title="Interact: use the app (I)"
         data-icon="pointer"
+        disabled={!ui.running}
         onclick={() => setMode('interact')}
       >{@html icon('pointer')}</button>
       <button
@@ -35,42 +57,53 @@
         class:on={ui.mode === 'annotate'}
         title="Annotate: freeze the screen and mark things up (A)"
         data-icon="annotate"
+        disabled={!ui.running}
         onclick={() => setMode('annotate')}
       >{@html icon('annotate')}</button>
     </div>
-    {#if ui.sdkAvailable}
-      <button class="pill sdk" class:on={ui.sdkEnabled} title="Use SimAgentationPlus data from the app (S)" onclick={toggleSdk}>
-        <span class="dot"></span>SDK
-      </button>
-    {/if}
-    {#if ui.running}<StreamSettings />{/if}
     <div class="pill" role="group" aria-label="Zoom">
       <button id="zoom-out" class="icon-btn" title="Zoom out (⌘−)" data-icon="zoom-out" onclick={zoomOut}>{@html icon('zoom-out')}</button>
+      <i class="sep"></i>
       <button
         id="zoom-fit"
         class="icon-btn"
-        class:on={ui.zoom === 'fit'}
+        class:on={ui.zoom === 'fit' && ui.running}
         title="Fit to window (⌘9)"
         data-icon="zoom-fit"
         onclick={() => setZoom('fit')}
       >{@html icon('zoom-fit')}</button>
+      <i class="sep"></i>
       <button
         id="zoom-actual"
         class="icon-btn"
-        class:on={ui.zoom !== 'fit' && Number(ui.zoom) === 1}
+        class:on={ui.zoom !== 'fit' && Number(ui.zoom) === 1 && ui.running}
         title="Actual size, 1 point per pixel (⌘0)"
         data-icon="zoom-actual"
         onclick={() => setZoom(1)}
       >{@html icon('zoom-actual')}</button>
+      <i class="sep"></i>
       <button id="zoom-in" class="icon-btn" title="Zoom in (⌘+)" data-icon="zoom-in" onclick={zoomIn}>{@html icon('zoom-in')}</button>
     </div>
+    <div class="pill" role="group" aria-label="View">
+      <button
+        id="toggle-focus"
+        class="icon-btn"
+        title={ui.panels.sidebar || ui.panels.inspector ? 'Show the device alone' : 'Show the device list and inspector'}
+        data-icon="focus"
+        onclick={toggleFocus}
+      >{@html icon('focus')}</button>
+      <Popover icon="more" title="More">
+        {#snippet children(close)}
+          <div class="menu" role="menu">
+            {#each menu as group, i (i)}
+              {#if i}<hr>{/if}
+              {#each group as item (item.label)}
+                <button class="menu-item" role="menuitem" disabled={item.disabled} onclick={() => { close(); item.run(); }}>{item.label}</button>
+              {/each}
+            {/each}
+          </div>
+        {/snippet}
+      </Popover>
+    </div>
   </div>
-  <button
-    id="toggle-inspector"
-    class="icon-btn"
-    class:on={ui.panels.inspector}
-    title="Show or hide annotations"
-    data-icon="inspector"
-    onclick={() => togglePanel('inspector')}
-  >{@html icon('inspector')}</button>
 </header>

@@ -20,6 +20,18 @@ const paths = {
   trash: '<path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/><path d="M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12"/><path d="M10 11v6M14 11v6"/>',
   'clear-done': '<path d="M3 12.5 7.5 17 15 8"/><path d="m12 16 1 1 8-9"/>',
   annotations: '<path d="M5 4h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-6l-5 4v-4H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/><path d="M8 9h8M8 12.5h5"/>',
+  // Device Hub's toolbar, sidebar and inspector glyphs.
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  filter: '<path d="M4 7h16M7 12h10M10 17h4"/>',
+  sliders: '<path d="M4 7h8M16 7h4M4 12h2M10 12h10M4 17h10M18 17h2"/><circle cx="14" cy="7" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="16" cy="17" r="2"/>',
+  doc: '<path d="M7 3h7l5 5v11a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M14 3v5h5M9 13h6M9 17h4"/>',
+  info: '<path d="M10 10.5h2.4V18M9.6 18h5.4"/><circle cx="12.2" cy="6.2" r="1.15" fill="currentColor" stroke="none"/>',
+  focus: '<path d="M20 4l-6 6M14 5.5V10h4.5M4 20l6-6M10 18.5V14H5.5"/>',
+  more: '<circle cx="5.5" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="18.5" cy="12" r="1.4" fill="currentColor" stroke="none"/>',
+  record: '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.6" fill="currentColor" stroke="none"/>',
+  'record-stop': '<circle cx="12" cy="12" r="8"/><rect x="9" y="9" width="6" height="6" rx="1.2" fill="currentColor" stroke="none"/>',
+  rotate: '<rect x="3.5" y="9" width="10" height="11.5" rx="2"/><path d="M11.5 4.5h2a5.5 5.5 0 0 1 5.5 5.5v1.5"/><path d="m16.5 9.5 2.5 2.5 2.5-2.5"/>',
+  'empty-doc': '<path d="M7 3h7l5 5v11a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M14 3v5h5M9 13h6M9 17h4M4 4l16 17"/>',
 };
 
 export function icon(name) {

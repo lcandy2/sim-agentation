@@ -1,30 +1,43 @@
 <script>
-  import { ui, copyPending, clearDone } from '../lib/app.svelte.js';
+  import { ui, setInspectorTab } from '../lib/app.svelte.js';
   import { icon } from '../lib/icons.js';
-  import AnnotationCard from './AnnotationCard.svelte';
+  import AnnotationsPane from './AnnotationsPane.svelte';
+  import InfoPane from './InfoPane.svelte';
+  import SettingsPane from './SettingsPane.svelte';
 
+  // Device Hub's inspector: three tabs in a pill at the top right.
+  const TABS = [
+    { id: 'settings', icon: 'sliders', title: 'Settings' },
+    { id: 'annotations', icon: 'doc', title: 'Annotations' },
+    { id: 'info', icon: 'info', title: 'Info' },
+  ];
   const open = $derived(ui.annotations.filter((a) => a.status === 'pending' || a.status === 'acknowledged').length);
-  const newestFirst = $derived(ui.annotations.toReversed());
 </script>
 
 <aside class="inspector" id="inspector">
   <header class="inspector-top">
-    <h2>Annotations <span class="count">{open || ''}</span></h2>
-    <div class="pill" role="group" aria-label="Annotations">
-      <button class="icon-btn" title="Copy pending annotations as Markdown" data-icon="copy" onclick={copyPending}>{@html icon('copy')}</button>
-      <button class="icon-btn" title="Remove resolved and dismissed" data-icon="clear-done" onclick={clearDone}>{@html icon('clear-done')}</button>
+    <div class="pill tabs" role="tablist" aria-label="Inspector">
+      {#each TABS as tab (tab.id)}
+        <button
+          class="icon-btn"
+          class:on={ui.panels.tab === tab.id}
+          role="tab"
+          aria-selected={ui.panels.tab === tab.id}
+          title={tab.id === 'annotations' && open ? `${tab.title} (${open} open)` : tab.title}
+          aria-label={tab.title}
+          onclick={() => setInspectorTab(tab.id)}
+        >
+          {@html icon(tab.icon)}
+          {#if tab.id === 'annotations' && open}<span class="tab-badge">{open}</span>{/if}
+        </button>
+      {/each}
     </div>
   </header>
-  {#if newestFirst.length}
-    <ol class="list">
-      {#each newestFirst as annotation (annotation.id)}
-        <AnnotationCard {annotation} />
-      {/each}
-    </ol>
+  {#if ui.panels.tab === 'settings'}
+    <SettingsPane />
+  {:else if ui.panels.tab === 'info'}
+    <InfoPane />
   {:else}
-    <div class="empty">
-      <span class="empty-icon" data-icon="annotations">{@html icon('annotations')}</span>
-      <p>Press <kbd>A</kbd> to freeze the screen, then click an element or drag a box around anything.</p>
-    </div>
+    <AnnotationsPane />
   {/if}
 </aside>

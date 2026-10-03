@@ -73,11 +73,12 @@ export function createDecoder(format, { onFrame, onError }) {
 }
 
 function jpegDecoder(onFrame) {
-  const stats = { chunks: 0, decoded: 0 };
+  const stats = { received: 0, firstAt: 0, decoded: 0 };
   return {
     stats,
     feed(buffer) {
-      stats.chunks++;
+      stats.received++;
+      stats.firstAt ||= performance.now();
       createImageBitmap(new Blob([buffer], { type: 'image/jpeg' })).then((bitmap) => {
         stats.decoded++;
         onFrame(bitmap);
@@ -91,9 +92,9 @@ function jpegDecoder(onFrame) {
 function videoDecoder(format, onFrame, onError) {
   let timestamp = 0;
   const state = { hardware: null };
-  // Video chunks in and frames out, so a caller can tell a decoder that
-  // takes chunks but never produces a picture (the JPEG seed doesn't count).
-  const stats = { chunks: 0, decoded: 0 };
+  // Video messages in and frames out, so a caller can tell a decoder that
+  // gets a stream but never produces a picture (the JPEG seed doesn't count).
+  const stats = { received: 0, firstAt: 0, decoded: 0 };
   const decoder = new VideoDecoder({
     output: (frame) => {
       stats.decoded++;
@@ -111,6 +112,10 @@ function videoDecoder(format, onFrame, onError) {
       const bytes = new Uint8Array(buffer);
       const tag = bytes[0];
       const payload = bytes.subarray(1);
+      if (tag <= 0x03) {
+        stats.received++;
+        stats.firstAt ||= performance.now();
+      }
       if (tag === 0x01) {
         const config = {
           codec: format === 'avcc' ? avcCodec(payload) : hevcCodec(payload),
@@ -125,7 +130,6 @@ function videoDecoder(format, onFrame, onError) {
           onError?.(e);
         }
       } else if ((tag === 0x02 || tag === 0x03) && decoder.state === 'configured') {
-        stats.chunks++;
         try {
           decoder.decode(new EncodedVideoChunk({ type: tag === 0x02 ? 'key' : 'delta', timestamp, data: payload }));
           timestamp += 16667; // never displayed; only has to increase

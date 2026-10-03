@@ -1,7 +1,7 @@
 <script>
   import { onMount } from 'svelte';
   import {
-    ui, MARGIN, attachStage, onStageResize, startDevice, pressButton, saveScreenshot,
+    ui, MARGIN, ROTATION, attachStage, onStageResize, startDevice, pressButton, saveScreenshot, toggleRecording, rotate,
     onPointerDown, onPointerMove, onPointerUp, onWheel, onScreenKey,
   } from '../lib/app.svelte.js';
   import { icon } from '../lib/icons.js';
@@ -45,75 +45,81 @@
   const chrome = $derived(ui.chrome);
   const px = (n) => `${n * ui.scale}px`;
   const mask = $derived(chrome?.mask ? `url("${chrome.mask}")` : '');
+
+  // The device turns on screen as iOS turns its interface; the framebuffer,
+  // touches and the accessibility tree stay portrait inside it. The rotor is
+  // the turned outline, so layout and fit-to-window see the right size.
+  const degrees = $derived(ui.running ? ROTATION[ui.orientation] : 0);
+  const sideways = $derived(Math.abs(degrees) === 90);
+  const outer = $derived(chrome ? { w: chrome.size.width + MARGIN * 2, h: chrome.size.height + MARGIN * 2 } : { w: 0, h: 0 });
 </script>
 
 <section class="stage" bind:this={stage}>
   <div class="device-wrap" hidden={!!ui.message || !chrome}>
-    <div
-      class="bezel"
-      class:annotating={ui.mode === 'annotate'}
-      style:width={chrome && px(chrome.size.width)}
-      style:height={chrome && px(chrome.size.height)}
-      style:margin={px(MARGIN)}
-    >
-      {#if chrome}
-        <div id="side-buttons">
-          {#each chrome.buttons as button (button.name)}
-            <SideButton {button} frame={buttonFrame(button, chrome.size)} />
-          {/each}
-        </div>
-        <div
-          class="bezel-art"
-          style:grid-template-columns="{px(chrome.slices.topLeft.width)} 1fr {px(chrome.slices.topRight.width)}"
-          style:grid-template-rows="{px(chrome.slices.topLeft.height)} 1fr {px(chrome.slices.bottomLeft.height)}"
-        >
-          {#each SLICES as key, i (i)}
-            {#if key}<img src={chrome.slices[key].url} alt="" draggable="false">{:else}<span></span>{/if}
-          {/each}
-        </div>
-      {/if}
+    <div class="rotor" style:width={px(sideways ? outer.h : outer.w)} style:height={px(sideways ? outer.w : outer.h)}>
       <div
-        id="device-frame"
-        class="device"
-        class:preview={!ui.running}
+        class="bezel"
         class:annotating={ui.mode === 'annotate'}
-        style:left={chrome && px(chrome.screen.x)}
-        style:top={chrome && px(chrome.screen.y)}
-        style:width={chrome && px(chrome.screen.width)}
-        style:height={chrome && px(chrome.screen.height)}
-        style:mask-image={mask}
-        style:-webkit-mask-image={mask}
+        style:width={chrome && px(chrome.size.width)}
+        style:height={chrome && px(chrome.size.height)}
+        style:transform="translate(-50%, -50%) rotate({degrees}deg)"
+        style:--unrotate="{-degrees}deg"
       >
-        <canvas id="screen" bind:this={canvas}></canvas>
-        <!-- The runtime draws hover, selection and markers into this layer. It
-             takes pointer and key input for the simulator, hence the handlers. -->
-        <!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
-        <div
-          id="overlay"
-          tabindex="0"
-          role="application"
-          aria-label="Simulator screen"
-          bind:this={overlay}
-          onpointerdown={onPointerDown}
-          onpointermove={onPointerMove}
-          onpointerup={onPointerUp}
-          onwheel={onWheel}
-          onkeydown={onScreenKey}
-        ></div>
-      </div>
-      <!-- Over the screen but outside its mask, so labels, markers and the
-           badge aren't cut off by the screen's rounded corners. -->
-      <div
-        class="float-layer"
-        bind:this={float}
-        style:left={chrome && px(chrome.screen.x)}
-        style:top={chrome && px(chrome.screen.y)}
-        style:width={chrome && px(chrome.screen.width)}
-        style:height={chrome && px(chrome.screen.height)}
-      >
-        {#if ui.frozen}
-          <div id="frozen-badge" class="glass">Click or drag · ↑ parent · Esc to resume</div>
+        {#if chrome}
+          <div id="side-buttons">
+            {#each chrome.buttons as button (button.name)}
+              <SideButton {button} frame={buttonFrame(button, chrome.size)} />
+            {/each}
+          </div>
+          <div
+            class="bezel-art"
+            style:grid-template-columns="{px(chrome.slices.topLeft.width)} 1fr {px(chrome.slices.topRight.width)}"
+            style:grid-template-rows="{px(chrome.slices.topLeft.height)} 1fr {px(chrome.slices.bottomLeft.height)}"
+          >
+            {#each SLICES as key, i (i)}
+              {#if key}<img src={chrome.slices[key].url} alt="" draggable="false">{:else}<span></span>{/if}
+            {/each}
+          </div>
         {/if}
+        <div
+          id="device-frame"
+          class="device"
+          class:preview={!ui.running}
+          class:annotating={ui.mode === 'annotate'}
+          style:left={chrome && px(chrome.screen.x)}
+          style:top={chrome && px(chrome.screen.y)}
+          style:width={chrome && px(chrome.screen.width)}
+          style:height={chrome && px(chrome.screen.height)}
+          style:mask-image={mask}
+          style:-webkit-mask-image={mask}
+        >
+          <canvas id="screen" bind:this={canvas}></canvas>
+          <!-- The runtime draws hover, selection and markers into this layer. It
+               takes pointer and key input for the simulator, hence the handlers. -->
+          <!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
+          <div
+            id="overlay"
+            tabindex="0"
+            role="application"
+            aria-label="Simulator screen"
+            bind:this={overlay}
+            onpointerdown={onPointerDown}
+            onpointermove={onPointerMove}
+            onpointerup={onPointerUp}
+            onwheel={onWheel}
+            onkeydown={onScreenKey}
+          ></div>
+        </div>
+        <!-- Over the screen but outside its mask, so labels and markers aren't
+             cut off by the screen's rounded corners. -->
+        <div
+          class="float-layer"
+          bind:this={float}
+          style:left={chrome && px(chrome.screen.x)}
+          style:top={chrome && px(chrome.screen.y)}
+          style:width={chrome && px(chrome.screen.width)}
+          style:height={chrome && px(chrome.screen.height)}
+        ></div>
       </div>
     </div>
     {#if chrome && !ui.running}
@@ -129,11 +135,24 @@
 
 {#if ui.running}
   <footer class="canvas-bottom">
-    <div class="pill" role="group" aria-label="Device">
-      <button class="icon-btn" title="Home" data-icon="home" onclick={() => pressButton('home')}>{@html icon('home')}</button>
-      <button class="icon-btn" title="Save screenshot" data-icon="screenshot" onclick={saveScreenshot}>{@html icon('screenshot')}</button>
-      <button class="icon-btn" title="Lock" data-icon="lock" onclick={() => pressButton('lock')}>{@html icon('lock')}</button>
-      <button class="icon-btn" title="App switcher" data-icon="app-switcher" onclick={() => pressButton('app-switcher')}>{@html icon('app-switcher')}</button>
+    {#if ui.frozen}
+      <div id="frozen-badge" class="glass">Click or drag · ↑ parent · Esc to resume</div>
+    {/if}
+    <div class="bottom-row">
+      <div class="pill" role="group" aria-label="Device">
+        <button class="icon-btn" title="Home" data-icon="home" onclick={() => pressButton('home')}>{@html icon('home')}</button>
+        <button class="icon-btn" title="Save screenshot" data-icon="screenshot" onclick={saveScreenshot}>{@html icon('screenshot')}</button>
+        <button
+          class="icon-btn"
+          class:recording={ui.recording}
+          title={ui.recording ? 'Stop recording and save the video' : 'Record the screen'}
+          data-icon="record"
+          onclick={toggleRecording}
+        >{@html icon(ui.recording ? 'record-stop' : 'record')}</button>
+      </div>
+      <div class="pill" role="group" aria-label="Rotate">
+        <button class="icon-btn" title="Rotate" data-icon="rotate" onclick={rotate}>{@html icon('rotate')}</button>
+      </div>
     </div>
   </footer>
 {/if}
