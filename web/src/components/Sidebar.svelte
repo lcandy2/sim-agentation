@@ -35,7 +35,7 @@
 
 <aside class="sidebar" id="sidebar">
   <div class="sidebar-top">
-    <span class="brand">sim-agentation</span>
+    <span class="brand">SimAgentation</span>
     <div class="pill bar-pill" role="group" aria-label="Simulators">
       <Popover icon="plus" title="New simulator" align="left">
         {#snippet children(close)}<NewSimulator {close} />{/snippet}

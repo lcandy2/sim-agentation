@@ -1,4 +1,4 @@
-# sim-agentation
+# SimAgentation
 
 Annotate a running iOS simulator in the browser and hand the feedback to a coding agent. It works like [Agentation](https://agentation.com), but for iOS: freeze the screen, click an element or drag a box around anything, and write what should change. The agent gets the element, the screen it is on, strings to search the source for, and two screenshots: the whole screen with the box drawn in red, and a close-up of the box.
 
