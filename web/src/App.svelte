@@ -8,6 +8,7 @@
   import Inspector from './components/Inspector.svelte';
   import InspectorTabs from './components/InspectorTabs.svelte';
   import Composer from './components/Composer.svelte';
+  import Notification from './components/Notification.svelte';
   import DeviceSheet from './components/DeviceSheet.svelte';
 
   onMount(() => {
@@ -36,3 +37,4 @@
 {#if ui.draft}
   <Composer />
 {/if}
+<Notification />

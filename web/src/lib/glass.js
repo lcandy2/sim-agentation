@@ -60,6 +60,26 @@ export const MATERIALS = {
       { angle: Math.PI, range: 25.3, hardness: 0.107, factor: 0.092, convergence: 0.348, opposite: 0.541 },
     ],
   },
+  // Notifications (the screenshot banner, the Device Hub notice): #bfbfbf at
+  // 25% Lightening what's behind, #1a1a1a added on top (Linear Dodge),
+  // bright rims inside top and bottom, frost 25, depth 30, light 0.25 (the
+  // control's, so its fitted glares).
+  notice: {
+    selector: '.notice',
+    glass: { frost: 25, refraction: 0.7, depth: 30, dispersion: 0.2, lightAngle: 0, lightIntensity: 0.25 },
+    fills: [
+      { blend: 'lighten', gray: 0.749, opacity: 0.25 },
+      { blend: 'dodge', gray: 0.102, opacity: 1 },
+    ],
+    inner: [
+      { blend: 'dodge', gray: 0.1569, y: -40, blur: 5, spread: -40 },
+      { blend: 'dodge', gray: 0.1569, y: 40, blur: 5, spread: -40 },
+    ],
+    glares: [
+      { angle: 0, range: 32.4, hardness: 0.054, factor: 0.721, convergence: 0.282, opposite: 0.957 },
+      { angle: Math.PI, range: 31.8, hardness: 0.197, factor: 0.279, convergence: 0.46, opposite: 0.322 },
+    ],
+  },
   menu: {
     selector: '.popover',
     glass: { frost: 25, refraction: 0.7, depth: 40, dispersion: 0.4, lightAngle: 0, lightIntensity: 0.2 },
@@ -337,6 +357,36 @@ const channels = (dispersion) => [
   ['B', 1 - 2 * dispersion, '0 0 0 0 0  0 0 0 0 0  0 0 1 0 0  0 0 0 1 0'],
 ];
 
+// The fills as filter steps on the backdrop, ending in "filled": runs of
+// affine fills fold into one color matrix; Lighten (each channel's max with
+// its gray, mixed in by its opacity) is a table transfer and a mix.
+function fillSteps(fills, input) {
+  let out = '';
+  let from = input;
+  let n = 0;
+  let run = [];
+  const step = () => (n += 1, `fill${n}`);
+  const flush = () => {
+    if (!run.length) return;
+    const to = step();
+    out += `<feColorMatrix in="${from}" values="${fillMatrix(run)}" result="${to}"/>`;
+    from = to;
+    run = [];
+  };
+  for (const fill of fills) {
+    if (fill.blend !== 'lighten') { run.push(fill); continue; }
+    flush();
+    const lit = step();
+    const table = Array.from({ length: 129 }, (_, k) => Math.max(k / 128, fill.gray).toFixed(4)).join(' ');
+    out += `<feComponentTransfer in="${from}" result="${lit}">${['R', 'G', 'B'].map((c) => `<feFunc${c} type="table" tableValues="${table}"/>`).join('')}</feComponentTransfer>`;
+    const to = step();
+    out += `<feComposite in="${lit}" in2="${from}" operator="arithmetic" k2="${fill.opacity}" k3="${1 - fill.opacity}" result="${to}"/>`;
+    from = to;
+  }
+  flush();
+  return out + `<feMerge result="filled"><feMergeNode in="${from}"/></feMerge>`;
+}
+
 function filterFor(material, urls, width, height) {
   if (!defs) {
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -356,7 +406,7 @@ function filterFor(material, urls, width, height) {
       ${image(urls.map, 'map')}${bend}
       <feComposite in="R" in2="G" operator="arithmetic" k2="1" k3="1" result="RG"/>
       <feComposite in="RG" in2="B" operator="arithmetic" k2="1" k3="1" result="bent"/>
-      <feColorMatrix in="bent" values="${fillMatrix(material.fills)}" result="filled"/>
+      ${fillSteps(material.fills, 'bent')}
       ${image(urls.add, 'add')}
       <feComposite in="filled" in2="add" operator="arithmetic" k2="1" k3="1" result="lit"/>
       ${image(urls.burn, 'burn')}

@@ -621,17 +621,57 @@ kbd {
 }
 .bottom-row { display: flex; gap: 8px; }
 /* Device Hub holds the device's buttons: a note over the bottom bar, with the fix. */
+/* macOS 27's Notification (Figma, Notifications page): its glass
+   (lib/glass.js), corners of 20, the menu's hairlines and deep shadow. The
+   screenshot banner, and the notice that Device Hub holds the buttons. */
+.notice {
+  position: relative;
+  border: 0;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: var(--menu-shadow);
+  -webkit-backdrop-filter: blur(12.5px);
+  backdrop-filter: blur(12.5px);
+  color: var(--control-label);
+  text-align: left;
+}
+.notice.glass-filtered { background: none; }
+.notice.glass-on::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: var(--glass-light) center / 100% 100% no-repeat;
+  pointer-events: none;
+}
+.banner {
+  position: fixed;
+  z-index: 40;
+  top: 56px;
+  right: 12px;
+  width: 344px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px 12px 10px;
+}
+.banner-image { width: 32px; height: 32px; margin: 0 4px; flex: none; border-radius: 6px; object-fit: cover; object-position: top; }
+.banner-text { flex: 1; min-width: 0; display: grid; }
+.banner-text strong { font-size: 13px; line-height: 16px; font-weight: 700; letter-spacing: -0.02em; }
+.banner-text span { font-size: 13px; line-height: 16px; letter-spacing: -0.008em; }
+.banner-text > * { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.banner-time { align-self: flex-start; font-size: 11px; line-height: 14px; color: rgba(0, 0, 0, 0.25); } /* #bfbfbf, burned in */
 .input-notice {
   pointer-events: auto;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 5px 5px 5px 14px;
-  border-radius: 999px;
-  font-size: 12px;
+  gap: 12px;
+  padding: 10px 12px 10px 16px;
+  font-size: 13px;
+  line-height: 16px;
   white-space: nowrap;
 }
-.input-notice .text-btn { padding: 4px 12px; }
 .canvas-bottom .pill { pointer-events: auto; }
 .icon-btn.recording { color: var(--mark); opacity: 1; }
 

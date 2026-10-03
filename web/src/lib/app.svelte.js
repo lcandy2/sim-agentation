@@ -3,6 +3,7 @@
 // hover, drag) and is never rendered directly.
 
 import { tick } from 'svelte';
+import { notify } from './notify.svelte.js';
 import { hitTest, describe, nodesInRect } from './ax.js';
 import { sampler, warm, containersAround, partsWithin } from './visual.js';
 import { matchesFrontApp, sdkContainers, sourceFor, viewContext } from './sdk.js';
@@ -574,9 +575,29 @@ export function pressButton(button, duration) {
 }
 
 /** Saves what's on screen (the frozen frame while annotating). */
+/** Saves what's on screen as Simulator.app's Save Screen does: the host
+ *  puts it on the Desktop, and a banner opens it in Finder. */
 export async function saveScreenshot() {
   const png = await screenPNG();
-  if (png) download(png, 'png');
+  if (!png) return;
+  const data = await new Promise((done) => {
+    const reader = new FileReader();
+    reader.onload = () => done(String(reader.result).split(',')[1]);
+    reader.readAsDataURL(png);
+  });
+  const res = await fetch('/api/screenshots', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ udid: ui.udid, png: data }),
+  }).catch(() => null);
+  const saved = res?.ok ? await res.json().catch(() => null) : null;
+  if (!saved) return download(png, 'png'); // a host without it: the browser's download
+  notify({
+    image: URL.createObjectURL(png),
+    title: 'Screenshot Saved',
+    message: 'Open in Finder',
+    action: () => fetch(`/api/screenshots/${saved.id}/reveal`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' }),
+  });
 }
 
 /** Copies what's on screen to the clipboard, as Simulator's Copy Screen does. */
