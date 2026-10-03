@@ -18,10 +18,6 @@ export const storage = {
   },
 };
 
-function choice(stored) {
-  return stored && stored !== 'auto' && Number(stored) > 0 ? Number(stored) : 'auto';
-}
-
 export const ui = $state({
   sims: [],
   query: '',
@@ -56,8 +52,10 @@ export const ui = $state({
     choice: storage.get('stream-format') ?? 'auto', // 'auto', or a format to always use
     format: null,     // the format streaming now: 'hevc', 'hevc422', 'avcc' (H.264) or 'mjpeg'
     skipped: [],      // [{ format, reason }]: what Auto gave up on this session
-    scaleChoice: choice(storage.get('stream-scale')), // 'auto', 1 (full resolution) or 2 (half)
-    bitrateChoice: choice(storage.get('stream-bitrate')), // 'auto' or bits per second, video only
+    // With the codec on Auto, resolution and bitrate are worked out too; a
+    // pinned codec uses these, which start from what Auto last chose.
+    scaleChoice: Number(storage.get('stream-scale')) || 1, // 1 full resolution, 2 half
+    bitrateChoice: Number(storage.get('stream-bitrate')) || 8_000_000, // video only
     scale: 1,         // what streams now
     bitrate: 8_000_000,
     playable: { mjpeg: true, avcc: false, hevc: false, hevc422: false },
@@ -225,15 +223,18 @@ function sampleStats() {
 export function setStreamChoice(choice) {
   if (choice === ui.stream.choice) return;
   if (choice !== 'auto' && !ui.stream.playable[choice]) return;
+  // Pinning a codec keeps the resolution and (nearest) bitrate Auto had
+  // chosen, as the starting point for choosing them by hand.
+  if (ui.stream.choice === 'auto' && choice !== 'auto') {
+    const nearest = BITRATE_STEPS.reduce((a, b) => (Math.abs(b - ui.stream.bitrate) < Math.abs(a - ui.stream.bitrate) ? b : a));
+    ui.stream.scaleChoice = ui.stream.scale;
+    ui.stream.bitrateChoice = nearest;
+    storage.set('stream-scale', String(ui.stream.scale));
+    storage.set('stream-bitrate', String(nearest));
+  }
   ui.stream.choice = choice;
   storage.set('stream-format', choice);
-  // Auto all the way: resolution and bitrate follow too.
-  if (choice === 'auto') {
-    ui.stream.scaleChoice = ui.stream.bitrateChoice = 'auto';
-    storage.set('stream-scale', 'auto');
-    storage.set('stream-bitrate', 'auto');
-    settleStream();
-  }
+  settleStream();
   // An explicit pick deserves a fresh try at everything.
   rt.failed.clear();
   ui.stream.skipped = [];
@@ -262,21 +263,23 @@ function fallBack(format, reason) {
   return true;
 }
 
-/** 'auto', or 1 (full) or 2 (half) to always use. */
+export const BITRATE_STEPS = [4_000_000, 8_000_000, 16_000_000]; // the choices with a pinned codec
+
+/** 1 (full) or 2 (half), with a pinned codec. */
 export function setStreamScale(scale) {
   ui.stream.scaleChoice = scale;
   storage.set('stream-scale', String(scale));
   settleStream();
 }
 
-/** 'auto', or bits per second to always use. */
+/** Bits per second, with a pinned codec. */
 export function setStreamBitrate(bps) {
   ui.stream.bitrateChoice = bps;
   storage.set('stream-bitrate', String(bps));
   settleStream();
 }
 
-// Auto resolution and bitrate. The device renders at 3x (iPad 2x); the page
+// Auto resolution and bitrate, with the codec on Auto. The device renders at 3x (iPad 2x); the page
 // shows it at ui.scale CSS px per point on a devicePixelRatio display. When
 // that is no more than half the device's pixels, half resolution looks the
 // same and costs a quarter. Going back to full waits for 60%, so a window
@@ -307,8 +310,9 @@ function autoBitrate(format, scale) {
 /** Works out the resolution and bitrate to stream now, and tells the host what changed. */
 function settleStream() {
   const s = ui.stream;
-  const scale = s.scaleChoice === 'auto' ? autoScale() : s.scaleChoice;
-  const bitrate = s.bitrateChoice === 'auto' ? autoBitrate(s.format, scale) : s.bitrateChoice;
+  const auto = s.choice === 'auto';
+  const scale = auto ? autoScale() : s.scaleChoice;
+  const bitrate = auto ? autoBitrate(s.format, scale) : s.bitrateChoice;
   if (scale !== s.scale) {
     s.scale = scale;
     send({ type: 'set_scale', scale });

@@ -1,13 +1,11 @@
 <script>
-  import { ui, setStreamChoice, setStreamScale, setStreamBitrate, toggleSdk } from '../lib/app.svelte.js';
+  import { ui, setStreamChoice, setStreamScale, setStreamBitrate, toggleSdk, BITRATE_STEPS } from '../lib/app.svelte.js';
   import { AUTO_ORDER, FORMATS, HEVC_422, formatLabel } from '../lib/stream.js';
 
   const SCALES = [
-    { value: 'auto', label: 'Auto' },
     { value: 1, label: 'Full' },
     { value: 2, label: 'Half' },
   ];
-  const BITRATES = ['auto', 4_000_000, 8_000_000, 16_000_000];
 
   const s = $derived(ui.stream);
   const auto = $derived(s.choice === 'auto');
@@ -49,37 +47,37 @@
         </div>
       </div>
     {/if}
+    <!-- With the codec on Auto these follow it: half resolution when the page
+         shows the device at half its pixels or less, a bitrate from the
+         resolution and codec. A pinned codec lets you choose them. -->
     <div class="setting">
       <span>Resolution</span>
-      <div class="pill seg-text" role="group" aria-label="Resolution">
-        {#each SCALES as option (option.value)}
-          <button
-            class:on={s.scaleChoice === option.value}
-            title={option.value === 'auto' ? 'Half when the page shows the device at half its pixels or less' : ''}
-            onclick={() => setStreamScale(option.value)}
-          >{option.label}</button>
-        {/each}
-      </div>
+      {#if auto}
+        <span class="setting-value" title="Half when the page shows the device at half its pixels or less">{s.scale === 2 ? 'Half' : 'Full'}</span>
+      {:else}
+        <div class="pill seg-text" role="group" aria-label="Resolution">
+          {#each SCALES as option (option.value)}
+            <button class:on={s.scaleChoice === option.value} onclick={() => setStreamScale(option.value)}>{option.label}</button>
+          {/each}
+        </div>
+      {/if}
     </div>
     {#if s.format !== 'mjpeg'}
       <div class="setting">
         <span>Bitrate</span>
-        <div class="pill seg-text" role="group" aria-label="Bitrate">
-          {#each BITRATES as bps (bps)}
-            <button
-              class:on={s.bitrateChoice === bps}
-              title={bps === 'auto' ? 'From the resolution and codec, 2–16 Mbps' : ''}
-              onclick={() => setStreamBitrate(bps)}
-            >{bps === 'auto' ? 'Auto' : `${bps / 1e6} Mbps`}</button>
-          {/each}
-        </div>
+        {#if auto}
+          <span class="setting-value" title="From the resolution and codec, 2–16 Mbps">{s.bitrate / 1e6} Mbps</span>
+        {:else}
+          <div class="pill seg-text" role="group" aria-label="Bitrate">
+            {#each BITRATE_STEPS as bps (bps)}
+              <button class:on={s.bitrateChoice === bps} onclick={() => setStreamBitrate(bps)}>{bps / 1e6} Mbps</button>
+            {/each}
+          </div>
+        {/if}
       </div>
     {/if}
     <div class="setting-note">
-      <p>
-        {auto ? `Auto: ${label}` : label} · {s.scale === 2 ? 'half' : 'full'} resolution{s.format !== 'mjpeg' ? ` · ${s.bitrate / 1e6} Mbps target` : ''}
-      </p>
-      <p>{s.fps} fps · {s.mbps.toFixed(1)} Mbit/s{decoding ? ` · ${decoding}` : ''}</p>
+      <p>{auto ? `Auto: ${label}` : label} · {s.fps} fps · {s.mbps.toFixed(1)} Mbit/s{decoding ? ` · ${decoding}` : ''}</p>
       {#if auto}
         <p>Tries {autoOrder}, skipping what won't decode in hardware.</p>
         {#each s.skipped as skip (skip.format)}

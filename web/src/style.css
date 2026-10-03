@@ -553,6 +553,7 @@ kbd {
 .switch {
   appearance: none;
   width: 32px;
+.setting-value { color: var(--secondary); font-variant-numeric: tabular-nums; }
   height: 19px;
   margin: 0;
   border-radius: 999px;
