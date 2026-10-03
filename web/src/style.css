@@ -865,52 +865,54 @@ kbd {
 
 .list { list-style: none; margin: 0; padding: 0 12px 16px; overflow-y: auto; flex: 1; }
 .item {
+  /* A Group Box (Figma, Group Boxes page): 3% black, corners of 12. The
+     close-up beside the comment, the status as a tinted tag, the target and
+     id secondary; delete appears on hover, borderless, as macOS's do. */
   position: relative;
   display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 14px;
-  margin-bottom: 10px;
-  border-radius: 10px;
-  background: var(--fill);
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px;
+  margin-bottom: 8px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.03);
 }
-.item img { width: 100%; max-height: 110px; object-fit: contain; object-position: left center; border-radius: 6px; background: var(--hover); }
+.item-thumb { width: 64px; height: 64px; flex: none; border-radius: 8px; object-fit: cover; background: var(--hover); box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.08); }
+.item-body { flex: 1; min-width: 0; display: grid; gap: 6px; padding-right: 20px; }
 .item-delete {
   position: absolute;
   top: 8px;
   right: 8px;
-  width: 30px;
-  height: 30px;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  color: var(--secondary);
   opacity: 0;
-  background: var(--glass);
-  border: 0.5px solid var(--glass-edge);
-  box-shadow: var(--glass-shadow);
-  -webkit-backdrop-filter: blur(20px) saturate(1.6);
-  backdrop-filter: blur(20px) saturate(1.6);
   transition: opacity 120ms ease;
 }
 .item-delete svg { width: 16px; height: 16px; }
 .item:hover .item-delete,
 .item-delete:focus-visible { opacity: 1; }
-.item-delete:hover { background: var(--glass); color: var(--mark); }
+.item-delete:hover { background: var(--hover); color: var(--mark); }
 @media (hover: none) { .item-delete { opacity: 1; } }
-.item-comment { margin: 0 0 4px; white-space: pre-wrap; word-break: break-word; }
-.item-meta { color: var(--secondary); font-size: 12px; line-height: 15px; display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.item-comment { margin: 0; font-size: 13px; line-height: 16px; color: var(--text); white-space: pre-wrap; word-break: break-word; }
+.item-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; color: var(--secondary); font-size: 11px; line-height: 14px; }
+.item-target { min-width: 0; overflow-wrap: anywhere; }
 .badge {
   display: inline-block;
+  padding: 1px 6px;
+  border-radius: 100px;
   font-size: 11px;
   line-height: 14px;
-  font-weight: 600;
-  padding: 2px 8px;
-  border-radius: 1000px;
-  background: color-mix(in srgb, currentColor 12%, transparent);
+  font-weight: 500;
+  background: color-mix(in srgb, currentColor 14%, transparent);
 }
 .badge::first-letter { text-transform: uppercase; }
 .badge.pending { color: var(--secondary); }
 .badge.acknowledged { color: var(--warn); }
 .badge.resolved { color: var(--ok); }
 .badge.dismissed { color: var(--tertiary); text-decoration: line-through; }
-.item-reply { margin-top: 6px; padding: 8px 10px; background: var(--hover); border-radius: 9px; font-size: 12px; line-height: 15px; }
+.item-reply { padding: 8px 10px; border-radius: 8px; background: rgba(0, 0, 0, 0.03); font-size: 12px; line-height: 15px; }
 .item-reply b { color: var(--accent); font-weight: 600; }
 
 /* ---------- composer popover ---------- */

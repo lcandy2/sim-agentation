@@ -18,10 +18,10 @@
 </script>
 
 <li class="item">
-  <img src="/images/{a.id}-crop.jpg" alt="">
-  <div>
+  <img class="item-thumb" src="/images/{a.id}-crop.jpg" alt="">
+  <div class="item-body">
     <p class="item-comment">{a.comment}</p>
-    <div class="item-meta"><span class="badge {a.status}">{a.status}</span><span>{a.id} · {target}</span></div>
+    <div class="item-meta"><span class="badge {a.status}">{a.status}</span><span class="item-target">{target} · {a.id}</span></div>
     {#each a.replies as reply, i (i)}
       <div class="item-reply"><b>{reply.from}</b> <span>{reply.message}</span></div>
     {/each}
