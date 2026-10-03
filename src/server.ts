@@ -6,45 +6,41 @@ import { toMarkdown } from './format';
 import { chromeFor, chromeImage, maskImage } from './chrome';
 import { hitTest, nodesInRect, screenContext, summarize } from '../web/ax.js';
 
-const BAGUETTE = process.env.BAGUETTE_URL || 'http://127.0.0.1:8421';
+// The native host (host/, Swift) drives the simulators: device list, boot,
+// and the screen/input/accessibility socket.
+const HOST = process.env.SIM_AGENTATION_HOST_URL || 'http://127.0.0.1:38472';
+const HOST_BINARY = process.env.SIM_AGENTATION_HOST_BIN || join(import.meta.dir, '..', 'host', '.build', 'debug', 'sim-agentation');
 const SDK = process.env.SIM_AGENTATION_SDK_URL || 'http://127.0.0.1:38471';
 const WEB = join(import.meta.dir, '..', 'web');
 
-async function baguetteUp() {
+async function hostUp() {
   try {
-    const res = await fetch(`${BAGUETTE}/simulators`, { signal: AbortSignal.timeout(800) });
+    const res = await fetch(`${HOST}/health`, { signal: AbortSignal.timeout(800) });
     return res.ok;
   } catch {
     return false;
   }
 }
 
-async function ensureBaguette() {
-  if (await baguetteUp()) return;
-  const port = new URL(BAGUETTE).port || '8421';
-  Bun.spawn(['baguette', 'serve', '--port', port], { stdout: 'ignore', stderr: 'ignore' }).unref();
+async function ensureHost() {
+  if (await hostUp()) return;
+  const port = new URL(HOST).port || '38472';
+  Bun.spawn([HOST_BINARY, '--port', port], { stdout: 'ignore', stderr: 'inherit' }).unref();
   for (let i = 0; i < 40; i++) {
     await Bun.sleep(250);
-    if (await baguetteUp()) return;
+    if (await hostUp()) return;
   }
-  throw new Error(`baguette serve did not come up on ${BAGUETTE}`);
+  throw new Error(`sim-agentation host did not come up on ${HOST} (built with \`swift build\` in host/?)`);
 }
 
-async function baguette(...args: string[]) {
-  const proc = Bun.spawn(['baguette', ...args], { stdout: 'pipe', stderr: 'pipe' });
-  const [out, err, code] = await Promise.all([
-    new Response(proc.stdout).text(),
-    new Response(proc.stderr).text(),
-    proc.exited,
-  ]);
-  if (code !== 0) throw new Error(err.trim() || `baguette ${args[0]} exited ${code}`);
-  return out;
+async function host(path: string, init?: RequestInit) {
+  const res = await fetch(`${HOST}${path}`, init);
+  const body = await res.json();
+  if (!res.ok) throw new Error(body.error || `host ${path} returned ${res.status}`);
+  return body;
 }
 
-async function devices() {
-  const data = JSON.parse(await baguette('list', '--json'));
-  return [...(data.running ?? []), ...(data.available ?? [])];
-}
+const devices = () => host('/api/devices');
 
 const json = (data: unknown, status = 200) => Response.json(data, { status });
 
@@ -167,7 +163,7 @@ function nextChange(timeoutMs: number) {
 type Proxy = { udid: string; upstream?: WebSocket; queue: (string | ArrayBuffer)[] };
 
 export async function serve() {
-  await ensureBaguette();
+  await ensureHost();
 
   const server = Bun.serve<Proxy, {}>({
     port: PORT,
@@ -192,8 +188,7 @@ export async function serve() {
           return file(join(store.IMAGES, parts[1]), { 'cache-control': 'private, max-age=31536000, immutable' });
         }
 
-        // Stream proxy. baguette refuses cross-origin sockets, so the
-        // browser talks to us and we talk to baguette.
+        // Stream proxy: the browser talks to us, we talk to the native host.
         if (parts[0] === 'ws' && parts[1]) {
           const ok = server.upgrade(req, { data: { udid: parts[1], queue: [] } });
           return ok ? undefined : new Response('upgrade failed', { status: 400 });
@@ -213,7 +208,7 @@ export async function serve() {
           return png ? file(png, forever) : new Response('not found', { status: 404 });
         }
         if (parts[0] === 'api' && parts[1] === 'sims' && parts[3] === 'boot' && req.method === 'POST') {
-          await baguette('boot', '--udid', parts[2]);
+          await host(`/api/devices/${encodeURIComponent(parts[2])}/boot`, { method: 'POST' });
           return json({ ok: true });
         }
 
@@ -264,7 +259,7 @@ export async function serve() {
 
     websocket: {
       open(ws: ServerWebSocket<Proxy>) {
-        const target = `${BAGUETTE.replace(/^http/, 'ws')}/simulators/${encodeURIComponent(ws.data.udid)}/stream?format=mjpeg&version=v2`;
+        const target = `${HOST.replace(/^http/, 'ws')}/simulators/${encodeURIComponent(ws.data.udid)}/stream`;
         const upstream = new WebSocket(target);
         upstream.binaryType = 'arraybuffer';
         ws.data.upstream = upstream;
@@ -274,7 +269,7 @@ export async function serve() {
         };
         upstream.onmessage = (e) => ws.send(e.data as any);
         upstream.onclose = () => ws.close();
-        upstream.onerror = () => ws.close(1011, 'baguette stream error');
+        upstream.onerror = () => ws.close(1011, 'host stream error');
       },
       message(ws: ServerWebSocket<Proxy>, msg) {
         const up = ws.data.upstream;

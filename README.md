@@ -8,15 +8,15 @@ Your app needs no SDK. Everything comes from the simulator's accessibility tree,
 
 - macOS on Apple Silicon, Xcode 26
 - [Bun](https://bun.sh)
-- [baguette](https://tddworks.github.io/baguette/) (`brew install baguette`), which streams the simulator and drives its input
 
 ## Run
 
 ```sh
+(cd host && swift build)
 bun src/cli.ts serve --open
 ```
 
-This opens http://localhost:38470 and starts `baguette serve` if it isn't running yet.
+`host/` is the native part, in Swift: it streams the simulator's screen, sends touches, buttons and keys, and reads the accessibility tree through Xcode's private CoreSimulator, SimulatorKit and AccessibilityPlatformTranslation frameworks. The web server starts it when needed. This opens http://localhost:38470.
 
 The page is laid out like Xcode's Device Hub: simulators on the left, the device in the middle, annotations on the right. Devices are drawn with Xcode's own DeviceKit chrome artwork (`/Library/Developer/DeviceKit/Chrome`), so the hardware buttons slide out on hover and press in when clicked. Selecting a simulator that isn't running shows it with a **Start** button; nothing boots until you press it.
 
@@ -73,11 +73,15 @@ When the app in front has the SDK, the status reads **Frozen · SDK**. Parents t
 |---|---|
 | `SIM_AGENTATION_PORT` | `38470` |
 | `SIM_AGENTATION_HOME` | `~/.sim-agentation` (annotations and screenshots) |
-| `BAGUETTE_URL` | `http://127.0.0.1:8421` |
+| `SIM_AGENTATION_HOST_URL` | `http://127.0.0.1:38472` (the native host) |
 | `SIM_AGENTATION_SDK_URL` | `http://127.0.0.1:38471` |
 
 ## Limits
 
 - Without the SDK it doesn't know which source file a view comes from. The agent searches for the labels and identifiers it is given.
 - Content without accessibility data, such as custom Canvas or Metal drawing, can only be annotated with a box.
-- baguette uses private Simulator frameworks, so a new Xcode release can break it until baguette is updated.
+- The native host uses private Simulator frameworks, so a new Xcode release can break it until it's updated.
+
+## Credits
+
+The simulator code in `host/Sources/SimBridge` is adapted from [baguette](https://github.com/tddworks/baguette) by tddworks, under the Apache License 2.0 (`host/Sources/SimBridge/LICENSE-baguette`). Each adapted file notes what changed.
