@@ -35,7 +35,7 @@
             <button
               class:on={s.format === f.id}
               disabled={!s.playable[f.id]}
-              title={s.playable[f.id] ? '' : `This browser can't decode ${f.label}`}
+              title={s.playable[f.id] ? f.name : `This browser can't decode ${f.name}`}
               onclick={() => setStreamFormat(f.id)}
             >{f.label}</button>
           {/each}

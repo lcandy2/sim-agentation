@@ -9,9 +9,9 @@
 // JPEG seed that paints before the first keyframe decodes.
 
 export const FORMATS = [
-  { id: 'avcc', label: 'H.264' },
-  { id: 'hevc', label: 'HEVC' },
-  { id: 'mjpeg', label: 'JPEG' },
+  { id: 'avcc', label: 'H.264', name: 'H.264 (AVC)' },
+  { id: 'hevc', label: 'H.265', name: 'H.265 (HEVC)' },
+  { id: 'mjpeg', label: 'JPEG', name: 'JPEG per frame' },
 ];
 
 // Codec strings only used to ask whether the browser can decode the format;

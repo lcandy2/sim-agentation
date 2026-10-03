@@ -26,7 +26,7 @@ The page is laid out like Xcode's Device Hub: simulators on the left, the device
 - **Interact** (`I`): use the app. Click and drag to touch, scroll with the wheel, type with the keyboard.
 - **Annotate** (`A`): freezes the screen. Hover to see elements, click one to annotate it, or drag a box over any area. Press ⌘↩ to add the note and Esc to go back to the live screen.
 
-The screen streams as H.264 by default: VideoToolbox encodes it in hardware with no frame reordering, and the browser decodes it in hardware with WebCodecs, at about 3 Mbit/s while scrolling. The codec pill in the toolbar (**H.264 · 60 fps**) switches to HEVC or JPEG (about 85 Mbit/s), halves the resolution, sets the bitrate and shows the live frame rate. The pipeline follows [baguette](https://github.com/tddworks/baguette)'s.
+The screen streams as H.264 by default: VideoToolbox encodes it in hardware with no frame reordering, and the browser decodes it in hardware with WebCodecs, at about 3 Mbit/s while scrolling. The codec pill in the toolbar (**H.264 · 60 fps**) switches to H.265 (HEVC) or JPEG (about 85 Mbit/s), halves the resolution, sets the bitrate and shows the live frame rate. The pipeline follows [baguette](https://github.com/tddworks/baguette)'s.
 
 Click **Copy** to put every pending annotation on the clipboard as Markdown, so you can paste it into any agent without MCP.
 
