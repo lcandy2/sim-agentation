@@ -374,6 +374,10 @@ button { cursor: default; }
   font-weight: 500;
 }
 .sheet-btn.default { background: var(--sheet-default); color: #fff; }
+/* The sidebar's padding is the only inset: its content lines up 18 px from
+   both edges (the right one counts the 1 px border), and nothing inside adds
+   its own. The sidebar button floats on that line too. */
+.window { --sidebar-pad: 18px; }
 .sheet-btn:disabled { opacity: 0.5; }
 
 kbd {
@@ -391,7 +395,7 @@ kbd {
    contents keep Device Hub's measured positions. */
 .sidebar {
   width: var(--sidebar-w);
-  padding: 8px 7px 8px 8px; /* the same inset on both sides, counting the 1 px border; content adds 10 px more */
+  padding: 8px calc(var(--sidebar-pad) - 1px) 8px var(--sidebar-pad);
   flex: none;
   display: flex;
   flex-direction: column;
@@ -401,15 +405,16 @@ kbd {
 }
 /* Device Hub's top bar: + and filter in a capsule, then the sidebar toggle,
    centered 26 pt from the window's top. */
-.sidebar-top { height: 36px; flex: none; display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 0 52px 0 10px; }
+.sidebar-top { height: 36px; flex: none; display: flex; align-items: center; gap: 6px; }
+.sidebar-top::after { content: ""; width: 36px; flex: none; } /* where the floating sidebar button sits */
 /* The product name where macOS puts a window's title; the right end leaves
    room for the sidebar button, which floats (see .sidebar-toggle). */
-.brand { font-size: 13px; line-height: 16px; font-weight: 700; color: var(--sidebar-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.brand { flex: 1; min-width: 0; font-size: 13px; line-height: 16px; font-weight: 700; color: var(--sidebar-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* macOS 27's search field (Figma, node 4376:54895): a control capsule with a
    secondary magnifying glass and placeholder. */
 .search {
-  margin: 13px 10px 0;
+  margin: 13px 0 0;
   height: 36px;
   flex: none;
   display: flex;
@@ -425,14 +430,16 @@ kbd {
 .search input::-webkit-search-cancel-button { opacity: 0.5; }
 .search:focus-within { box-shadow: var(--control-shadow), 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent); }
 
-.devices { flex: 1; overflow-y: auto; padding: 0 10px 16px; }
+/* The list scrolls, which clips what leaves it; it reaches 7 px into the
+   sidebar's padding (and gives it back) so a selected row can too. */
+.devices { flex: 1; overflow-y: auto; margin: 0 -7px; padding: 0 7px; }
 .devices h3 { margin: 18px 0 8px; font-size: 12px; line-height: 15px; font-weight: 400; color: var(--sidebar-secondary); }
 .devices .none { margin: 12px 0; color: var(--sidebar-secondary); }
 
 /* Rows are 46 pt tall, 220 pt wide, radius 9; selected is solid blue. */
 .device-row {
   /* The content lines up with "Available"; the selection reaches 7 px past
-     it on both sides (into the list's padding), as in Device Hub. */
+     it on both sides, as in Device Hub. */
   width: calc(100% + 14px);
   height: 46px;
   display: grid;
@@ -801,7 +808,7 @@ kbd {
   position: absolute;
   z-index: 6;
   top: 8px;
-  left: calc(var(--sidebar-w) - 54px); /* 18 px from the sidebar's right edge, as its content is from the left */
+  left: calc(var(--sidebar-w) - var(--sidebar-pad) - 36px); /* on the sidebar's content line */
   transition: left 320ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 .window.no-sidebar .sidebar-toggle { left: 12px; }
