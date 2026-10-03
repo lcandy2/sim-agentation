@@ -11,6 +11,9 @@ import SimBridge
 ///   tag is 0x01 for the avcC/hvcC description, 0x02 for a keyframe, 0x03
 ///   for a delta frame and 0x04 for a JPEG seed that paints before the
 ///   first keyframe decodes.
+///
+/// In every format 0x05 is a full-resolution still (see `sendStill`) and
+/// 0x06 padding the page drops (see `probe`).
 enum StreamFormat: String, Sendable {
     case mjpeg, avcc, hevc, hevc422
 }
@@ -29,7 +32,7 @@ struct StreamOptions: Sendable {
 /// binary messages and takes input and accessibility requests as JSON text
 /// messages, on the same protocol as baguette's stream socket.
 final class DeviceSession: @unchecked Sendable {
-    private enum Tag: UInt8 { case description = 0x01, keyframe = 0x02, delta = 0x03, seed = 0x04, still = 0x05 }
+    private enum Tag: UInt8 { case description = 0x01, keyframe = 0x02, delta = 0x03, seed = 0x04, still = 0x05, padding = 0x06 }
 
     private let udid: String
     private let socket: WebSocket
@@ -54,6 +57,33 @@ final class DeviceSession: @unchecked Sendable {
     private var reportedFailure = false
     private var idlePump: DispatchSourceTimer?
     private lazy var input = HIDInput(udid: udid)
+
+    // How the stream keeps up, reported once a second for the page's Auto
+    // (see `report`).
+    private struct Period {
+        var start = DispatchTime.now().uptimeNanoseconds
+        var frames = 0
+        var bytes = 0
+        var encodeNanos: UInt64 = 0
+        var queued = 0
+        var queuedSamples = 0
+        var heldNanos: UInt64 = 0
+    }
+    private var period = Period()
+    private var statsTimer: DispatchSourceTimer?
+    private var encodeStart: UInt64 = 0
+    private var backedUpSince: UInt64?
+    private var lastFrameBytes = 0
+    private var lastRate = 0 // bits/s of stream in the last report
+    private var probing: Probe?
+    private struct Probe {
+        let bps: Int
+        let until: UInt64
+        let slack: Int // bytes the viewer may be behind and padding still go out
+        var planned = 0
+        var sent = 0
+        var timer: DispatchSourceTimer
+    }
 
     init(udid: String, socket: WebSocket, options: StreamOptions) {
         self.udid = udid
@@ -82,11 +112,20 @@ final class DeviceSession: @unchecked Sendable {
             onClose: { [weak self] in
                 guard let self else { return }
                 self.capture.stop()
-                self.lock.lock(); self.idlePump?.cancel(); self.idlePump = nil; self.lock.unlock()
+                self.lock.lock()
+                self.idlePump?.cancel(); self.idlePump = nil
+                self.statsTimer?.cancel(); self.statsTimer = nil
+                self.probing?.timer.cancel(); self.probing = nil
+                self.lock.unlock()
                 Self.liveLock.lock(); Self.live[ObjectIdentifier(self)] = nil; Self.liveLock.unlock()
             }
         )
         video?.onEncoded = { [weak self] encoded in self?.encoded(encoded) }
+        let stats = DispatchSource.makeTimerSource(queue: encodeQueue)
+        stats.schedule(deadline: .now() + 1, repeating: 1)
+        stats.setEventHandler { [weak self] in self?.report() }
+        stats.resume()
+        lock.lock(); statsTimer = stats; lock.unlock()
         do {
             try capture.start { [weak self] surface in self?.frame(surface) }
         } catch {
@@ -127,7 +166,14 @@ final class DeviceSession: @unchecked Sendable {
         idlePump = timer
     }
 
-    /// Sends the newest frame once the encoder is free, the socket has caught
+    /// How far the viewer may fall behind before frames wait for it: 150 ms
+    /// of the stream, and never less than two frames of the last size, so a
+    /// keyframe alone doesn't hold the next one. Lock held.
+    private var backlogLimit: Int {
+        max(64_000, options.bitrate / 8 * 15 / 100, lastFrameBytes * 2)
+    }
+
+    /// Sends the newest frame once the encoder is free, the viewer has caught
     /// up and the frame interval has passed. A frame that arrives too early
     /// waits instead of being dropped: dropping one that came a hair under
     /// 16 ms left a 33 ms gap, and dropping the last frame of an animation
@@ -138,7 +184,19 @@ final class DeviceSession: @unchecked Sendable {
         guard !encoding, let surface = latest else { lock.unlock(); return }
         let now = DispatchTime.now().uptimeNanoseconds
         let due = lastSent + 1_000_000_000 / UInt64(max(1, options.fps)) - 600_000 // a little slack for timer jitter
-        if now < due || socket.isBackedUp {
+        // A connection slower than the stream fills up with frames the viewer
+        // sees ever later; waiting here keeps what it sees current.
+        let queued = socket.queuedBytes
+        let backedUp = socket.isBackedUp || queued > backlogLimit
+        period.queued += queued
+        period.queuedSamples += 1
+        if backedUp {
+            if backedUpSince == nil { backedUpSince = now }
+        } else if let since = backedUpSince {
+            period.heldNanos += now - since
+            backedUpSince = nil
+        }
+        if now < due || backedUp {
             if !retryScheduled {
                 retryScheduled = true
                 let delay = max(due > now ? due - now : 0, 2_000_000)
@@ -154,6 +212,7 @@ final class DeviceSession: @unchecked Sendable {
         encoding = true
         latest = nil
         lastSent = now
+        encodeStart = now
         let scale = options.scale
         let seed = pendingSeed
         let keyframe = pendingKeyframe
@@ -166,8 +225,9 @@ final class DeviceSession: @unchecked Sendable {
             guard let self else { return }
             guard let pixels = self.scaler.scale(surface, by: scale) else { return self.sent(nil) }
             guard let video = self.video else {
-                if let bytes = self.jpeg.encode(pixels) { self.socket.send(binary: bytes) }
-                return self.sent(nil)
+                let bytes = self.jpeg.encode(pixels)
+                if let bytes { self.socket.send(binary: bytes) }
+                return self.sent(nil, bytes: bytes?.count ?? 0)
             }
             if seed, let bytes = self.jpeg.encode(pixels) { self.socket.send(binary: Self.tagged(.seed, bytes)) }
             if !video.encode(pixels, forceKeyframe: keyframe) { self.encoded(nil) }
@@ -189,14 +249,55 @@ final class DeviceSession: @unchecked Sendable {
         sent(output)
     }
 
-    /// The frame in flight is done: sends video output, then the next frame.
-    private func sent(_ encoded: VideoEncoder.Encoded?) {
+    /// The frame in flight is done: sends video output (a JPEG went out
+    /// already, `bytes` long), then the next frame.
+    private func sent(_ encoded: VideoEncoder.Encoded?, bytes: Int = 0) {
+        var bytes = bytes
         if let encoded {
             if let description = encoded.description { socket.send(binary: Self.tagged(.description, description)) }
             socket.send(binary: Self.tagged(encoded.isKeyframe ? .keyframe : .delta, encoded.data))
+            bytes = (encoded.description?.count ?? 0) + encoded.data.count
         }
-        lock.lock(); encoding = false; lock.unlock()
+        lock.lock()
+        encoding = false
+        if bytes > 0 {
+            period.frames += 1
+            period.bytes += bytes
+            period.encodeNanos += DispatchTime.now().uptimeNanoseconds - encodeStart
+            lastFrameBytes = bytes
+        }
+        lock.unlock()
         pump()
+    }
+
+    /// Once a second, how the stream kept up, for the page's Auto: frames
+    /// and bytes sent, the bytes the viewer was behind on average, the share
+    /// of the second frames waited for it, how long a frame took to scale
+    /// and encode, and when it was sent (`t`, ms on this Mac's clock): it
+    /// arrives behind the frames, so the page can tell how late they are
+    /// even when the backlog is past this socket, in a tunnel or a proxy.
+    private func report() {
+        lock.lock()
+        let now = DispatchTime.now().uptimeNanoseconds
+        if let since = backedUpSince {
+            period.heldNanos += now - since
+            backedUpSince = now
+        }
+        let p = period
+        period = Period()
+        let elapsed = Double(max(1, now - p.start))
+        lastRate = Int(Double(p.bytes * 8) / (elapsed / 1e9))
+        lock.unlock()
+        socket.send(json: [
+            "type": "stats",
+            "frames": p.frames,
+            "bytes": p.bytes,
+            "queued": p.queuedSamples > 0 ? p.queued / p.queuedSamples : 0,
+            "held": min(1, Double(p.heldNanos) / elapsed),
+            "encodeMs": p.frames > 0 ? Double(p.encodeNanos) / Double(p.frames) / 1e6 : 0,
+            "seconds": elapsed / 1e9,
+            "t": Double(DispatchTime.now().uptimeNanoseconds) / 1e6,
+        ])
     }
 
     private static func tagged(_ tag: Tag, _ payload: Data) -> Data {
@@ -224,6 +325,10 @@ final class DeviceSession: @unchecked Sendable {
             capture.requestFrame()
         case "set_fps", "set_bitrate", "set_scale":
             reconfigure(type, msg)
+        case "probe":
+            guard let bps = (msg["bps"] as? NSNumber)?.intValue, bps > 0 else { return }
+            let slackMs = min(300, max(40, (msg["slackMs"] as? NSNumber)?.intValue ?? 60))
+            probe(bps: min(bps, 100_000_000), ms: min(1000, max(100, (msg["ms"] as? NSNumber)?.intValue ?? 400)), slackMs: slackMs)
         case "orientation":
             guard let name = msg["orientation"] as? String, let orientation = DeviceOrientation(wireName: name) else { return }
             let ok = Orientation.set(orientation, udid: udid)
@@ -250,6 +355,58 @@ final class DeviceSession: @unchecked Sendable {
             else { return }
             self.socket.send(binary: Self.tagged(.still, bytes))
         }
+    }
+
+    /// Whether the connection carries `bps`, for the page's Auto to come
+    /// back up after it backed up: pads the stream to that rate for `ms`
+    /// with 0x06 messages the page drops, but only while the viewer is less
+    /// than `slackMs` of it behind (a round trip, and a little), so padding
+    /// fills spare room and never stacks up in front of frames. A connection
+    /// without the room takes less of it: `probe_result` is ok when at
+    /// least 85% of the padding went out. Padding beats switching the stream
+    /// up to see: a failed try costs next to nothing, not a keyframe and a
+    /// stutter, so it can try often.
+    private func probe(bps: Int, ms: Int, slackMs: Int) {
+        let tick = 0.02
+        lock.lock()
+        guard probing == nil else { lock.unlock(); return }
+        let chunk = max(1, Int(Double(max(0, bps - lastRate)) / 8 * tick))
+        let timer = DispatchSource.makeTimerSource(queue: encodeQueue)
+        probing = Probe(
+            bps: bps,
+            until: DispatchTime.now().uptimeNanoseconds + UInt64(ms) * 1_000_000,
+            slack: max(16_000, bps / 8 * slackMs / 1000),
+            timer: timer
+        )
+        lock.unlock()
+        timer.schedule(deadline: .now(), repeating: tick)
+        timer.setEventHandler { [weak self] in
+            guard let self else { return }
+            self.lock.lock()
+            guard var probe = self.probing else { self.lock.unlock(); return }
+            if DispatchTime.now().uptimeNanoseconds >= probe.until {
+                probe.timer.cancel()
+                self.probing = nil
+                self.lock.unlock()
+                let ok = probe.sent >= probe.planned * 85 / 100
+                self.socket.send(json: [
+                    "type": "probe_result", "ok": ok, "bps": probe.bps, "planned": probe.planned, "sent": probe.sent,
+                    "t": Double(DispatchTime.now().uptimeNanoseconds) / 1e6, // as in `report`
+                ])
+                return
+            }
+            probe.planned += chunk
+            let room = self.socket.queuedBytes < probe.slack
+            if room { probe.sent += chunk }
+            self.probing = probe
+            self.lock.unlock()
+            if room {
+                var bytes = Data(count: chunk + 1)
+                bytes[0] = Tag.padding.rawValue
+                self.socket.send(binary: bytes)
+            }
+        }
+        timer.resume()
     }
 
     private func reconfigure(_ type: String, _ msg: [String: Any]) {

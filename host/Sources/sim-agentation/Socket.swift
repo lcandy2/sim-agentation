@@ -101,6 +101,15 @@ final class Connection: @unchecked Sendable {
         }
     }
 
+    /// Bytes in the kernel's send buffer: not sent yet, or sent and not yet
+    /// acknowledged by the peer. On a connection slower than the stream it
+    /// grows; on this Mac it drains as fast as it fills.
+    var kernelQueued: Int {
+        var count: Int32 = 0
+        var length = socklen_t(MemoryLayout<Int32>.size)
+        return getsockopt(fd, SOL_SOCKET, SO_NWRITE, &count, &length) == 0 ? Int(count) : 0
+    }
+
     /// Closes after whatever was already handed to the kernel is sent.
     func cancel() {
         queue.async {

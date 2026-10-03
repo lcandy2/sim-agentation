@@ -263,6 +263,7 @@ final class WebSocket: @unchecked Sendable {
     /// is behind, so a slow viewer gets fewer frames rather than old ones.
     private let writesLock = NSLock()
     private var pendingWrites = 0
+    private var pendingBytes = 0
 
     init(connection: Connection, queue: DispatchQueue) {
         self.connection = connection
@@ -289,8 +290,15 @@ final class WebSocket: @unchecked Sendable {
         return pendingWrites > 1
     }
 
-    private func adjustPending(_ delta: Int) {
-        writesLock.lock(); pendingWrites += delta; writesLock.unlock()
+    /// Bytes sent that the viewer hasn't received yet, as far as this end
+    /// can tell: still queued here, or in the kernel awaiting acknowledgement.
+    var queuedBytes: Int {
+        writesLock.lock(); let pending = pendingBytes; writesLock.unlock()
+        return pending + connection.kernelQueued
+    }
+
+    private func adjustPending(_ delta: Int, bytes: Int) {
+        writesLock.lock(); pendingWrites += delta; pendingBytes += delta * bytes; writesLock.unlock()
     }
 
     func close() {
@@ -312,9 +320,9 @@ final class WebSocket: @unchecked Sendable {
         let bytes = frame
         queue.async {
             guard !self.closed else { return }
-            self.adjustPending(1)
+            self.adjustPending(1, bytes: bytes.count)
             self.connection.send(bytes) { [weak self] error in
-                self?.adjustPending(-1)
+                self?.adjustPending(-1, bytes: bytes.count)
                 if error != nil { self?.finish(sendClose: false) }
             }
         }

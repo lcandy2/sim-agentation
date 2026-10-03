@@ -7,7 +7,8 @@ import { notify } from './notify.svelte.js';
 import { hitTest, describe, nodesInRect } from './ax.js';
 import { sampler, warm, containersAround, partsWithin } from './visual.js';
 import { matchesFrontApp, sdkContainers, sourceFor, viewContext } from './sdk.js';
-import { createDecoder, decodeCapabilities, formatLabel, pickFormat } from './stream.js';
+import { createDecoder, decodeCapabilities, decodesSmoothly, formatLabel, pickFormat } from './stream.js';
+import { HIDDEN_FPS, createAuto, decide, newFormat, observe, probeFor, probed, restart } from './auto.js';
 import { sdkToPortrait, treeToPortrait, uprightDegrees } from './rotation.js';
 
 export const storage = {
@@ -65,6 +66,12 @@ export const ui = $state({
     bitrate: 8_000_000,
     playable: { mjpeg: true, avcc: false, hevc: false, hevc422: false },
     hardwareDecode: { mjpeg: null, avcc: null, hevc: null, hevc422: null },
+    fpsTarget: 60,    // what the host streams at: 60, less for a slow connection or a hidden page
+    why: { scale: null, bitrate: null, fps: null }, // why Auto went below full, sharp and 60
+    net: null,        // which of those the connection is why of (see auto.js decide)
+    link: null,       // { behindMs, carried, backingUp }: the connection, from the host's last report
+    estimate: Infinity, // bits/s the connection carries, as far as Auto has seen
+    encodeMs: 0,      // the host's time to scale and encode a frame
     fps: 0,           // frames painted in the last second
     mbps: 0,          // megabits received in the last second
     hardware: null,   // the video decoder runs in hardware (null: unknown or JPEG)
@@ -85,6 +92,9 @@ const rt = {
   drag: null,
   draft: null,       // { kind, rect, point?, label }
   failed: new Set(), // formats Auto gave up on this session
+  auto: createAuto(), // what Auto has learned about the connection and decoder (see auto.js)
+  seen: { received: 0, decoded: 0, bytes: 0, at: 0 }, // the page's counts at the host's last report
+  bytesIn: 0,        // every binary byte the stream has brought
   touching: false,
   canvas: null,
   ctx: null,
@@ -128,9 +138,10 @@ export function attachStage({ canvas, overlay, float, stage, previewInfo }) {
 function connect(udid) {
   stopStream();
   setStatus('Connecting…');
+  restart(rt.auto);
   settleStream();
-  const { format, scale, bitrate } = ui.stream;
-  const ws = new WebSocket(`ws://${location.host}/ws/${encodeURIComponent(udid)}?format=${format}&scale=${scale}&bitrate=${bitrate}`);
+  const { format, scale, bitrate, fpsTarget } = ui.stream;
+  const ws = new WebSocket(`ws://${location.host}/ws/${encodeURIComponent(udid)}?format=${format}&scale=${scale}&bitrate=${bitrate}&fps=${fpsTarget}`);
   ws.binaryType = 'arraybuffer';
   rt.ws = ws;
   const newDecoder = () =>
@@ -151,6 +162,13 @@ function connect(udid) {
     });
   rt.decoder = newDecoder();
   rt.decoderErrors = 0;
+  rt.seen = { received: 0, decoded: 0, bytes: rt.bytesIn, at: performance.now() };
+  // Whether this browser decodes the device's full resolution smoothly.
+  decodesSmoothly(format, devicePixels()).then((smooth) => {
+    if (rt.ws !== ws) return;
+    rt.auto.smooth = smooth;
+    settleStream();
+  });
 
   ws.onopen = () => {
     ws.send(JSON.stringify({ type: 'snapshot' }));
@@ -170,7 +188,10 @@ function connect(udid) {
   };
   ws.onmessage = (e) => {
     if (typeof e.data === 'string') return onText(JSON.parse(e.data));
-    if (new Uint8Array(e.data, 0, 1)[0] === 0x05) return rt.onStill?.(e.data); // a full-size still, not the stream
+    const tag = new Uint8Array(e.data, 0, 1)[0];
+    rt.bytesIn += e.data.byteLength;
+    if (tag === 0x05) return rt.onStill?.(e.data); // a full-size still, not the stream
+    if (tag === 0x06) return; // a probe's padding (see auto.js probeFor)
     rt.counts.bytes += e.data.byteLength;
     rt.decoder?.feed(e.data);
   };
@@ -252,6 +273,7 @@ const capabilities = () => ({ playable: ui.stream.playable, hardware: ui.stream.
 function useFormat(format) {
   if (format === ui.stream.format) return;
   ui.stream.format = format;
+  newFormat(rt.auto);
   if (ui.running && ui.udid) connect(ui.udid);
 }
 
@@ -285,12 +307,9 @@ export function setStreamBitrate(bps) {
   settleStream();
 }
 
-// Auto resolution and bitrate, with the codec on Auto. The device renders at 3x (iPad 2x); the page
-// shows it at ui.scale CSS px per point on a devicePixelRatio display. When
-// that is no more than half the device's pixels, half resolution looks the
-// same and costs a quarter. Going back to full waits for 60%, so a window
-// dragged across the line doesn't flip the encoder back and forth.
-const BITS_PER_PIXEL = { hevc: 0.035, avcc: 0.05, hevc422: 0.06 }; // per frame, at 60 fps
+// With the codec on Auto, resolution, bitrate and frame rate are Auto's too
+// (see auto.js). A pinned codec streams the resolution and bitrate chosen
+// for it at 60 fps. Either way a hidden page gets a few frames a second.
 let settleTimer;
 
 function devicePixels() {
@@ -300,33 +319,77 @@ function devicePixels() {
   return { width: screen.width * k, height: screen.height * k };
 }
 
-function autoScale() {
-  if (!ui.chrome) return ui.stream.scale;
-  const shown = (ui.chrome.screen.width * ui.scale * (window.devicePixelRatio || 1)) / devicePixels().width;
-  if (ui.stream.scale === 2) return shown > 0.6 ? 1 : 2;
-  return shown <= 0.5 ? 2 : 1;
+/** The share of the device's pixels the page draws: ui.scale CSS px per point on a devicePixelRatio display. */
+function shownShare() {
+  if (!ui.chrome) return ui.stream.scale === 2 ? 0.5 : 1;
+  return (ui.chrome.screen.width * ui.scale * (window.devicePixelRatio || 1)) / devicePixels().width;
 }
 
-function autoBitrate(format, scale) {
-  const { width, height } = devicePixels();
-  const bps = (width / scale) * (height / scale) * 60 * (BITS_PER_PIXEL[format] ?? 0.05);
-  return Math.min(16, Math.max(2, Math.round(bps / 1e6))) * 1e6;
-}
-
-/** Works out the resolution and bitrate to stream now, and tells the host what changed. */
+/** Works out what to stream now, and tells the host what changed. */
 function settleStream() {
   const s = ui.stream;
-  const auto = s.choice === 'auto';
-  const scale = auto ? autoScale() : s.scaleChoice;
-  const bitrate = auto ? autoBitrate(s.format, scale) : s.bitrateChoice;
+  const hidden = document.hidden;
+  let scale = s.scaleChoice;
+  let bitrate = s.bitrateChoice;
+  let fps = hidden ? HIDDEN_FPS : 60;
+  if (s.choice === 'auto' && s.format) {
+    const d = decide(rt.auto, { format: s.format, pixels: devicePixels(), shown: shownShare(), current: s.scale, hidden });
+    ({ scale, fps } = d);
+    bitrate = d.bitrate ?? s.bitrate; // JPEG has none
+    s.why = d.why;
+    s.net = d.net;
+  } else {
+    s.why = { scale: null, bitrate: null, fps: hidden ? 'the page is hidden' : null };
+    s.net = null;
+  }
   if (scale !== s.scale) {
     s.scale = scale;
+    rt.auto.quiet = Math.max(rt.auto.quiet, 1); // a new size starts with a keyframe
     send({ type: 'set_scale', scale });
   }
   if (bitrate !== s.bitrate) {
     s.bitrate = bitrate;
     send({ type: 'set_bitrate', bps: bitrate });
   }
+  if (fps !== s.fpsTarget) {
+    s.fpsTarget = fps;
+    send({ type: 'set_fps', fps });
+  }
+}
+
+/** Once a second from the host: how the stream kept up. Auto learns from it, with the decoder's side. */
+function onStats(host) {
+  rt.hostStats = host; // for the devtools console
+  const s = ui.stream;
+  const now = performance.now();
+  const stats = rt.decoder?.stats;
+  const page = {
+    fed: 0,
+    decoded: 0,
+    backlog: 0,
+    received: ((rt.bytesIn - rt.seen.bytes) * 8) / (Math.max(250, now - rt.seen.at) / 1000),
+    offset: now - host.t,
+  };
+  if (stats) {
+    Object.assign(page, { fed: stats.received - rt.seen.received, decoded: stats.decoded - rt.seen.decoded, backlog: stats.backlog });
+    stats.backlog = 0;
+  }
+  rt.seen = { received: stats?.received ?? 0, decoded: stats?.decoded ?? 0, bytes: rt.bytesIn, at: now };
+  observe(rt.auto, host, page, { format: s.format, fps: s.fpsTarget, scale: s.scale, hidden: document.hidden });
+  s.link = rt.auto.link;
+  s.estimate = rt.auto.estimate;
+  s.encodeMs = host.encodeMs;
+  if (s.choice !== 'auto') return;
+  const probe = probeFor(rt.auto, { format: s.format, pixels: devicePixels(), hidden: document.hidden });
+  if (probe) send({ type: 'probe', ...probe, ms: 400 });
+  settleStream();
+}
+
+/** The host's answer to a probe: the connection took the padding, or not. */
+function onProbe(result) {
+  probed(rt.auto, { ...result, offset: performance.now() - result.t });
+  ui.stream.estimate = rt.auto.estimate;
+  if (ui.stream.choice === 'auto') settleStream();
 }
 
 export function send(msg) {
@@ -350,6 +413,10 @@ function onText(msg) {
   if (msg.type === 'describe_ui_result') {
     rt.pendingTree?.(msg.ok ? msg.tree : null);
     rt.pendingTree = null;
+  } else if (msg.type === 'stats') {
+    onStats(msg);
+  } else if (msg.type === 'probe_result') {
+    onProbe(msg);
   } else if (msg.type === 'stream_error') {
     // The host couldn't encode this format (no encoder for it on this Mac).
     if (!fallBack(msg.format, msg.error)) setStatus(msg.error);
@@ -1284,6 +1351,7 @@ export async function createSimulator({ name, deviceType, runtime }) {
 export function start() {
   requestAnimationFrame(paintLoop);
   const stats = setInterval(sampleStats, 1000);
+  document.addEventListener('visibilitychange', settleStream);
   // Settle the format before the first device connects.
   decodeCapabilities().then(({ playable, hardware }) => {
     ui.stream.playable = playable;
@@ -1296,5 +1364,6 @@ export function start() {
   return () => {
     clearInterval(timer);
     clearInterval(stats);
+    document.removeEventListener('visibilitychange', settleStream);
   };
 }

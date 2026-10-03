@@ -73,16 +73,19 @@ export function createDecoder(format, { onFrame, onError }) {
 }
 
 function jpegDecoder(onFrame) {
-  const stats = { received: 0, firstAt: 0, decoded: 0 };
+  const stats = { received: 0, firstAt: 0, decoded: 0, backlog: 0 };
+  let decoding = 0;
   return {
     stats,
     feed(buffer) {
       stats.received++;
       stats.firstAt ||= performance.now();
+      stats.backlog = Math.max(stats.backlog, ++decoding);
       createImageBitmap(new Blob([buffer], { type: 'image/jpeg' })).then((bitmap) => {
+        decoding--;
         stats.decoded++;
         onFrame(bitmap);
-      }, () => {});
+      }, () => decoding--);
     },
     hardware: null,
     dispose() {},
@@ -93,8 +96,10 @@ function videoDecoder(format, onFrame, onError) {
   let timestamp = 0;
   const state = { hardware: null };
   // Video messages in and frames out, so a caller can tell a decoder that
-  // gets a stream but never produces a picture (the JPEG seed doesn't count).
-  const stats = { received: 0, firstAt: 0, decoded: 0 };
+  // gets a stream but never produces a picture (the JPEG seed doesn't count),
+  // and the most frames it has held at once (reset by the caller), so it can
+  // tell one that falls behind.
+  const stats = { received: 0, firstAt: 0, decoded: 0, backlog: 0 };
   const decoder = new VideoDecoder({
     output: (frame) => {
       stats.decoded++;
@@ -133,6 +138,7 @@ function videoDecoder(format, onFrame, onError) {
         try {
           decoder.decode(new EncodedVideoChunk({ type: tag === 0x02 ? 'key' : 'delta', timestamp, data: payload }));
           timestamp += 16667; // never displayed; only has to increase
+          stats.backlog = Math.max(stats.backlog, decoder.decodeQueueSize);
         } catch {}
       } else if (tag === 0x04) {
         // JPEG seed: paints before the first keyframe decodes.
@@ -145,6 +151,23 @@ function videoDecoder(format, onFrame, onError) {
       } catch {}
     },
   };
+}
+
+/**
+ * Whether this browser says it decodes the format at this size, 60 fps,
+ * smoothly; null when it can't say (or for JPEG, which it always decodes).
+ */
+export async function decodesSmoothly(format, { width, height }) {
+  if (!PROBES[format] || !navigator.mediaCapabilities) return null;
+  try {
+    const info = await navigator.mediaCapabilities.decodingInfo({
+      type: 'file',
+      video: { contentType: `video/mp4; codecs="${PROBES[format]}"`, width, height, bitrate: 8_000_000, framerate: 60 },
+    });
+    return info.supported ? info.smooth : null;
+  } catch {
+    return null;
+  }
 }
 
 // `prefer-hardware` silently falls back to a software decoder, which is
