@@ -391,10 +391,9 @@ kbd {
 /* Device Hub's top bar: + and filter in a capsule, then the sidebar toggle,
    centered 26 pt from the window's top. */
 .sidebar-top { height: 36px; flex: none; display: flex; align-items: center; gap: 6px; }
-.sidebar-top::after { content: ""; width: 36px; flex: none; } /* where the floating sidebar button sits */
-/* The product name where macOS puts a window's title; the right end leaves
-   room for the sidebar button, which floats (see .sidebar-toggle). */
-.brand { flex: 1; min-width: 0; font-size: 13px; line-height: 16px; font-weight: 700; color: var(--sidebar-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* The product name where macOS puts a window's title, then + and filter. */
+.brand { flex: 1; min-width: 0; font-size: 17px; line-height: 22px; font-weight: 700; color: var(--sidebar-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 1100px) { .brand { font-size: 15px; } } /* the narrower sidebar still fits it whole */
 
 /* macOS 27's search field (Figma, node 4376:54895): a control capsule with a
    secondary magnifying glass and placeholder. */
