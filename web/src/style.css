@@ -431,14 +431,16 @@ kbd {
 
 /* Rows are 46 pt tall, 220 pt wide, radius 9; selected is solid blue. */
 .device-row {
-  width: 100%;
+  /* The content lines up with "Available"; the selection reaches 7 px past
+     it on both sides (into the list's padding), as in Device Hub. */
+  width: calc(100% + 14px);
   height: 46px;
   display: grid;
   grid-template-columns: 32px 1fr auto;
   align-items: center;
   gap: 8px;
-  margin: 0;
-  padding: 0; /* the picture starts where "Available" does */
+  margin: 0 -7px;
+  padding: 0 7px;
   border: 0;
   border-radius: 9px;
   background: none;
