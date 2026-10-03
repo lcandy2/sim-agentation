@@ -1,7 +1,7 @@
 <script>
   import {
     ui, setMode, setZoom, zoomIn, zoomOut, togglePanel, toggleFocus,
-    copyPending, clearDone, saveScreenshot, pressButton,
+    copyPending, clearDone, saveScreenshot, pressButton, pressAppSwitcher,
   } from '../lib/app.svelte.js';
   import { icon } from '../lib/icons.js';
   import Popover from './Popover.svelte';
@@ -17,7 +17,7 @@
     [
       { label: 'Save Screenshot', icon: 'screenshot', run: saveScreenshot, disabled: !ui.running },
       { label: 'Lock', icon: 'lock', run: () => pressButton('lock'), disabled: !ui.running },
-      { label: 'App Switcher', icon: 'app-switcher', run: () => pressButton('app-switcher'), disabled: !ui.running },
+      { label: 'App Switcher', icon: 'app-switcher', run: pressAppSwitcher, disabled: !ui.running },
     ],
   ]);
 </script>

@@ -487,6 +487,12 @@ export function pressHome() {
   send({ type: 'button', button: hasButton ? 'home' : 'swipe-to-home' });
 }
 
+/** The app switcher: a double home press with a home button, the swipe-and-hold elsewhere. */
+export function pressAppSwitcher() {
+  const hasButton = ui.chrome?.buttons?.some((b) => b.name === 'home');
+  send({ type: 'button', button: hasButton ? 'app-switcher' : 'swipe-to-app-switcher' });
+}
+
 export function pressButton(button, duration) {
   send({ type: 'button', button, ...(duration > 0.4 ? { duration } : {}) });
 }
