@@ -1,5 +1,5 @@
 <script>
-  import { ui, togglePanel, setFilter } from '../lib/app.svelte.js';
+  import { ui, setFilter } from '../lib/app.svelte.js';
   import { icon } from '../lib/icons.js';
   import DeviceRow from './DeviceRow.svelte';
   import NewSimulator from './NewSimulator.svelte';
@@ -35,6 +35,7 @@
 
 <aside class="sidebar" id="sidebar">
   <div class="sidebar-top">
+    <span class="brand">sim-agentation</span>
     <div class="pill bar-pill" role="group" aria-label="Simulators">
       <Popover icon="plus" title="New simulator" align="left">
         {#snippet children(close)}<NewSimulator {close} />{/snippet}
@@ -51,9 +52,6 @@
         {/snippet}
       </Popover>
     </div>
-    <button class="icon-btn circle-btn" title="Hide the device list" aria-label="Hide the device list" onclick={() => togglePanel('sidebar', false)}>
-      {@html icon('sidebar')}
-    </button>
   </div>
   <label class="search">
     <span data-icon="search">{@html icon('search')}</span>

@@ -31,11 +31,6 @@
 </script>
 
 <header class="canvas-top">
-  {#if !ui.panels.sidebar}
-    <button id="toggle-sidebar" class="icon-btn circle-btn" title="Show the device list" aria-label="Show the device list" onclick={() => togglePanel('sidebar', true)}>
-      {@html icon('sidebar')}
-    </button>
-  {/if}
   <div class="title">
     <div class="title-name">{ui.simName}</div>
     <div class="title-sub"><span>{ui.runtime}</span><span class="status">{status}</span></div>

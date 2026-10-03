@@ -19,7 +19,6 @@
   --field: rgba(0, 0, 0, 0.07);
   --fill: rgba(0, 0, 0, 0.05);
   --control: rgba(253, 253, 253, 0.92);
-  --control-edge: transparent;
   --control-shadow: inset 0 0 0 1px #ffffff, 0 8px 36px rgba(0, 0, 0, 0.07);
   --control-on: rgba(0, 0, 0, 0.1);
   --menu: #ffffff;
@@ -95,7 +94,7 @@ button { cursor: default; }
 [data-icon] { display: inline-grid; place-items: center; }
 [data-icon] svg { width: 18px; height: 18px; }
 
-.window { display: flex; height: 100%; overflow: hidden; background: var(--window); }
+.window { --sidebar-w: 248px; --inspector-w: 281px; position: relative; display: flex; height: 100%; overflow: hidden; background: var(--window); }
 
 /* ---------- controls ---------- */
 
@@ -259,8 +258,7 @@ kbd {
 /* A full-height sidebar (macOS 27 no longer floats it), 248 pt wide; its
    contents keep Device Hub's measured positions. */
 .sidebar {
-  --width: 248px;
-  width: var(--width);
+  width: var(--sidebar-w);
   padding: 8px 0 8px 8px;
   flex: none;
   display: flex;
@@ -271,7 +269,10 @@ kbd {
 }
 /* Device Hub's top bar: + and filter in a capsule, then the sidebar toggle,
    centered 26 pt from the window's top. */
-.sidebar-top { height: 36px; flex: none; display: flex; align-items: center; justify-content: flex-end; gap: 8px; padding: 0 5px; }
+.sidebar-top { height: 36px; flex: none; display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 0 49px 0 10px; }
+/* The product name where macOS puts a window's title; the right end leaves
+   room for the sidebar button, which floats (see .sidebar-toggle). */
+.brand { font-size: 13px; line-height: 16px; font-weight: 700; color: var(--sidebar-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .bar-pill { gap: 0; }
 
 .search {
@@ -338,8 +339,9 @@ kbd {
 /* ---------- canvas: device ---------- */
 
 .canvas { position: relative; flex: 1; min-width: 0; display: flex; flex-direction: column; background: var(--canvas); }
-.canvas-top { height: 52px; flex: none; display: flex; align-items: center; gap: 8px; padding: 0 7px 0 20px; }
-.window.no-sidebar .canvas-top { padding-left: 12px; }
+.canvas-top { height: 52px; flex: none; display: flex; align-items: center; gap: 8px; padding: 0 7px 0 20px; transition: padding-left 320ms cubic-bezier(0.4, 0, 0.2, 1); }
+/* With the sidebar out, the title moves over for the sidebar button. */
+.window.no-sidebar .canvas-top { padding-left: 56px; }
 .title { flex: 1; min-width: 0; }
 .title-name { font-weight: 700; font-size: 13px; line-height: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .title-sub { font-size: 11px; line-height: 14px; color: var(--secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -496,8 +498,7 @@ kbd {
 /* ---------- inspector ---------- */
 
 .inspector {
-  --width: 281px;
-  width: var(--width);
+  width: var(--inspector-w);
   flex: none;
   display: flex;
   flex-direction: column;
@@ -661,17 +662,27 @@ kbd {
    into the room. Once out they're hidden, so they leave the tab order. */
 .sidebar,
 .inspector { transition: margin 320ms cubic-bezier(0.4, 0, 0.2, 1), visibility 0s; }
-.window.no-sidebar .sidebar { margin-left: calc(-1 * var(--width)); }
-.window.no-inspector .inspector { margin-right: calc(-1 * var(--width)); }
+.window.no-sidebar .sidebar { margin-left: calc(-1 * var(--sidebar-w)); }
+.window.no-inspector .inspector { margin-right: calc(-1 * var(--inspector-w)); }
 .window.no-sidebar .sidebar,
 .window.no-inspector .inspector { visibility: hidden; transition: margin 320ms cubic-bezier(0.4, 0, 0.2, 1), visibility 0s 320ms; }
+/* One sidebar button for both states, riding along with the slide: at the
+   right end of the sidebar's top bar, or left of the title when it's out. */
+.sidebar-toggle {
+  position: absolute;
+  z-index: 6;
+  top: 8px;
+  left: calc(var(--sidebar-w) - 42px);
+  transition: left 320ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+.window.no-sidebar .sidebar-toggle { left: 12px; }
 @media (prefers-reduced-motion: reduce) {
-  .sidebar, .inspector, .window.no-sidebar .sidebar, .window.no-inspector .inspector { transition: none; }
+  .sidebar, .inspector, .window.no-sidebar .sidebar, .window.no-inspector .inspector,
+  .sidebar-toggle, .canvas-top { transition: none; }
 }
 
 @media (max-width: 1000px) {
-  .sidebar { --width: 220px; }
-  .inspector { --width: 261px; }
+  .window { --sidebar-w: 220px; --inspector-w: 261px; }
 }
 /* Fit-to-window still applies; the zoom buttons give their room to the title. */
 @media (max-width: 1000px) {
