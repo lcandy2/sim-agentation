@@ -1010,7 +1010,9 @@ export async function toggleFocus() {
   await Promise.all([togglePanel('sidebar', show), togglePanel('inspector', show)]);
 }
 
+/** A tab opens the inspector on it; the tab that is already open closes it. */
 export function setInspectorTab(tab) {
+  if (ui.panels.inspector && ui.panels.tab === tab) return togglePanel('inspector', false);
   ui.panels.tab = tab;
   storage.set('inspector-tab', tab);
   if (!ui.panels.inspector) togglePanel('inspector', true);

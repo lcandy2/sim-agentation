@@ -4,6 +4,7 @@
     copyPending, clearDone, saveScreenshot, pressButton,
   } from '../lib/app.svelte.js';
   import { icon } from '../lib/icons.js';
+  import InspectorTabs from './InspectorTabs.svelte';
   import Popover from './Popover.svelte';
 
   const status = $derived(ui.flash ?? ui.status);
@@ -100,5 +101,7 @@
         {/snippet}
       </Popover>
     </div>
+    <!-- The inspector's tabs come out here while it's closed, to open it again. -->
+    {#if !ui.panels.inspector}<InspectorTabs />{/if}
   </div>
 </header>
