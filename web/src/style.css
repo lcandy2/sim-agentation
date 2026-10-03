@@ -257,22 +257,6 @@ button { cursor: default; }
 .text-btn:disabled { opacity: 0.5; }
 
 /* Segmented text buttons, used in Settings. */
-.seg-text { height: 30px; padding: 0 2px; }
-.seg-text button {
-  height: 24px;
-  padding: 0 9px;
-  border: 0;
-  border-radius: 999px;
-  background: none;
-  color: var(--text);
-  font-size: 12px;
-  font-weight: 500;
-  opacity: 0.8;
-  white-space: nowrap;
-}
-.seg-text button:hover { background: var(--hover); opacity: 1; }
-.seg-text button.on { background: var(--segment); box-shadow: var(--glass-shadow); opacity: 1; font-weight: 600; }
-.seg-text button:disabled { opacity: 0.3; background: none; }
 
 /* Menus: macOS 27's (Figma, macOS 27 Community, nodes 4370:42750 and
    4370:42756), in the top layer (components/Popover.svelte) under their
@@ -356,7 +340,7 @@ button { cursor: default; }
 .sheet-message p { margin: 0; font-size: 11px; line-height: 14px; }
 .sheet-grid label { font-size: 13px; line-height: 24px; font-weight: 500; letter-spacing: -0.26px; text-align: right; color: var(--secondary); }
 .sheet .field,
-.sheet .popup {
+.popup {
   width: 100%;
   min-width: 0;
   height: 24px;
@@ -369,9 +353,12 @@ button { cursor: default; }
 }
 .sheet .field { padding: 0 8px; background: var(--canvas); box-shadow: 0 0 0 1px var(--sheet-field-border); caret-color: #08f; }
 .sheet .field:focus { box-shadow: 0 0 0 1px var(--sheet-field-border), 0 0 0 3.5px var(--sheet-focus), inset 0 0 0 1px var(--sheet-focus); }
-.sheet .popup { appearance: none; padding: 0 24px 0 12px; background: var(--popup-chevrons) right center / 24px 24px no-repeat, var(--sheet-fill); }
-.sheet .popup:focus-visible { box-shadow: 0 0 0 3.5px var(--sheet-focus); }
-.sheet .popup:disabled { color: var(--secondary); }
+/* macOS 27's pop-up button (the dialog's, node 690:10197), here and in the
+   inspector's settings. */
+.popup { appearance: none; padding: 0 24px 0 12px; background: var(--popup-chevrons) right center / 24px 24px no-repeat, var(--sheet-fill); }
+.popup:focus-visible { box-shadow: 0 0 0 3.5px var(--sheet-focus); }
+.popup:disabled { color: var(--secondary); }
+.setting .popup { width: auto; max-width: 60%; }
 .sheet-buttons { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 20px 20px; }
 .sheet-btn {
   min-width: 74px;

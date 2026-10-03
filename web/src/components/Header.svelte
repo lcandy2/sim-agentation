@@ -20,8 +20,7 @@
       { label: 'App Switcher', icon: 'app-switcher', run: () => pressButton('app-switcher'), disabled: !ui.running },
     ],
     [
-      { label: 'Stream Settings', icon: 'sliders', run: () => setInspectorTab('settings') },
-      { label: 'Device Info', icon: 'info', run: () => setInspectorTab('info') },
+      { label: 'Info and Settings', icon: 'info', run: () => setInspectorTab('info') },
     ],
     [
       { label: ui.panels.sidebar ? 'Hide Device List' : 'Show Device List', icon: 'sidebar', run: () => togglePanel('sidebar') },

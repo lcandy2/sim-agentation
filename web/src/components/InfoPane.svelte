@@ -25,9 +25,9 @@
   }
 </script>
 
-{#if sim}
-  <div class="pane">
-    <h3 class="pane-title">{sim.name}</h3>
+<section class="settings-group">
+  <h3>{sim?.name ?? 'Device'}</h3>
+  {#if sim}
     <dl class="info">
       {#each rows as [label, value] (label)}
         <dt>{label}</dt><dd>{value}</dd>
@@ -35,7 +35,7 @@
       <dt>Identifier</dt>
       <dd><button class="link" title="Copy" onclick={copyId}>{sim.udid}</button></dd>
     </dl>
-  </div>
-{:else}
-  <div class="empty"><p>No simulator selected.</p></div>
-{/if}
+  {:else}
+    <p class="setting-note">No simulator selected.</p>
+  {/if}
+</section>

@@ -41,7 +41,7 @@ export const ui = $state({
   panels: {
     sidebar: storage.get('panel-sidebar') !== 'hidden',
     inspector: storage.get('panel-inspector') !== 'hidden',
-    tab: storage.get('inspector-tab') ?? 'annotations', // 'settings', 'annotations' or 'info'
+    tab: storage.get('inspector-tab') === 'annotations' ? 'annotations' : storage.get('inspector-tab') ? 'info' : 'annotations', // 'info' (with the settings) or 'annotations'
   },
   filter: storage.get('filter') ?? 'all', // the device list: 'all', 'running', 'iphone' or 'ipad'
   orientation: 'portrait', // the device's, as sent to it: see ROTATION

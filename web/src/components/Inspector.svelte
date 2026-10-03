@@ -5,11 +5,11 @@
   import InfoPane from './InfoPane.svelte';
   import SettingsPane from './SettingsPane.svelte';
 
-  // Device Hub's inspector: three tabs in a pill at the top right.
+  // The inspector: two tabs at the top right, the device's info with the
+  // stream settings, and the annotations.
   const TABS = [
-    { id: 'settings', icon: 'sliders', title: 'Settings' },
+    { id: 'info', icon: 'info', title: 'Info and Settings' },
     { id: 'annotations', icon: 'doc', title: 'Annotations' },
-    { id: 'info', icon: 'info', title: 'Info' },
   ];
   const open = $derived(ui.annotations.filter((a) => a.status === 'pending' || a.status === 'acknowledged').length);
 </script>
@@ -33,10 +33,11 @@
       {/each}
     </div>
   </header>
-  {#if ui.panels.tab === 'settings'}
-    <SettingsPane />
-  {:else if ui.panels.tab === 'info'}
-    <InfoPane />
+  {#if ui.panels.tab === 'info'}
+    <div class="pane">
+      <InfoPane />
+      <SettingsPane />
+    </div>
   {:else}
     <AnnotationsPane />
   {/if}
