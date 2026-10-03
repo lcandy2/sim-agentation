@@ -60,11 +60,11 @@
         id="mode-annotate"
         class="icon-btn"
         class:on={ui.mode === 'annotate'}
-        title="Annotate: freeze the screen and mark things up (A)"
+        title="Design Mode: freeze the screen and mark things up (A)"
         data-icon="annotate"
         disabled={!ui.running}
         onclick={() => setMode('annotate')}
-      >{@html icon('annotate')}</button>
+      >{@html icon('annotate')}<span class="mode-label">Design Mode</span></button>
     </div>
     <div class="pill" role="group" aria-label="Zoom">
       <button id="zoom-out" class="icon-btn" title="Zoom out (⌘−)" data-icon="zoom-out" onclick={zoomOut}>{@html icon('zoom-out')}</button>

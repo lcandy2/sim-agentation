@@ -173,6 +173,33 @@ button { cursor: default; }
 .icon-btn.small { width: 28px; height: 28px; }
 .icon-btn.small svg { width: 16px; height: 16px; }
 #mode-annotate.on { background: var(--mark); color: #fff; }
+/* Design Mode: the annotate button grows its name while it's on and folds
+   back to a symbol when it's off. */
+#mode-annotate {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  min-width: 32px;
+  padding: 0 6px;
+  gap: 0;
+  transition: padding 220ms cubic-bezier(0.3, 0.7, 0.2, 1), gap 220ms cubic-bezier(0.3, 0.7, 0.2, 1);
+}
+#mode-annotate .mode-label {
+  max-width: 0;
+  overflow: hidden;
+  opacity: 0;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 16px;
+  transition: max-width 220ms cubic-bezier(0.3, 0.7, 0.2, 1), opacity 160ms ease;
+}
+#mode-annotate.on { padding: 0 12px 0 8px; gap: 5px; }
+#mode-annotate.on .mode-label { max-width: 110px; opacity: 1; }
+@media (prefers-reduced-motion: reduce) {
+  #mode-annotate, #mode-annotate .mode-label { transition: none; }
+}
 
 /* macOS 27's toolbar controls (Figma, macOS 27 Community, nodes 4370:41840
    and 4376:54895), all on one material: a 36 pt capsule over the Fill
