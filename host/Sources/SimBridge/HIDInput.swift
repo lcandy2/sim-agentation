@@ -17,10 +17,6 @@ public enum HardwareButton: String, Sendable, CaseIterable {
     case volumeUp = "volume-up", volumeDown = "volume-down"
     case appSwitcher = "app-switcher"
     case swipeToHome = "swipe-to-home"
-    /// The Face ID gesture: up from the bottom edge, a pause, then lift. The
-    /// double home press `appSwitcher` sends does nothing there on iOS 26.5
-    /// and 27 (measured).
-    case swipeToAppSwitcher = "swipe-to-app-switcher"
 }
 
 /// Sends touches, buttons, scrolls and keys to a simulator through
@@ -123,10 +119,6 @@ public final class HIDInput: @unchecked Sendable {
             return legacyButton(0, holdUs: holdUs, on: c) && first
         case .swipeToHome:
             return Digitizer.swipe(from: CGPoint(x: 0.5, y: 0.998), to: CGPoint(x: 0.5, y: 0.30), steps: 12, stepMs: 16, edge: .bottom, id: nextTouchId(), target: Self.target, to: c)
-        case .swipeToAppSwitcher:
-            // Measured on iOS 27.2: up a quarter of the screen over 400 ms and
-            // still for 800 ms opens the switcher; stopping 40% up goes home.
-            return Digitizer.swipe(from: CGPoint(x: 0.5, y: 0.998), to: CGPoint(x: 0.5, y: 0.73), steps: 25, stepMs: 16, holdMs: 800, edge: .bottom, id: nextTouchId(), target: Self.target, to: c)
         case .power: return hid(page: 12, usage: 48, holdUs: holdUs, on: c)
         case .volumeUp: return hid(page: 12, usage: 233, holdUs: holdUs, on: c)
         case .volumeDown: return hid(page: 12, usage: 234, holdUs: holdUs, on: c)
@@ -223,11 +215,37 @@ public final class HIDInput: @unchecked Sendable {
         return c
     }
 
-    static func send(_ message: UnsafeMutableRawPointer, to client: AnyObject) {
+    private static let completionQueue = DispatchQueue(label: "sim-agentation.hid.completion")
+
+    /// Sends one Indigo message and waits for SimulatorKit to finish sending
+    /// it, as baguette's IndigoHIDMessage.send does. Fire-and-forget (no
+    /// completion) loses button presses: a home press's down and up never
+    /// reached SpringBoard on iOS 27.2, while touches, a stream, got by.
+    /// Success means the transport finished, not that the guest acted.
+    @discardableResult
+    static func send(_ message: UnsafeMutableRawPointer, to client: AnyObject, deadline: DispatchTime = .now() + 5) -> Bool {
         let sel = NSSelectorFromString("sendWithMessage:freeWhenDone:completionQueue:completion:")
-        guard let cls = object_getClass(client), let imp = class_getMethodImplementation(cls, sel) else { return }
-        typealias Fn = @convention(c) (AnyObject, Selector, UnsafeMutableRawPointer, ObjCBool, AnyObject?, AnyObject?) -> Void
-        unsafeBitCast(imp, to: Fn.self)(client, sel, message, ObjCBool(true), nil, nil)
+        guard let cls = object_getClass(client), let method = class_getInstanceMethod(cls, sel) else {
+            free(message)
+            return false
+        }
+        let completed = DispatchSemaphore(value: 0)
+        nonisolated(unsafe) var failure: NSError?
+        let completion: @convention(block) (NSError?) -> Void = { error in
+            failure = error
+            completed.signal()
+        }
+        typealias Fn = @convention(c) (AnyObject, Selector, UnsafeMutableRawPointer, Bool, DispatchQueue?, (@convention(block) (NSError?) -> Void)?) -> Void
+        unsafeBitCast(method_getImplementation(method), to: Fn.self)(client, sel, message, true, completionQueue, completion)
+        guard completed.wait(timeout: deadline) == .success else {
+            log("HID send timed out; delivery unknown")
+            return false
+        }
+        if let failure {
+            log("HID send failed: \(failure)")
+            return false
+        }
+        return true
     }
 }
 
@@ -317,9 +335,7 @@ private enum Digitizer {
         return true
     }
 
-    /// `holdMs` keeps the finger still at `end` before lifting, as a pause in
-    /// a gesture does (the app switcher's).
-    static func swipe(from start: CGPoint, to end: CGPoint, steps: Int, stepMs: UInt32, holdMs: UInt32 = 0, edge: ScreenEdge?, id: UInt32, target: UInt32, to client: AnyObject) -> Bool {
+    static func swipe(from start: CGPoint, to end: CGPoint, steps: Int, stepMs: UInt32, edge: ScreenEdge?, id: UInt32, target: UInt32, to client: AnyObject) -> Bool {
         guard send(start, id: id, phase: .down, edge: edge, target: target, to: client) else { return false }
         var moved = 0
         for i in 1...steps {
@@ -327,14 +343,6 @@ private enum Digitizer {
             let t = Double(i) / Double(steps)
             let p = CGPoint(x: start.x + (end.x - start.x) * t, y: start.y + (end.y - start.y) * t)
             if send(p, id: id, phase: .move, edge: edge, target: target, to: client) { moved += 1 }
-        }
-        // A pause is the finger still on the glass: iOS sees it as moves that
-        // stay put, not as silence, so keep reporting the same point.
-        var held: UInt32 = 0
-        while held < holdMs {
-            usleep(stepMs * 1000)
-            held += stepMs
-            _ = send(end, id: id, phase: .move, edge: edge, target: target, to: client)
         }
         usleep(stepMs * 1000)
         return send(end, id: id, phase: .up, edge: edge, target: target, to: client) && moved >= steps / 2

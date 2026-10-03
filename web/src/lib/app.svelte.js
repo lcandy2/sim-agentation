@@ -477,20 +477,14 @@ export function onWindowKey(e) {
 
 // ---------- device buttons ----------
 
-/**
- * Home. A device with a home button gets the button; on the others (Face ID
- * iPhones, newer iPads) iOS 27 ignores that legacy press (measured on 27.2:
- * the app stayed in front), so Home is their swipe up from the bottom edge.
- */
+/** Home: the home button press, which SpringBoard takes on every device, Face ID too (as baguette sends it). */
 export function pressHome() {
-  const hasButton = ui.chrome?.buttons?.some((b) => b.name === 'home');
-  send({ type: 'button', button: hasButton ? 'home' : 'swipe-to-home' });
+  send({ type: 'button', button: 'home' });
 }
 
-/** The app switcher: a double home press with a home button, the swipe-and-hold elsewhere. */
+/** The app switcher: two home presses 150 ms apart (baguette's and idb's recipe). */
 export function pressAppSwitcher() {
-  const hasButton = ui.chrome?.buttons?.some((b) => b.name === 'home');
-  send({ type: 'button', button: hasButton ? 'app-switcher' : 'swipe-to-app-switcher' });
+  send({ type: 'button', button: 'app-switcher' });
 }
 
 export function pressButton(button, duration) {
@@ -769,7 +763,7 @@ function highlight() {
   const [ax, ay] = { 90: [x, y + h], 180: [x + w, y + h], [-90]: [x + w, y] }[ROTATION[ui.orientation]] ?? [x, y];
   label.style.left = `${(ax / width) * 100}%`;
   label.style.top = `${(ay / height) * 100}%`;
-  const more = hover.level < hover.targets.length - 1 ? '  ↑ parent' : '';
+  const more = hover.level < hover.targets.length - 1 ? '  ↑' : ''; // there's a parent: ↑ goes to it
   label.textContent = target.label + more;
 }
 
