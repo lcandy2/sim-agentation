@@ -1,7 +1,8 @@
 // Stream formats and their decoders: WebSocket messages in, paintable
 // frames out. Adapted from baguette's frame-decoder.js and stream-format.js
 // (https://github.com/tddworks/baguette, Apache License 2.0). Changes: HEVC
-// alongside H.264, decoder errors reported so the caller can restart.
+// alongside H.264, HEVC 4:2:2, decoder errors reported so the caller can
+// restart.
 //
 // Wire format (see DeviceSession.swift): `mjpeg` sends one JPEG per binary
 // message; `avcc` and `hevc` send [tag][payload], where 0x01 is the
@@ -14,13 +15,16 @@ export const FORMATS = [
   { id: 'mjpeg', label: 'JPEG', name: 'JPEG per frame' },
 ];
 
+// H.265 in 4:2:2 10-bit: a variant of `hevc`, picked with the chroma switch.
+export const HEVC_422 = { id: 'hevc422', name: 'H.265 (HEVC) 4:2:2 10-bit' };
+
 // Codec strings only used to ask whether the browser can decode the format;
 // the real ones come from each stream's description.
-const PROBES = { avcc: 'avc1.640033', hevc: 'hvc1.1.6.L153.90' };
+const PROBES = { avcc: 'avc1.640033', hevc: 'hvc1.1.6.L153.90', hevc422: 'hvc1.4.10.L153.BD.08' };
 
 /** Which formats this browser can play. WebCodecs needs a secure context, which localhost is. */
 export async function playableFormats() {
-  const playable = { mjpeg: true, avcc: false, hevc: false };
+  const playable = { mjpeg: true, avcc: false, hevc: false, hevc422: false };
   if (typeof VideoDecoder === 'undefined') return playable;
   await Promise.all(
     Object.entries(PROBES).map(async ([id, codec]) => {
@@ -35,6 +39,7 @@ export async function playableFormats() {
 /** The stored preference when it plays here, else the best format that does. */
 export function pickFormat(stored, playable) {
   if (stored && playable[stored]) return stored;
+  if (stored === 'hevc422' && playable.hevc) return 'hevc';
   return FORMATS.find((f) => playable[f.id]).id;
 }
 
@@ -75,7 +80,7 @@ function videoDecoder(format, onFrame, onError) {
       const payload = bytes.subarray(1);
       if (tag === 0x01) {
         const config = {
-          codec: format === 'hevc' ? hevcCodec(payload) : avcCodec(payload),
+          codec: format === 'avcc' ? avcCodec(payload) : hevcCodec(payload),
           description: payload.slice(),
           optimizeForLatency: true,
           hardwareAcceleration: 'prefer-hardware',

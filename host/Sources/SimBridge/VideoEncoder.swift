@@ -1,9 +1,10 @@
 // Adapted from baguette (https://github.com/tddworks/baguette),
 // Copyright 2026 tddworks, licensed under the Apache License 2.0 (see
 // LICENSE-baguette). H264Encoder.swift and H264Tuning.swift. Changes: HEVC
-// as well as H.264 (hvcC taken from the format description), the output
-// handler also hears about dropped frames, and a requested keyframe carries
-// the parameter sets again so a client can restart its decoder.
+// as well as H.264 (hvcC taken from the format description), HEVC 4:2:2,
+// the output handler also hears about dropped frames, and a requested
+// keyframe carries the parameter sets again so a client can restart its
+// decoder.
 
 import CoreMedia
 import CoreVideo
@@ -17,7 +18,14 @@ import VideoToolbox
 /// frame reordering, no frame delay and low-latency rate control, so the
 /// browser's decoder holds nothing back; a long GOP keeps big keyframes rare.
 public final class VideoEncoder: @unchecked Sendable {
-    public enum Codec: Sendable { case h264, hevc }
+    public enum Codec: Sendable {
+        case h264, hevc
+        /// HEVC Main 4:2:2 10-bit: color at half the horizontal resolution
+        /// instead of half both ways, so colored text keeps its edges. The
+        /// hardware encoder only produces it from 4:2:2 10-bit input and
+        /// without low-latency rate control, which pins it to Main 4:2:0.
+        case hevc422
+    }
 
     public struct Encoded: Sendable {
         /// avcC or hvcC: sent with the first keyframe, and again with a requested one.
@@ -42,6 +50,7 @@ public final class VideoEncoder: @unchecked Sendable {
     private var bitrate: Int
     private var emittedDescription = false
     private var frameCount: Int64 = 0
+    private var transfer: VTPixelTransferSession? // BGRA → 4:2:2 10-bit, for .hevc422
 
     public init(codec: Codec, fps: Int = 60, bitrate: Int = 8_000_000) {
         self.codec = codec
@@ -85,6 +94,11 @@ public final class VideoEncoder: @unchecked Sendable {
         let session = self.session
         lock.unlock()
         guard let session else { return false }
+        var pixels = pixels
+        if codec == .hevc422 {
+            guard let converted = convert(pixels, for: session) else { return false }
+            pixels = converted
+        }
 
         let frameProperties: NSDictionary? = forceKeyframe
             ? [kVTEncodeFrameOptionKey_ForceKeyFrame: kCFBooleanTrue!] as NSDictionary
@@ -116,14 +130,23 @@ public final class VideoEncoder: @unchecked Sendable {
         // an encoder refuses it, fall back to the regular real-time path.
         let lowLatency = [kVTVideoEncoderSpecification_EnableLowLatencyRateControl: kCFBooleanTrue!] as CFDictionary
         let codecType = codec == .h264 ? kCMVideoCodecType_H264 : kCMVideoCodecType_HEVC
+        // 4:2:2 frames come from the session's own pool, converted into it.
+        let input: CFDictionary? = codec == .hevc422
+            ? [
+                kCVPixelBufferPixelFormatTypeKey: kCVPixelFormatType_422YpCbCr10BiPlanarVideoRange,
+                kCVPixelBufferWidthKey: width,
+                kCVPixelBufferHeightKey: height,
+                kCVPixelBufferIOSurfacePropertiesKey: [:] as [CFString: Any],
+            ] as CFDictionary
+            : nil
         var created: VTCompressionSession?
-        for spec in [lowLatency, nil] {
+        for spec in codec == .hevc422 ? [nil] : [lowLatency, nil] {
             let status = VTCompressionSessionCreate(
                 allocator: kCFAllocatorDefault,
                 width: width, height: height,
                 codecType: codecType,
                 encoderSpecification: spec,
-                imageBufferAttributes: nil,
+                imageBufferAttributes: input,
                 compressedDataAllocator: kCFAllocatorDefault,
                 outputCallback: nil,
                 refcon: nil,
@@ -134,7 +157,11 @@ public final class VideoEncoder: @unchecked Sendable {
         guard let created else { return }
 
         // Rejected properties return a non-noErr status we ignore.
-        let profile = codec == .h264 ? kVTProfileLevel_H264_High_AutoLevel : kVTProfileLevel_HEVC_Main_AutoLevel
+        let profile = switch codec {
+        case .h264: kVTProfileLevel_H264_High_AutoLevel
+        case .hevc: kVTProfileLevel_HEVC_Main_AutoLevel
+        case .hevc422: kVTProfileLevel_HEVC_Main42210_AutoLevel
+        }
         let properties: [(CFString, CFTypeRef)] = [
             (kVTCompressionPropertyKey_RealTime, kCFBooleanTrue),
             (kVTCompressionPropertyKey_ProfileLevel, profile),
@@ -148,6 +175,16 @@ public final class VideoEncoder: @unchecked Sendable {
         VTCompressionSessionPrepareToEncodeFrames(created)
         session = created
         emittedDescription = false
+    }
+
+    /// BGRA into a 4:2:2 10-bit buffer from the session's pool.
+    private func convert(_ pixels: CVPixelBuffer, for session: VTCompressionSession) -> CVPixelBuffer? {
+        if transfer == nil { VTPixelTransferSessionCreate(allocator: nil, pixelTransferSessionOut: &transfer) }
+        guard let transfer, let pool = VTCompressionSessionGetPixelBufferPool(session) else { return nil }
+        var output: CVPixelBuffer?
+        CVPixelBufferPoolCreatePixelBuffer(nil, pool, &output)
+        guard let output, VTPixelTransferSessionTransferImage(transfer, from: pixels, to: output) == noErr else { return nil }
+        return output
     }
 
     private func extract(_ sample: CMSampleBuffer) -> Encoded? {

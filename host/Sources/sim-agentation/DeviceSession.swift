@@ -6,12 +6,13 @@ import SimBridge
 /// How the screen goes over the wire, as baguette's stream socket names it.
 ///
 /// - `mjpeg`: one JPEG per binary message.
-/// - `avcc` (H.264) and `hevc`: `[tag][payload]` binary messages, where the
+/// - `avcc` (H.264), `hevc` and `hevc422` (HEVC 4:2:2 10-bit):
+///   `[tag][payload]` binary messages, where the
 ///   tag is 0x01 for the avcC/hvcC description, 0x02 for a keyframe, 0x03
 ///   for a delta frame and 0x04 for a JPEG seed that paints before the
 ///   first keyframe decodes.
 enum StreamFormat: String, Sendable {
-    case mjpeg, avcc, hevc
+    case mjpeg, avcc, hevc, hevc422
 }
 
 /// What the viewer can retune while streaming: `set_fps`, `set_bitrate`
@@ -61,6 +62,7 @@ final class DeviceSession: @unchecked Sendable {
         case .mjpeg: video = nil
         case .avcc: video = VideoEncoder(codec: .h264, fps: options.fps, bitrate: options.bitrate)
         case .hevc: video = VideoEncoder(codec: .hevc, fps: options.fps, bitrate: options.bitrate)
+        case .hevc422: video = VideoEncoder(codec: .hevc422, fps: options.fps, bitrate: options.bitrate)
         }
     }
 
