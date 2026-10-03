@@ -618,6 +618,18 @@ kbd {
   pointer-events: none; /* floats over the stage; only its controls take clicks */
 }
 .bottom-row { display: flex; gap: 8px; }
+/* Device Hub holds the device's buttons: a note over the bottom bar, with the fix. */
+.input-notice {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 5px 5px 14px;
+  border-radius: 999px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.input-notice .text-btn { padding: 4px 12px; }
 .canvas-bottom .pill { pointer-events: auto; }
 .icon-btn.recording { color: var(--mark); opacity: 1; }
 

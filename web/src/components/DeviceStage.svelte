@@ -1,7 +1,7 @@
 <script>
   import { onMount, untrack } from 'svelte';
   import {
-    ui, MARGIN, ROTATION, attachStage, onStageResize, startDevice, pressHome, saveScreenshot, toggleRecording, rotate,
+    ui, MARGIN, ROTATION, attachStage, onStageResize, startDevice, pressHome, reclaimInput, saveScreenshot, toggleRecording, rotate,
     onPointerDown, onPointerMove, onPointerUp, onWheel, onScreenKey,
   } from '../lib/app.svelte.js';
   import { icon } from '../lib/icons.js';
@@ -173,6 +173,15 @@
 
 {#if ui.running}
   <footer class="canvas-bottom">
+    {#if ui.inputShadowed}
+      <!-- Device Hub holds this device's buttons; say so where they are. -->
+      <div class="input-notice glass" role="status">
+        <span>Xcode's Device Hub has taken this simulator's buttons.</span>
+        <button class="text-btn" disabled={ui.reclaiming} title="Restarts the simulator's SpringBoard; open apps close" onclick={reclaimInput}>
+          {ui.reclaiming ? 'Taking Back…' : 'Take Back'}
+        </button>
+      </div>
+    {/if}
     <div class="bottom-row">
       <div class="pill" role="group" aria-label="Device">
         <button class="icon-btn" title="Home" data-icon="home" onclick={pressHome}>{@html icon('home')}</button>

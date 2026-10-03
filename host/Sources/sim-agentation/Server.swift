@@ -138,6 +138,18 @@ final class AppServer: @unchecked Sendable {
             }
             if part(0) == "api" && part(1) == "sims" && part(3) == "boot" && req.method == "POST" {
                 try await boot(parts[2])
+                // Once it's up, take its buttons back if Device Hub claims them:
+                // nothing runs yet, so restarting SpringBoard costs nothing.
+                let udid = parts[2]
+                Task.detached { await InputSurface.healAfterBoot(udid: udid) }
+                return .respond(Self.json(JSONObject(["ok": .bool(true)])))
+            }
+            if part(0) == "api" && part(1) == "sims", let udid = part(2), part(3) == "input", req.method == "GET" {
+                let shadowed = await InputSurface.shadowed(udid: udid)
+                return .respond(Self.json(JSONObject(["shadowed": .bool(shadowed)])))
+            }
+            if part(0) == "api" && part(1) == "sims", let udid = part(2), part(3) == "reclaim", req.method == "POST" {
+                try await InputSurface.reclaim(udid: udid)
                 return .respond(Self.json(JSONObject(["ok": .bool(true)])))
             }
 

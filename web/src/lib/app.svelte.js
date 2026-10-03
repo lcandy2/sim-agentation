@@ -45,6 +45,8 @@ export const ui = $state({
   },
   filter: storage.get('filter') ?? 'all', // the device list: 'all', 'running', 'iphone' or 'ipad'
   orientation: 'portrait', // the device's, as sent to it: see ROTATION
+  inputShadowed: false, // Xcode's Device Hub holds this device's buttons (see checkInput)
+  reclaiming: false,
   recording: false,
   annotations: [],
   draft: null,        // { label, box } while the composer is open: the selection's box, viewport px
@@ -497,11 +499,35 @@ export function onWindowKey(e) {
 /** Home: the home button press, which SpringBoard takes on every device, Face ID too (as baguette sends it). */
 export function pressHome() {
   send({ type: 'button', button: 'home' });
+  checkInput();
 }
 
 /** The app switcher: two home presses 150 ms apart (baguette's and idb's recipe). */
 export function pressAppSwitcher() {
   send({ type: 'button', button: 'app-switcher' });
+  checkInput();
+}
+
+// Xcode 27's Device Hub, once it attaches to a simulator, takes its legacy
+// input: the home button and the app switcher stop working while the host
+// still reports success. The page asks when a device connects and when its
+// buttons are pressed, and offers to take the input back.
+export async function checkInput() {
+  const udid = ui.udid;
+  if (!udid || !ui.running) return;
+  const state = await fetch(`/api/sims/${udid}/input`).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+  if (udid === ui.udid) ui.inputShadowed = !!state?.shadowed;
+}
+
+/** Restarts the simulator's SpringBoard with its legacy input live again (open apps close). */
+export async function reclaimInput() {
+  const udid = ui.udid;
+  ui.reclaiming = true;
+  const res = await fetch(`/api/sims/${udid}/reclaim`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' }).catch(() => null);
+  ui.reclaiming = false;
+  if (!res?.ok) return flashStatus("Couldn't take the buttons back", 6000);
+  if (udid === ui.udid) ui.inputShadowed = false;
+  flashStatus('Buttons are back');
 }
 
 export function pressButton(button, duration) {
@@ -971,7 +997,11 @@ export async function selectDevice(sim) {
   await tick();
   updateScale();
   ui.shown++;
-  if (ui.running) connect(sim.udid);
+  ui.inputShadowed = false;
+  if (ui.running) {
+    connect(sim.udid);
+    checkInput();
+  }
 }
 
 export async function startDevice() {
