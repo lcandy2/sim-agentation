@@ -33,10 +33,10 @@
 
 <form class="composer" bind:this={form} style:left="{position.left}px" style:top="{position.top}px" onsubmit={submit}>
   <div class="composer-target">{ui.draft.label}</div>
-  <textarea rows="3" placeholder="What should change?" bind:this={text} bind:value={comment} onkeydown={keydown}></textarea>
+  <textarea class="field" rows="3" placeholder="What should change?" bind:this={text} bind:value={comment} onkeydown={keydown}></textarea>
   <div class="composer-row">
     <span class="hint">⌘↩ to add · Esc to cancel</span>
-    <button type="button" class="text-btn" onclick={cancelComposer}>Cancel</button>
-    <button type="submit" class="text-btn primary">Add</button>
+    <button type="button" class="push-btn" onclick={cancelComposer}>Cancel</button>
+    <button type="submit" class="push-btn default">Add</button>
   </div>
 </form>

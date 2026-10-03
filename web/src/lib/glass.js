@@ -39,6 +39,27 @@ export const MATERIALS = {
       { angle: Math.PI, range: 31.8, hardness: 0.197, factor: 0.279, convergence: 0.46, opposite: 0.322 },
     ],
   },
+  // Popovers (the composer): white at 70% under #bfbfbf at 10% (Lighten
+  // and Darken, which over this light a glass come to plain mixes), bright
+  // 1 pt rims inside top and bottom (Linear and Color Dodge, here both
+  // added), the Glass effect at frost 26, depth 40, light 0.15. Its light
+  // stands in with the menu's fitted glares, the nearest measured.
+  popover: {
+    selector: '.composer',
+    glass: { frost: 26, refraction: 0.7, depth: 40, dispersion: 0.2, lightAngle: 0, lightIntensity: 0.15 },
+    fills: [
+      { blend: 'normal', gray: 1, opacity: 0.7 },
+      { blend: 'normal', gray: 0.749, opacity: 0.1 },
+    ],
+    inner: [
+      { blend: 'dodge', gray: 0.2, y: 1, blur: 1, spread: 0 },
+      { blend: 'dodge', gray: 0.2, y: -1, blur: 1, spread: 0 },
+    ],
+    glares: [
+      { angle: 0, range: 18.4, hardness: 0, factor: 0.24, convergence: 0.236, opposite: 0.793 },
+      { angle: Math.PI, range: 25.3, hardness: 0.107, factor: 0.092, convergence: 0.348, opposite: 0.541 },
+    ],
+  },
   menu: {
     selector: '.popover',
     glass: { frost: 25, refraction: 0.7, depth: 40, dispersion: 0.4, lightAngle: 0, lightIntensity: 0.2 },

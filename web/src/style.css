@@ -51,6 +51,11 @@
   --menu-separator: rgba(0, 0, 0, 0.11); /* #e6e6e6 */
   --menu-highlight: var(--selection);
   /* macOS 27's small dialog (Figma, node 690:10197). */
+  /* macOS 27's Popover (Figma, Popovers page): white at 70% under #bfbfbf at
+     10% (lib/glass.js draws them through its glass; this is the fallback),
+     corners of 20, a deep shadow. */
+  --popover-fill: linear-gradient(rgba(191, 191, 191, 0.1) 0 0), rgba(255, 255, 255, 0.7);
+  --popover-shadow: 0 8px 38px rgba(0, 0, 0, 0.25);
   --sheet: #ffffff;
   --sheet-shadow: 0 0 0.4px rgba(0, 0, 0, 0.8), 0 18px 21.6px rgba(0, 0, 0, 0.3);
   --sheet-fill: rgba(0, 0, 0, 0.08);
@@ -118,6 +123,8 @@
     --menu-label: rgba(255, 255, 255, 0.85);
     --menu-disabled: rgba(255, 255, 255, 0.25);
     --menu-separator: rgba(255, 255, 255, 0.1);
+    --popover-fill: #262626;
+    --popover-shadow: 0 10px 40px rgba(0, 0, 0, 0.4), 0 0 0 0.5px rgba(255, 255, 255, 0.1);
     --sheet: #2a2a2a;
     --sheet-shadow: 0 0 0.5px rgba(0, 0, 0, 0.8), 0 18px 27px rgba(0, 0, 0, 0.5);
     --sheet-fill: rgba(255, 255, 255, 0.1);
@@ -272,20 +279,6 @@ button { cursor: default; }
   backdrop-filter: saturate(180%) blur(20px);
 }
 
-/* Pill text buttons: tinted, or key-colored when primary. */
-.text-btn {
-  padding: 5px 14px;
-  border: 0;
-  border-radius: 1000px;
-  background: var(--accent-tint);
-  color: var(--accent);
-  font-weight: 600;
-  line-height: 18px;
-}
-.text-btn:hover { background: color-mix(in srgb, var(--accent) 14%, transparent); }
-.text-btn.primary { background: var(--accent); color: var(--on-accent); }
-.text-btn.primary:hover { background: color-mix(in srgb, var(--accent), #000 4%); }
-.text-btn:disabled { opacity: 0.5; }
 
 /* Segmented text buttons, used in Settings. */
 
@@ -370,7 +363,7 @@ button { cursor: default; }
 .sheet-message h2 { margin: 0; font-size: 13px; line-height: 16px; font-weight: 700; }
 .sheet-message p { margin: 0; font-size: 11px; line-height: 14px; }
 .sheet-grid label { font-size: 13px; line-height: 24px; font-weight: 500; letter-spacing: -0.26px; text-align: right; color: var(--secondary); }
-.sheet .field,
+.field,
 .popup {
   width: 100%;
   min-width: 0;
@@ -382,8 +375,8 @@ button { cursor: default; }
   font-size: 13px;
   font-weight: 500;
 }
-.sheet .field { padding: 0 8px; background: var(--canvas); box-shadow: 0 0 0 1px var(--sheet-field-border); caret-color: var(--accent); }
-.sheet .field:focus { box-shadow: 0 0 0 1px var(--sheet-field-border), 0 0 0 3.5px var(--sheet-focus), inset 0 0 0 1px var(--sheet-focus); }
+.field { padding: 0 8px; background: var(--canvas); box-shadow: 0 0 0 1px var(--sheet-field-border); caret-color: var(--accent); }
+.field:focus { box-shadow: 0 0 0 1px var(--sheet-field-border), 0 0 0 3.5px var(--sheet-focus), inset 0 0 0 1px var(--sheet-focus); }
 /* macOS 27's pop-up button (the dialog's, node 690:10197), here and in the
    inspector's settings. */
 .popup { appearance: none; padding: 0 24px 0 12px; background: var(--popup-chevrons) right center / 24px 24px no-repeat, var(--sheet-fill); }
@@ -391,7 +384,9 @@ button { cursor: default; }
 .popup:disabled { color: var(--secondary); }
 .setting .popup { width: auto; max-width: 60%; }
 .sheet-buttons { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 20px 20px; }
-.sheet-btn {
+/* macOS 27's push buttons (the dialog's, node 690:10197), in the dialog and
+   the composer. */
+.push-btn {
   min-width: 74px;
   height: 24px;
   padding: 0 16px;
@@ -403,8 +398,8 @@ button { cursor: default; }
   line-height: 16px;
   font-weight: 500;
 }
-.sheet-btn.default { background: var(--sheet-default); color: #fff; }
-.sheet-btn:disabled { opacity: 0.5; }
+.push-btn.default { background: var(--sheet-default); color: #fff; }
+.push-btn:disabled { opacity: 0.5; }
 
 kbd {
   font: 600 11px/1 -apple-system, system-ui, sans-serif;
@@ -821,29 +816,36 @@ kbd {
 
 /* ---------- composer popover ---------- */
 
+/* macOS 27's Popover (Figma, Popovers page): its glass (lib/glass.js), 20 pt
+   in with 8 pt between; the target as a headline, the note in a text field,
+   push buttons at the bottom right. */
 .composer {
   position: fixed;
   z-index: 10;
   width: 320px;
-  padding: 16px;
-  border-radius: 12px;
-  background: var(--menu);
-  border: 0.5px solid var(--glass-edge);
-  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.14);
+  display: grid;
+  gap: 8px;
+  padding: 20px;
+  border-radius: 20px;
+  background: var(--popover-fill);
+  box-shadow: var(--popover-shadow);
+  -webkit-backdrop-filter: blur(13px);
+  backdrop-filter: blur(13px);
 }
-.composer-target { font-size: 12px; line-height: 15px; color: var(--secondary); margin-bottom: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.composer textarea {
-  width: 100%;
-  resize: vertical;
-  padding: 8px;
-  border-radius: 8px;
-  border: 1px solid var(--separator);
-  background: var(--canvas);
-  outline: none;
+.composer.glass-filtered { background: none; }
+.composer.glass-on::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: var(--glass-light) center / 100% 100% no-repeat;
+  pointer-events: none;
 }
-.composer textarea:focus { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent); }
-.composer-row { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
-.composer-row .hint { flex: 1; color: var(--secondary); font-size: 12px; line-height: 15px; white-space: nowrap; }
+.composer-target { font-size: 13px; line-height: 16px; font-weight: 700; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.composer .field { height: auto; padding: 4px 8px; line-height: 16px; resize: none; }
+.composer-row { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+.composer-row .hint { flex: 1; color: var(--secondary); font-size: 11px; line-height: 14px; white-space: nowrap; }
 
 /* ---------- narrow windows ---------- */
 

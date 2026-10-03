@@ -101,8 +101,8 @@
       <input id="new-sim-name" class="field" bind:value={name} oninput={() => (named = true)} spellcheck="false" autocomplete="off">
     </div>
     <div class="sheet-buttons">
-      <button type="button" class="sheet-btn" onclick={dismiss}>Cancel</button>
-      <button type="submit" class="sheet-btn default" disabled={busy || !deviceType || !name.trim()}>{busy ? 'Creating…' : 'Create'}</button>
+      <button type="button" class="push-btn" onclick={dismiss}>Cancel</button>
+      <button type="submit" class="push-btn default" disabled={busy || !deviceType || !name.trim()}>{busy ? 'Creating…' : 'Create'}</button>
     </div>
   </form>
 </dialog>
