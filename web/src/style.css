@@ -61,13 +61,11 @@
   --menu: #ffffff;
   --card: #ffffff;
   --segment: #ffffff;
-  /* One palette, the Figma file's macOS 27 colors (Colors/Accents, and
-     Tables/BG - Selected + Active for anything selected): blue for what you
-     act on (buttons, links, focus, the caret, switches), the selection blue
-     behind what's selected (the device row, the menu's highlight). Device
-     Hub's row measures #2962d9 only because macOS's sidebar vibrancy
-     softens this same blue. */
-  --selection: #0165e2;
+  /* One palette, the Figma file's macOS 27 colors (Colors/Accents), and one
+     blue: Accents/Blue, for what you act on (buttons, links, focus, the
+     caret, switches) and behind what's selected (the device row, the
+     menu's highlight). */
+  --selection: var(--accent);
   --on-selection: #ffffff;
   --thumb: #ffffff;
   --thumb-off: rgba(0, 0, 0, 0.045);
@@ -91,7 +89,6 @@
   :root {
     --design: #6d7cff;
     --accent: #0091ff;
-    --selection: #0158d2;
     --mark: #ff4245;
     /* Not yet measured against Device Hub in dark mode: macOS dark equivalents. */
     --window: #1c1c1c;
