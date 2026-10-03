@@ -174,16 +174,17 @@ button { cursor: default; }
 .icon-btn.small svg { width: 16px; height: 16px; }
 #mode-annotate.on { background: var(--mark); color: #fff; }
 /* Design Mode: the annotate button grows its name while it's on and folds
-   back to a symbol when it's off. */
+   back to a symbol when it's off, in the sidebar's motion (320 ms, the same
+   curve). The name's column eases from 0fr to 1fr, i.e. exactly to its own
+   width, and carries the spacing beside it, so one width opens and closes;
+   like the sidebar, it is clipped rather than faded. */
 #mode-annotate {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
   width: auto;
   min-width: 32px;
   padding: 0 6px;
-  gap: 0;
-  transition: padding 220ms cubic-bezier(0.3, 0.7, 0.2, 1), gap 220ms cubic-bezier(0.3, 0.7, 0.2, 1);
+  transition: background-color 320ms cubic-bezier(0.4, 0, 0.2, 1), color 320ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 #mode-annotate .mode-label {
   display: grid;
@@ -193,12 +194,10 @@ button { cursor: default; }
 #mode-annotate .mode-label > span {
   min-width: 0;
   overflow: hidden;
-  opacity: 0;
   white-space: nowrap;
   font-size: 13px;
   font-weight: 600;
   line-height: 16px;
-  transition: max-width 220ms cubic-bezier(0.3, 0.7, 0.2, 1), opacity 160ms ease;
 }
 /* The spacing beside the name is content, so the column clips it too (padding wouldn't be). */
 #mode-annotate .mode-label > span::before { content: ""; display: inline-block; width: 5px; }
