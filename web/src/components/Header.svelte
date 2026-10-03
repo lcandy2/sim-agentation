@@ -1,6 +1,7 @@
 <script>
   import { ui, setMode, toggleSdk, setZoom, zoomIn, zoomOut, togglePanel } from '../lib/app.svelte.js';
   import { icon } from '../lib/icons.js';
+  import StreamSettings from './StreamSettings.svelte';
 
   const status = $derived(ui.flash ?? ui.status);
 </script>
@@ -42,6 +43,7 @@
         <span class="dot"></span>SDK
       </button>
     {/if}
+    {#if ui.running}<StreamSettings />{/if}
     <div class="pill" role="group" aria-label="Zoom">
       <button id="zoom-out" class="icon-btn" title="Zoom out (⌘−)" data-icon="zoom-out" onclick={zoomOut}>{@html icon('zoom-out')}</button>
       <button

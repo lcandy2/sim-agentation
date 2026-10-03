@@ -15,6 +15,7 @@ public struct JPEGEncoder: Sendable {
         self.quality = quality
     }
 
+    /// Wraps the IOSurface zero-copy and encodes it.
     public func encode(_ surface: IOSurface) -> Data? {
         var buffer: Unmanaged<CVPixelBuffer>?
         let status = CVPixelBufferCreateWithIOSurface(
@@ -23,6 +24,11 @@ public struct JPEGEncoder: Sendable {
             &buffer
         )
         guard status == kCVReturnSuccess, let pixels = buffer?.takeRetainedValue() else { return nil }
+        return encode(pixels)
+    }
+
+    /// Encodes a BGRA pixel buffer, e.g. one from `VideoFrameScaler`.
+    public func encode(_ pixels: CVPixelBuffer) -> Data? {
         CVPixelBufferLockBaseAddress(pixels, .readOnly)
         defer { CVPixelBufferUnlockBaseAddress(pixels, .readOnly) }
         guard let base = CVPixelBufferGetBaseAddress(pixels),

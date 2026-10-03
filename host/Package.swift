@@ -20,6 +20,9 @@ let package = Package(
                 .linkedFramework("IOSurface"),
                 .linkedFramework("CoreVideo"),
                 .linkedFramework("ImageIO"),
+                .linkedFramework("VideoToolbox"),
+                .linkedFramework("CoreMedia"),
+                .linkedFramework("CoreImage"),
             ]
         ),
         .executableTarget(

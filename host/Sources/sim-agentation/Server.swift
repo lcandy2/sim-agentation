@@ -107,7 +107,13 @@ final class AppServer: @unchecked Sendable {
 
             // The simulator stream: screen frames out, input and describe_ui in.
             if part(0) == "ws", let udid = part(1) {
-                return .upgrade { socket in DeviceSession(udid: udid, socket: socket).start() }
+                var options = StreamOptions()
+                if let format = req.queryValue("format").flatMap(StreamFormat.init(rawValue:)) { options.format = format }
+                if let fps = req.queryValue("fps").flatMap(Int.init), fps > 0 { options.fps = min(fps, 120) }
+                if let bps = req.queryValue("bitrate").flatMap(Int.init), bps > 0 { options.bitrate = bps }
+                if let scale = req.queryValue("scale").flatMap(Int.init), scale > 0 { options.scale = min(scale, 4) }
+                let chosen = options
+                return .upgrade { socket in DeviceSession(udid: udid, socket: socket, options: chosen).start() }
             }
 
             // Device chrome artwork: rasterized once, then immutable.

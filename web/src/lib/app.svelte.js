@@ -6,6 +6,7 @@ import { tick } from 'svelte';
 import { hitTest, describe, nodesInRect } from './ax.js';
 import { sampler, warm, containersAround } from './visual.js';
 import { matchesFrontApp, sdkContainers, sourceFor, viewContext } from './sdk.js';
+import { createDecoder, pickFormat, playableFormats } from './stream.js';
 
 export const storage = {
   get(k) {
@@ -41,11 +42,23 @@ export const ui = $state({
   },
   annotations: [],
   draft: null,        // { label, x, y } while the composer is open (viewport px)
+  stream: {
+    format: storage.get('stream-format'), // 'avcc' (H.264), 'hevc' or 'mjpeg'; settled by start()
+    scale: Number(storage.get('stream-scale')) || 1, // 1 full resolution, 2 half
+    bitrate: Number(storage.get('stream-bitrate')) || 8_000_000, // video only
+    playable: { mjpeg: true, avcc: false, hevc: false },
+    fps: 0,           // frames painted in the last second
+    mbps: 0,          // megabits received in the last second
+    hardware: null,   // the video decoder runs in hardware (null: unknown or JPEG)
+  },
 });
 
 const rt = {
   ws: null,
-  frame: null,       // latest ImageBitmap
+  decoder: null,
+  pending: null,     // newest decoded frame, not painted yet
+  frame: null,       // last painted frame: ImageBitmap or VideoFrame
+  counts: { frames: 0, bytes: 0 },
   frozen: null,      // { bitmap, tree, points, pixels, sdk, sdkAvailable, marks }
   pendingTree: null,
   hover: null,       // { point, targets: [{ rect, label, node? }], level }
@@ -92,29 +105,37 @@ export function attachStage({ canvas, overlay, float, stage, previewInfo }) {
 // ---------- stream ----------
 
 function connect(udid) {
-  rt.ws?.close();
+  stopStream();
   setStatus('Connecting…');
-  const ws = new WebSocket(`ws://${location.host}/ws/${encodeURIComponent(udid)}`);
+  const { format, scale, bitrate } = ui.stream;
+  const ws = new WebSocket(`ws://${location.host}/ws/${encodeURIComponent(udid)}?format=${format}&scale=${scale}&bitrate=${bitrate}`);
   ws.binaryType = 'arraybuffer';
   rt.ws = ws;
+  const newDecoder = () =>
+    createDecoder(format, {
+      onFrame: (frame) => {
+        rt.pending?.close?.();
+        rt.pending = frame;
+      },
+      // A dead video decoder can't recover: start a new one from a fresh keyframe.
+      onError: () => {
+        if (rt.ws !== ws) return;
+        rt.decoder?.dispose();
+        rt.decoder = newDecoder();
+        send({ type: 'force_idr' });
+      },
+    });
+  rt.decoder = newDecoder();
 
   ws.onopen = () => {
     ws.send(JSON.stringify({ type: 'snapshot' }));
     // Nudge with a harmless scroll so an idle screen still emits a frame.
     setTimeout(() => !rt.frame && send({ type: 'scroll', deltaX: 0, deltaY: 0 }), 600);
   };
-  ws.onmessage = async (e) => {
+  ws.onmessage = (e) => {
     if (typeof e.data === 'string') return onText(JSON.parse(e.data));
-    const bitmap = await createImageBitmap(new Blob([e.data], { type: 'image/jpeg' })).catch(() => null);
-    if (!bitmap) return;
-    rt.frame?.close?.();
-    rt.frame = bitmap;
-    if (rt.frozen) return;
-    if (!ui.live) {
-      ui.live = true;
-      setStatus(''); // streaming is the normal state; say nothing
-    }
-    paint(bitmap);
+    rt.counts.bytes += e.data.byteLength;
+    rt.decoder?.feed(e.data);
   };
   ui.live = false;
   ws.onclose = () => {
@@ -130,22 +151,77 @@ function stopStream() {
   const ws = rt.ws;
   rt.ws = null;
   ui.live = false;
+  rt.decoder?.dispose();
+  rt.decoder = null;
+  rt.pending?.close?.();
+  rt.pending = null;
+  rt.frame?.close?.();
   rt.frame = null;
   ws?.close();
+}
+
+// Paints the newest decoded frame once per display refresh; older ones are
+// dropped, as in baguette's StreamSession.
+function paintLoop() {
+  const frame = rt.pending;
+  if (frame) {
+    rt.pending = null;
+    rt.frame?.close?.();
+    rt.frame = frame;
+    rt.counts.frames++;
+    if (!rt.frozen) {
+      if (!ui.live) {
+        ui.live = true;
+        setStatus(''); // streaming is the normal state; say nothing
+      }
+      paint(frame);
+    }
+  }
+  requestAnimationFrame(paintLoop);
+}
+
+function sampleStats() {
+  ui.stream.fps = rt.counts.frames;
+  ui.stream.mbps = (rt.counts.bytes * 8) / 1e6;
+  ui.stream.hardware = rt.decoder?.hardware ?? null;
+  rt.counts = { frames: 0, bytes: 0 };
+}
+
+/** Switches codec; the stream restarts in the new format. */
+export function setStreamFormat(format) {
+  if (format === ui.stream.format || !ui.stream.playable[format]) return;
+  ui.stream.format = format;
+  storage.set('stream-format', format);
+  if (ui.running && ui.udid) connect(ui.udid);
+}
+
+export function setStreamScale(scale) {
+  ui.stream.scale = scale;
+  storage.set('stream-scale', String(scale));
+  send({ type: 'set_scale', scale });
+}
+
+export function setStreamBitrate(bps) {
+  ui.stream.bitrate = bps;
+  storage.set('stream-bitrate', String(bps));
+  send({ type: 'set_bitrate', bps });
 }
 
 export function send(msg) {
   if (rt.ws?.readyState === WebSocket.OPEN) rt.ws.send(JSON.stringify(msg));
 }
 
-function paint(bitmap) {
+const frameSize = (f) => ({ width: f.displayWidth ?? f.width, height: f.displayHeight ?? f.height });
+
+function paint(frame) {
   const { canvas, ctx } = rt;
   if (!canvas) return;
-  if (canvas.width !== bitmap.width || canvas.height !== bitmap.height) {
-    canvas.width = bitmap.width;
-    canvas.height = bitmap.height;
+  const { width, height } = frameSize(frame);
+  if (canvas.width !== width || canvas.height !== height) {
+    canvas.width = width;
+    canvas.height = height;
   }
-  ctx.drawImage(bitmap, 0, 0);
+  ctx.drawImage(frame, 0, 0);
 }
 
 function onText(msg) {
@@ -288,10 +364,11 @@ export function pressButton(button, duration) {
 
 /** Saves what's on screen (the frozen frame while annotating). */
 export async function saveScreenshot() {
-  const bitmap = rt.frozen?.bitmap ?? rt.frame;
-  if (!bitmap) return;
-  const out = new OffscreenCanvas(bitmap.width, bitmap.height);
-  out.getContext('2d').drawImage(bitmap, 0, 0);
+  const frame = rt.frozen?.bitmap ?? rt.frame;
+  if (!frame) return;
+  const { width, height } = frameSize(frame);
+  const out = new OffscreenCanvas(width, height);
+  out.getContext('2d').drawImage(frame, 0, 0);
   const blob = await out.convertToBlob({ type: 'image/png' });
   const stamp = new Date().toISOString().slice(0, 19).replace('T', ' at ').replaceAll(':', '.');
   const link = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: `${ui.simName} ${stamp}.png` });
@@ -315,15 +392,19 @@ export async function setMode(mode) {
       fetchTree(),
       fetch('/api/sdk').then((r) => (r.status === 200 ? r.json() : null)).catch(() => null),
     ]);
-    const bitmap = rt.frame;
-    rt.frame = null; // keep the frozen bitmap alive
-    const scale = Math.round(bitmap.width / ui.chrome.screen.width); // pixels per point
+    // Freeze a copy: video frames belong to the decoder and must be closed soon.
+    const source = rt.frame;
+    rt.frame = null;
+    const bitmap = await createImageBitmap(source);
+    source.close?.();
+    if (ui.mode !== 'annotate') return bitmap.close(); // left annotate mode meanwhile
     const f = (rt.frozen = {
       bitmap,
       tree: null,
       sdk: null,
       sdkAvailable: null,
-      points: { width: bitmap.width / scale, height: bitmap.height / scale },
+      // The stream may be scaled down, so points come from the device, not the frame.
+      points: { width: ui.chrome.screen.width, height: ui.chrome.screen.height },
       marks: [],
     });
     paint(bitmap);
@@ -713,8 +794,18 @@ export async function togglePanel(name) {
 // ---------- start ----------
 
 export function start() {
-  loadDevices();
+  requestAnimationFrame(paintLoop);
+  const stats = setInterval(sampleStats, 1000);
+  // Settle the format before the first device connects.
+  playableFormats().then((playable) => {
+    ui.stream.playable = playable;
+    ui.stream.format = pickFormat(ui.stream.format, playable);
+    loadDevices();
+  });
   refresh();
   const timer = setInterval(refresh, 1500);
-  return () => clearInterval(timer);
+  return () => {
+    clearInterval(timer);
+    clearInterval(stats);
+  };
 }

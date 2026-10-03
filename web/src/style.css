@@ -111,6 +111,50 @@ button { cursor: default; }
 .pill.sdk .dot { width: 7px; height: 7px; border-radius: 50%; border: 1.5px solid currentColor; }
 .pill.sdk.on { color: var(--ok); }
 .pill.sdk.on .dot { background: currentColor; }
+/* Stream settings: a pill naming the codec, opening a small glass menu. */
+.stream-settings { position: relative; }
+.pill.stream-pill {
+  gap: 6px;
+  height: 36px;
+  padding: 0 14px;
+  border: 0;
+  font-weight: 700;
+  font-size: 12px;
+  color: var(--secondary);
+}
+.pill.stream-pill:hover, .pill.stream-pill.open { color: var(--text); }
+.stream-fps { font-weight: 500; font-variant-numeric: tabular-nums; }
+.stream-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 20;
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 12px;
+  background: var(--card);
+  border: 0.5px solid var(--glass-edge);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.12);
+  white-space: nowrap;
+}
+.menu-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; font-size: 13px; }
+.seg-text { padding: 2px; }
+.seg-text button {
+  padding: 4px 11px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+  opacity: 0.85;
+}
+.seg-text button:hover { background: var(--hover); opacity: 1; }
+.seg-text button.on { background: var(--segment); box-shadow: var(--glass-shadow); opacity: 1; }
+.seg-text button:disabled { opacity: 0.3; background: none; }
+.menu-stats { margin: 0; font-size: 12px; color: var(--secondary); font-variant-numeric: tabular-nums; }
+
 .glass {
   background: var(--glass);
   border: 0.5px solid var(--glass-edge);
