@@ -29,7 +29,7 @@ struct StreamOptions: Sendable {
 /// binary messages and takes input and accessibility requests as JSON text
 /// messages, on the same protocol as baguette's stream socket.
 final class DeviceSession: @unchecked Sendable {
-    private enum Tag: UInt8 { case description = 0x01, keyframe = 0x02, delta = 0x03, seed = 0x04 }
+    private enum Tag: UInt8 { case description = 0x01, keyframe = 0x02, delta = 0x03, seed = 0x04, still = 0x05 }
 
     private let udid: String
     private let socket: WebSocket
@@ -37,6 +37,7 @@ final class DeviceSession: @unchecked Sendable {
     private let format: StreamFormat
     private let jpeg = JPEGEncoder(quality: 0.8)
     private let scaler = VideoFrameScaler()
+    private let stillScaler = VideoFrameScaler() // its own pool: stills are full size, the stream may not be
     private let video: VideoEncoder?
     private let encodeQueue = DispatchQueue(label: "sim-agentation.encode", qos: .userInteractive)
     private let inputQueue = DispatchQueue(label: "sim-agentation.input", qos: .userInteractive)
@@ -216,6 +217,8 @@ final class DeviceSession: @unchecked Sendable {
         case "snapshot":
             lock.lock(); pendingSeed = true; lock.unlock()
             capture.requestFrame()
+        case "still":
+            sendStill()
         case "force_idr":
             lock.lock(); pendingKeyframe = true; lock.unlock()
             capture.requestFrame()
@@ -230,6 +233,22 @@ final class DeviceSession: @unchecked Sendable {
         default:
             nonisolated(unsafe) let message = msg // decoded JSON, only read on inputQueue
             inputQueue.async { [weak self] in self?.perform(type, message) }
+        }
+    }
+
+    /// The screen as it is now at full resolution, whatever the stream's,
+    /// as a 0x05-tagged JPEG (in every format: a stream's JPEGs start 0xFF).
+    /// Design Mode freezes on it, reads its pixels and saves it.
+    private func sendStill() {
+        lock.lock(); let surface = lastSurface; lock.unlock()
+        guard let surface else { return }
+        IOSurfaceIncrementUseCount(surface)
+        encodeQueue.async { [weak self] in
+            defer { IOSurfaceDecrementUseCount(surface) }
+            guard let self, let pixels = self.stillScaler.scale(surface, by: 1),
+                  let bytes = JPEGEncoder(quality: 0.92).encode(pixels)
+            else { return }
+            self.socket.send(binary: Self.tagged(.still, bytes))
         }
     }
 

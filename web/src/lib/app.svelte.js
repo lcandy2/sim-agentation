@@ -165,6 +165,7 @@ function connect(udid) {
   };
   ws.onmessage = (e) => {
     if (typeof e.data === 'string') return onText(JSON.parse(e.data));
+    if (new Uint8Array(e.data, 0, 1)[0] === 0x05) return rt.onStill?.(e.data); // a full-size still, not the stream
     rt.counts.bytes += e.data.byteLength;
     rt.decoder?.feed(e.data);
   };
@@ -350,6 +351,22 @@ function onText(msg) {
   } else if (msg.type === 'error' || msg.ok === false) {
     setStatus(msg.error || 'Error');
   }
+}
+
+/** A full-resolution picture of the screen now, or null if none comes. */
+function requestStill() {
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => {
+      rt.onStill = null;
+      resolve(null);
+    }, 2000);
+    rt.onStill = (buffer) => {
+      clearTimeout(timer);
+      rt.onStill = null;
+      createImageBitmap(new Blob([new Uint8Array(buffer, 1)], { type: 'image/jpeg' })).then(resolve, () => resolve(null));
+    };
+    send({ type: 'still' });
+  });
 }
 
 function fetchTree() {
@@ -570,6 +587,9 @@ export async function setMode(mode) {
     rt.frame = null;
     const bitmap = await createImageBitmap(source);
     source.close?.();
+    // A stream below full resolution blurs small things together (a ring of
+    // dots, a word and its icon), so ask for the screen at full size too.
+    const still = bitmap.width < devicePixels().width ? requestStill() : Promise.resolve(null);
     if (ui.mode !== 'annotate') return bitmap.close(); // left annotate mode meanwhile
     const f = (rt.frozen = {
       bitmap,
@@ -586,6 +606,16 @@ export async function setMode(mode) {
     await new Promise(requestAnimationFrame); // let the frozen frame paint first
     f.pixels = sampler(bitmap, f.points.width, f.points.height);
     warm(f.pixels);
+    // The full-size still replaces the frame: what's read, drawn and saved.
+    const full = await still;
+    if (rt.frozen !== f) return full?.close();
+    if (full) {
+      f.bitmap.close?.();
+      f.bitmap = full;
+      paint(full);
+      f.pixels = sampler(full, f.points.width, f.points.height);
+      warm(f.pixels);
+    }
 
     const [tree, sdk] = await data;
     if (rt.frozen !== f) return; // left annotate mode meanwhile
