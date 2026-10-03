@@ -170,6 +170,15 @@ final class AppServer: @unchecked Sendable {
             }
 
             // SimAgentationPlus runs inside the app; the simulator shares our loopback.
+            // Hot reload: the dev server `pnpm dev` runs leaves its address and a
+            // token beside the build; the page loads from it only if it answers
+            // with that token (web/src/main.js).
+            if path == "/api/dev" {
+                guard let dist, let note = FileManager.default.contents(atPath: Path.join((dist as NSString).deletingLastPathComponent, ".dev-server.json")),
+                      let dev = try? JSON.parse(note)
+                else { return .respond(Response(status: 204, headers: [:], body: Data())) }
+                return .respond(Self.json(dev))
+            }
             if path == "/api/sdk" { return .respond(await sdkSnapshot()) }
             if path == "/api/annotations" && req.method == "GET" {
                 return .respond(Self.json(.array(store.list(status: req.queryValue("status")).map(JSON.object))))

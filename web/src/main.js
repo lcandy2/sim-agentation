@@ -1,25 +1,26 @@
 import { mount } from 'svelte';
 import './style.css';
 
-// Hot reload on the host's page (38470) too. `pnpm dev` first builds a copy
-// of the UI in the "handoff" mode, and only that copy, on finding the Vite
-// dev server, hands over to it: its HMR client and the source entry load
-// from there, while the page stays on the host, whose API and WebSocket it
-// keeps talking to. A production build has none of this, so it never runs
-// code from another port. Keep DEV in step with vite.config.js.
-const DEV = 'http://localhost:38472';
-
+// Hot reload on the host's page (38470) too. While `pnpm dev` runs, the
+// host tells a built page where the Vite dev server is and the token it left
+// (/api/dev); if the server there answers that token, the page loads Vite's
+// HMR client and the source entry from it, staying on the host and talking
+// to its API and WebSocket. Anything else on that port can't answer the
+// token, so it can't get code into the page (see vite.config.js).
 async function handOverToDevServer() {
-  if (import.meta.env.MODE !== 'handoff') return false;
+  if (!import.meta.env.PROD) return false; // already the dev server's page
   try {
-    if (!(await fetch(`${DEV}/@vite/client`, { cache: 'no-store' })).ok) return false;
+    const dev = await fetch('/api/dev', { cache: 'no-store' }).then((r) => (r.status === 200 ? r.json() : null));
+    if (!dev?.url || !dev.token) return false;
+    const answer = await fetch(`${dev.url}/__dev-token`, { cache: 'no-store' }).then((r) => r.text());
+    if (answer !== dev.token) return false;
+    for (const link of document.querySelectorAll('link[rel="stylesheet"]')) link.remove(); // the source's CSS replaces it
+    await import(/* @vite-ignore */ `${dev.url}/@vite/client`);
+    await import(/* @vite-ignore */ `${dev.url}/src/main.js`);
+    return true;
   } catch {
     return false; // no dev server: run the build
   }
-  for (const link of document.querySelectorAll('link[rel="stylesheet"]')) link.remove(); // the source's CSS replaces it
-  await import(/* @vite-ignore */ `${DEV}/@vite/client`);
-  await import(/* @vite-ignore */ `${DEV}/src/main.js`);
-  return true;
 }
 
 if (!(await handOverToDevServer())) {

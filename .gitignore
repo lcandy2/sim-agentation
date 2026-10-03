@@ -5,3 +5,4 @@ node_modules
 xcuserdata/
 DerivedData/
 web/dist/
+web/.dev-server.json
