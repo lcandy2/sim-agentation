@@ -9,6 +9,8 @@ import { rmSync, writeFileSync } from 'node:fs';
 const HOST = `http://localhost:${process.env.SIM_AGENTATION_PORT ?? 38470}`;
 const DEV_PORT = 38472;
 const DEV_ORIGINS = new Set([`http://localhost:${DEV_PORT}`, `http://127.0.0.1:${DEV_PORT}`]);
+const HOST_PORT = new URL(HOST).port;
+const HOST_ORIGINS = [`http://localhost:${HOST_PORT}`, `http://127.0.0.1:${HOST_PORT}`];
 
 // The host answers only its own Host and Origin. changeOrigin sets the Host;
 // the page's own Origin is rewritten to the host's, while any other site's
@@ -22,27 +24,27 @@ function asHost(proxy) {
 }
 const toHost = { target: HOST, changeOrigin: true, configure: asHost };
 
-// Hot reload on the host's page: while the dev server runs it leaves its
-// address and a fresh token in web/.dev-server.json, which the host hands the
-// page (/api/dev), and answers the token at /__dev-token. A built page loads
-// the source from here only when the two agree (web/src/main.js), so nothing
-// else listening on this port can slip code into it.
+// Hot reload on the host's page: while the dev server runs it leaves a fresh
+// token and its process id in web/.dev-server.json, readable by this user
+// alone, which the host hands the page (/api/dev) while that process lives;
+// it answers the token at /__dev-token, to the host's page alone. A built
+// page loads the source from DEV_PORT only when the two agree
+// (web/src/main.js), so nothing else listening there can slip code in.
 function devServerNote() {
   const file = new URL('./web/.dev-server.json', import.meta.url);
   const token = randomBytes(24).toString('hex');
   return {
     name: 'sim-agentation-dev-server-note',
     configureServer(server) {
-      writeFileSync(file, JSON.stringify({ url: `http://localhost:${DEV_PORT}`, token }));
+      rmSync(file, { force: true }); // a new file, so the owner-only mode holds
+      writeFileSync(file, JSON.stringify({ token, pid: process.pid }), { mode: 0o600, flag: 'wx' });
       const remove = () => rmSync(file, { force: true });
       server.httpServer?.once('close', remove);
       process.once('exit', remove);
       for (const signal of ['SIGINT', 'SIGTERM']) process.once(signal, () => { remove(); process.exit(); });
       server.middlewares.use('/__dev-token', (req, res) => {
-        const origin = req.headers.origin;
-        if (origin && /^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin)) res.setHeader('access-control-allow-origin', origin);
         res.setHeader('cache-control', 'no-store');
-        res.end(token);
+        res.end(token); // readable cross-origin by the host's page alone (server.cors)
       });
     },
   };
@@ -55,8 +57,10 @@ export default defineConfig({
     port: DEV_PORT,
     strictPort: true,
     // The host's built page loads the source from here (web/src/main.js),
-    // so the dev server's URLs are absolute to it.
+    // so the dev server's URLs are absolute to it, and it alone may read
+    // them across origins (Vite's default lets any localhost page).
     origin: `http://localhost:${DEV_PORT}`,
+    cors: { origin: HOST_ORIGINS },
     proxy: {
       '/api': toHost,
       '/images': toHost,
