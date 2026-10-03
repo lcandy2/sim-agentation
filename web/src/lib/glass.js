@@ -82,6 +82,25 @@ export const MATERIALS = {
       { angle: Math.PI, range: 31.8, hardness: 0.197, factor: 0.279, convergence: 0.46, opposite: 0.322 },
     ],
   },
+  // Alerts (Reset, Remove): white at 70% under #bfbfbf at 10% (Lighten and
+  // Darken, plain mixes over the dimmed window behind), bright rims inside
+  // top and bottom, frost 16, depth 30, light 0.25.
+  alert: {
+    selector: '.sheet.alert',
+    glass: { frost: 16, refraction: 0.7, depth: 30, dispersion: 0.2, lightAngle: 0, lightIntensity: 0.25 },
+    fills: [
+      { blend: 'normal', gray: 1, opacity: 0.7 },
+      { blend: 'normal', gray: 0.749, opacity: 0.1 },
+    ],
+    inner: [
+      { blend: 'dodge', gray: 0.1569, y: -40, blur: 10, spread: -40 },
+      { blend: 'dodge', gray: 0.1569, y: 40, blur: 10, spread: -40 },
+    ],
+    glares: [
+      { angle: 0, range: 32.4, hardness: 0.054, factor: 0.721, convergence: 0.282, opposite: 0.957 },
+      { angle: Math.PI, range: 31.8, hardness: 0.197, factor: 0.279, convergence: 0.46, opposite: 0.322 },
+    ],
+  },
   menu: {
     selector: '.popover',
     glass: { frost: 25, refraction: 0.7, depth: 40, dispersion: 0.4, lightAngle: 0, lightIntensity: 0.2 },

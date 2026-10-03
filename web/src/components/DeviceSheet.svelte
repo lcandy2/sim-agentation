@@ -1,9 +1,12 @@
 <script>
   import { onMount } from 'svelte';
-  import { ui, renameDevice, eraseDevice, removeDevice } from '../lib/app.svelte.js';
+  import { ui, renameDevice, eraseDevice, removeDevice, chromeOf } from '../lib/app.svelte.js';
+  import { thumbnail } from '../lib/thumbnail.js';
 
   // The … menu's dialogs, as macOS's sheet (see NewSimulator for the
-  // measured motion): Rename asks for a name, Reset and Remove confirm.
+  // measured motion): Rename asks for a name in the small dialog; Reset and
+  // Remove confirm in macOS 27's Alert (Figma, Alerts page), the device's
+  // picture as its icon.
   let { kind, close } = $props();
 
   let dialog = $state(null);
@@ -34,6 +37,11 @@
   }
 
   const name = ui.simName;
+  let picture = $state(null);
+  $effect(() => {
+    if (kind === 'rename') return;
+    chromeOf(ui.udid).then((c) => c && thumbnail(c, 64)).then((url) => (picture = url));
+  });
   let newName = $state(name);
   let busy = $state(false);
 
@@ -61,7 +69,20 @@
   }
 </script>
 
-<dialog class="sheet" bind:this={dialog} onclose={close} oncancel={(e) => { e.preventDefault(); dismiss(); }} aria-labelledby="device-sheet-title">
+<dialog class="sheet" class:alert={kind !== 'rename'} bind:this={dialog} onclose={close} oncancel={(e) => { e.preventDefault(); dismiss(); }} aria-labelledby="device-sheet-title">
+  {#if kind !== 'rename'}
+    <form class="alert-body" onsubmit={submit}>
+      <div class="alert-icon">{#if picture}<img src={picture} alt="">{/if}</div>
+      <div class="alert-text">
+        <h2 id="device-sheet-title">{copy.title}</h2>
+        <p>{copy.text}</p>
+      </div>
+      <div class="alert-buttons">
+        <button type="button" class="alert-btn" onclick={dismiss}>Cancel</button>
+        <button type="submit" class="alert-btn destructive" disabled={busy}>{copy.action}</button>
+      </div>
+    </form>
+  {:else}
   <form onsubmit={submit}>
     <div class="sheet-grid">
       <div class="sheet-message">
@@ -83,4 +104,5 @@
       >{copy.action}</button>
     </div>
   </form>
+  {/if}
 </dialog>

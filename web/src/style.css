@@ -409,6 +409,40 @@ button { cursor: default; }
 .push-btn.default.destructive { background: var(--mark); }
 .push-btn:disabled { opacity: 0.5; }
 
+/* macOS 27's Alert (Figma, Alerts page): 260 wide, its glass (lib/glass.js)
+   with corners of 34 and a deep shadow; the icon, title and message
+   left-aligned, capsule buttons side by side. */
+.sheet.alert {
+  width: 260px;
+  border-radius: 34px;
+  background: rgba(255, 255, 255, 0.75);
+  box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.141), 1.25px 0 0 -0.75px rgba(0, 0, 0, 0.141), -1.25px 0 0 -0.75px rgba(0, 0, 0, 0.141), 0 18px 38px rgba(0, 0, 0, 0.25);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+.sheet.alert.glass-filtered { background: none; }
+.sheet.alert.glass-on::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: var(--glass-light) center / 100% 100% no-repeat;
+  pointer-events: none;
+}
+.alert-body { display: grid; gap: 14px; padding: 20px 16px 16px; }
+.alert-icon { height: 64px; padding: 0 6px; }
+.alert-icon img { height: 64px; filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.25)); }
+.alert-text { display: grid; gap: 10px; padding: 0 6px 2px; color: rgba(0, 0, 0, 0.85); }
+.alert-text h2 { margin: 0; font-size: 13px; line-height: 16px; font-weight: 700; }
+.alert-text p { margin: 0; font-size: 11px; line-height: 14px; }
+.alert-buttons { display: flex; gap: 8px; }
+.alert-btn { flex: 1; height: 32px; padding: 0 8px; border: 0; border-radius: 100px; background: #e6e6e6; color: rgba(0, 0, 0, 0.85); font-size: 13px; line-height: 16px; font-weight: 500; }
+.alert-btn.default { background: var(--accent); color: #fff; }
+.alert-btn.destructive { background: rgba(245, 47, 50, 0.23); color: #f52f32; } /* Figma: red at 23%, red label */
+.alert-btn:disabled { opacity: 0.5; }
+.alert-btn:focus-visible { outline: none; box-shadow: 0 0 0 3.5px var(--sheet-focus); }
+
 kbd {
   font: 600 11px/1 -apple-system, system-ui, sans-serif;
   padding: 2px 5px;
