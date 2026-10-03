@@ -55,6 +55,7 @@ const rt = {
   canvas: null,
   ctx: null,
   overlay: null,
+  float: null,       // unmasked layer over the screen: labels and markers may spill past its edges
   stage: null,
   previewInfo: null,
 };
@@ -79,10 +80,11 @@ export function flashStatus(text) {
 
 // ---------- stage elements ----------
 
-export function attachStage({ canvas, overlay, stage, previewInfo }) {
+export function attachStage({ canvas, overlay, float, stage, previewInfo }) {
   rt.canvas = canvas;
   rt.ctx = canvas.getContext('2d');
   rt.overlay = overlay;
+  rt.float = float;
   rt.stage = stage;
   rt.previewInfo = previewInfo;
 }
@@ -200,7 +202,7 @@ function placeBox(el, rect) {
 }
 
 function clearLayer(selector) {
-  rt.overlay?.querySelectorAll(selector).forEach((n) => n.remove());
+  for (const layer of [rt.overlay, rt.float]) layer?.querySelectorAll(selector).forEach((n) => n.remove());
 }
 
 // ---------- pointer and keyboard on the screen ----------
@@ -342,7 +344,7 @@ export async function setMode(mode) {
     rt.frozen = null;
     ui.frozen = false;
     ui.sdkAvailable = false;
-    clearLayer('.hl, .sel, .marker');
+    clearLayer('.hl, .hl-label, .sel, .marker');
     rt.hover = null;
     setStatus(ui.live ? '' : 'Connecting…');
     send({ type: 'snapshot' });
@@ -386,7 +388,7 @@ function annotateMove(e) {
     const dy = p.y - rt.drag.start.y;
     if (!rt.drag.moved && Math.hypot(dx, dy) < 4) return;
     rt.drag.moved = true;
-    clearLayer('.hl');
+    clearLayer('.hl, .hl-label');
     rt.hover = null;
     let sel = rt.overlay.querySelector('.sel');
     if (!sel) rt.overlay.append((sel = Object.assign(document.createElement('div'), { className: 'sel' })));
@@ -411,7 +413,7 @@ function annotateUp(e) {
   }
   const target = rt.hover?.targets[rt.hover.level] ?? targetsAt(p)[0];
   const rect = target ? { ...target.rect } : { x: p.x - 22, y: p.y - 22, width: 44, height: 44 };
-  clearLayer('.hl');
+  clearLayer('.hl, .hl-label');
   const sel = Object.assign(document.createElement('div'), { className: 'sel' });
   placeBox(sel, rect);
   rt.overlay.append(sel);
@@ -469,17 +471,19 @@ const normalize = (a, b) => ({ x: Math.min(a.x, b.x), y: Math.min(a.y, b.y), wid
 
 function highlight() {
   let hl = rt.overlay.querySelector('.hl');
+  let label = rt.float.querySelector('.hl-label');
   const hover = rt.hover;
   const target = hover?.targets[hover.level];
-  if (!target) return hl?.remove();
-  if (!hl) {
-    hl = Object.assign(document.createElement('div'), { className: 'hl' });
-    hl.append(Object.assign(document.createElement('span'), { className: 'hl-label' }));
-    rt.overlay.append(hl);
-  }
+  if (!target) return clearLayer('.hl, .hl-label');
+  if (!hl) rt.overlay.append((hl = Object.assign(document.createElement('div'), { className: 'hl' })));
+  // The label sits on the unmasked layer so it stays whole above the top of the screen.
+  if (!label) rt.float.append((label = Object.assign(document.createElement('span'), { className: 'hl-label' })));
   placeBox(hl, target.rect);
+  const { width, height } = rt.frozen.points;
+  label.style.left = `${(target.rect.x / width) * 100}%`;
+  label.style.top = `${(target.rect.y / height) * 100}%`;
   const more = hover.level < hover.targets.length - 1 ? '  ↑ parent' : '';
-  hl.firstChild.textContent = target.label + more;
+  label.textContent = target.label + more;
 }
 
 // ---------- composer ----------
@@ -550,7 +554,7 @@ export async function submitComposer(comment) {
   const marker = Object.assign(document.createElement('div'), { className: 'marker', textContent: f.marks.length });
   marker.style.left = `${(r.x / f.points.width) * 100}%`;
   marker.style.top = `${(r.y / f.points.height) * 100}%`;
-  rt.overlay.append(marker);
+  rt.float.append(marker);
 }
 
 async function toBase64(offscreen) {

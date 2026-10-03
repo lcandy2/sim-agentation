@@ -12,10 +12,11 @@
   let stage = $state(null);
   let canvas = $state(null);
   let overlay = $state(null);
+  let float = $state(null);
   let previewInfo = $state(null);
 
   $effect(() => {
-    if (stage && canvas && overlay) attachStage({ canvas, overlay, stage, previewInfo });
+    if (stage && canvas && overlay && float) attachStage({ canvas, overlay, float, stage, previewInfo });
   });
 
   onMount(() => {
@@ -99,6 +100,17 @@
           onwheel={onWheel}
           onkeydown={onScreenKey}
         ></div>
+      </div>
+      <!-- Over the screen but outside its mask, so labels, markers and the
+           badge aren't cut off by the screen's rounded corners. -->
+      <div
+        class="float-layer"
+        bind:this={float}
+        style:left={chrome && px(chrome.screen.x)}
+        style:top={chrome && px(chrome.screen.y)}
+        style:width={chrome && px(chrome.screen.width)}
+        style:height={chrome && px(chrome.screen.height)}
+      >
         {#if ui.frozen}
           <div id="frozen-badge" class="glass">Click or drag · ↑ parent · Esc to resume</div>
         {/if}

@@ -263,6 +263,7 @@ button { cursor: default; }
 .device.preview #overlay { visibility: hidden; }
 #screen { width: 100%; height: 100%; display: block; }
 #overlay { position: absolute; inset: 0; outline: none; touch-action: none; }
+.float-layer { position: absolute; z-index: 4; pointer-events: none; }
 .device.annotating #overlay { cursor: crosshair; }
 #frozen-badge {
   position: absolute;
@@ -316,12 +317,12 @@ button { cursor: default; }
 }
 
 /* Selection layers on the screen. */
-.hl, .sel, .marker { position: absolute; pointer-events: none; }
+.hl, .hl-label, .sel, .marker { position: absolute; pointer-events: none; }
 .hl { border: 1.5px solid var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); border-radius: 4px; }
 .hl-label {
   position: absolute;
-  top: -21px;
-  left: -1px;
+  z-index: 1;
+  transform: translate(-1px, calc(-100% - 3px));
   background: var(--accent);
   color: #fff;
   font-size: 11px;
