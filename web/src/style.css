@@ -27,20 +27,25 @@
      15.5% off, as black at those alphas does (221 and 208 on 246). */
   --control: rgba(239, 239, 239, 0.4375);
   --control-luminosity: rgba(248, 248, 248, 0.2);
-  --control-shadow: 1.25px 0 0 -0.75px #d0d0d0, -1.25px 0 0 -0.75px #d0d0d0, 0 0 0 0.5px #e8e8e8, 0 8px 15px rgba(0, 0, 0, 0.02);
+  /* Its drop shadows: hairlines that Linear Burn #e8e8e8 and #d0d0d0 into
+     what's behind (black at what they take away), then a soft shadow. */
+  --control-shadow: 1.25px 0 0 -0.75px rgba(0, 0, 0, 0.184), -1.25px 0 0 -0.75px rgba(0, 0, 0, 0.184), 0 0 0 0.5px rgba(0, 0, 0, 0.09), 0 8px 15px rgba(0, 0, 0, 0.02);
   --control-label: #1a1a1a;
   --control-secondary: #727272;
   --control-on: rgba(0, 0, 0, 0.1);
   --control-separator: rgba(0, 0, 0, 0.08); /* lighter than the design's 15.5%, as asked */
   /* macOS 27's Menu (Figma, nodes 4370:42750 and 4370:42756): #d9d9d9 at 55%
-     luminosity under #d9d9d9 at 40%, which through the glass's backdrop
-     filter blend as plain layers; its hairlines, a dark 0.5 pt outline where
-     Figma's render draws one, and a deep shadow. */
+     luminosity under #d9d9d9 at 40% (lib/glass.js blends them with what's
+     behind; this is the fallback), hairlines that Linear Burn #dbdbdb, and
+     a deep shadow. */
   --menu-fill: linear-gradient(rgba(217, 217, 217, 0.4) 0 0), rgba(217, 217, 217, 0.55);
-  --menu-shadow: 0 0 0 0.5px #262626, 1.25px 0 0 -0.75px #dbdbdb, -1.25px 0 0 -0.75px #dbdbdb, 0 0 0 0.5px #dbdbdb, 0 8px 48px rgba(0, 0, 0, 0.25);
-  --menu-label: #1a1a1a;
-  --menu-disabled: #bfbfbf;
-  --menu-separator: rgba(0, 0, 0, 0.1); /* #e6e6e6, plus-darker */
+  --menu-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.141), 1.25px 0 0 -0.75px rgba(0, 0, 0, 0.141), -1.25px 0 0 -0.75px rgba(0, 0, 0, 0.141), 0 8px 48px rgba(0, 0, 0, 0.25);
+  /* Its labels and separators are vibrant, burned in (plus-darker), which
+     Chrome can't blend through the glass: these land where Figma's do on
+     the menu over a white page (#1a1a1a burns to black). */
+  --menu-label: #000000;
+  --menu-disabled: rgba(0, 0, 0, 0.28); /* #bfbfbf */
+  --menu-separator: rgba(0, 0, 0, 0.11); /* #e6e6e6 */
   --menu-highlight: #0069f9;
   /* macOS 27's small dialog (Figma, node 690:10197). */
   --sheet: #ffffff;
@@ -199,6 +204,13 @@ button { cursor: default; }
 .search::before { background: var(--control-luminosity); mix-blend-mode: luminosity; }
 .pill.glass-on::after,
 .search.glass-on::after { background: var(--glass-light) center / 100% 100% no-repeat; }
+/* Where lib/glass.js's filter runs, it draws the Fill itself, blended with
+   what's behind as Figma blends it. */
+.pill.glass-filtered,
+.search.glass-filtered,
+.popover.glass-filtered { background: none; }
+.pill.glass-filtered::before,
+.search.glass-filtered::before { display: none; }
 
 .pill { display: inline-flex; align-items: center; gap: 4px; height: 36px; padding: 4px; }
 .pill .icon-btn { width: 28px; height: 28px; border-radius: 100px; color: var(--control-label); opacity: 1; }
