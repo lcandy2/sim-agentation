@@ -35,6 +35,11 @@ const paths = {
   'record-stop': '<circle cx="12" cy="12" r="8"/><rect x="9" y="9" width="6" height="6" rx="1.2" fill="currentColor" stroke="none"/>',
   rotate: '<rect x="7" y="8" width="10" height="10" rx="2"/><path d="M14 3.5h1.5a4 4 0 0 1 4 4V9"/><path d="m17.5 7.2 2 2 2-2"/><path d="M10 22.5H8.5a4 4 0 0 1-4-4V17"/><path d="m6.5 18.8-2-2-2 2"/>',
   'empty-doc': '<path d="M7 3h7l5 5v11a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M14 3v5h5M9 13h6M9 17h4M4 4l16 17"/>',
+  // Device Hub's … menu: Shut Down, Restart, Rename, Reset, (Remove is trash).
+  power: '<path d="M12 3.5v8"/><path d="M7 6.3a7.5 7.5 0 1 0 10 0"/>',
+  restart: '<path d="M16.5 5.5 7.5 12l9 6.5z"/>',
+  rename: '<path d="M5 19.5 18.5 6"/><path d="M15.5 4.5 20 9"/>',
+  erase: '<path d="M20.5 9.2 14.8 3.5 3.5 14.8l5.7 5.7z"/><path d="m7 11.3 5.7 5.7"/>',
 };
 
 export function icon(name) {

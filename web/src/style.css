@@ -397,6 +397,8 @@ button { cursor: default; }
   font-weight: 500;
 }
 .push-btn.default { background: var(--sheet-default); color: #fff; }
+/* An action that erases or deletes: macOS's destructive button, red. */
+.push-btn.default.destructive { background: var(--mark); }
 .push-btn:disabled { opacity: 0.5; }
 
 kbd {

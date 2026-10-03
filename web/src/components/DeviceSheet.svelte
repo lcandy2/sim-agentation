@@ -1,0 +1,86 @@
+<script>
+  import { onMount } from 'svelte';
+  import { ui, renameDevice, eraseDevice, removeDevice } from '../lib/app.svelte.js';
+
+  // The … menu's dialogs, as macOS's sheet (see NewSimulator for the
+  // measured motion): Rename asks for a name, Reset and Remove confirm.
+  let { kind, close } = $props();
+
+  let dialog = $state(null);
+  let field = $state(null);
+  let closing = false;
+  const still = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const DIM = 'rgba(0, 0, 0, 0.2)';
+  onMount(() => {
+    dialog.showModal();
+    field?.select();
+    if (still()) return;
+    dialog.animate([{ transform: 'translateY(-32px)' }, { transform: 'none' }], { duration: 260, easing: 'cubic-bezier(0.42, 0, 0.58, 1)' });
+    dialog.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 140 });
+    dialog.animate([{ background: 'transparent' }, { background: DIM }], { duration: 270, pseudoElement: '::backdrop' });
+  });
+  async function dismiss() {
+    if (closing) return;
+    closing = true;
+    if (!still()) {
+      const out = { duration: 230, fill: 'forwards' };
+      await Promise.all([
+        dialog.animate([{ transform: 'none' }, { transform: 'translateY(-30px)' }], { ...out, easing: 'cubic-bezier(0.42, 0, 1, 1)' }).finished,
+        dialog.animate([{ opacity: 1 }, { opacity: 0 }], out).finished,
+        dialog.animate([{ background: DIM }, { background: 'transparent' }], { duration: 270, fill: 'forwards', pseudoElement: '::backdrop' }).finished,
+      ]);
+    }
+    dialog.close();
+  }
+
+  const name = ui.simName;
+  let newName = $state(name);
+  let busy = $state(false);
+
+  const copy = {
+    rename: { title: `Rename “${name}”`, text: 'The new name shows in the device list and to tools that list simulators.', action: 'Rename' },
+    erase: {
+      title: `Reset Content and Settings of “${name}”?`,
+      text: 'All of its apps, data and settings are erased, as on a new device. A running simulator restarts.',
+      action: 'Reset',
+    },
+    remove: { title: `Remove “${name}”?`, text: 'The simulator and everything on it are deleted. This can’t be undone.', action: 'Remove' },
+  }[kind];
+
+  async function submit(e) {
+    e.preventDefault();
+    busy = true;
+    // Close first for the long ones; their progress shows in the status line.
+    if (kind === 'rename') {
+      if (await renameDevice(newName.trim())) dismiss();
+    } else {
+      dismiss();
+      await (kind === 'erase' ? eraseDevice() : removeDevice());
+    }
+    busy = false;
+  }
+</script>
+
+<dialog class="sheet" bind:this={dialog} onclose={close} oncancel={(e) => { e.preventDefault(); dismiss(); }} aria-labelledby="device-sheet-title">
+  <form onsubmit={submit}>
+    <div class="sheet-grid">
+      <div class="sheet-message">
+        <h2 id="device-sheet-title">{copy.title}</h2>
+        <p>{copy.text}</p>
+      </div>
+      {#if kind === 'rename'}
+        <label for="device-sheet-name">Name:</label>
+        <input id="device-sheet-name" class="field" bind:this={field} bind:value={newName} spellcheck="false" autocomplete="off">
+      {/if}
+    </div>
+    <div class="sheet-buttons">
+      <button type="button" class="push-btn" onclick={dismiss}>Cancel</button>
+      <button
+        type="submit"
+        class="push-btn default"
+        class:destructive={kind !== 'rename'}
+        disabled={busy || (kind === 'rename' && (!newName.trim() || newName.trim() === name))}
+      >{copy.action}</button>
+    </div>
+  </form>
+</dialog>

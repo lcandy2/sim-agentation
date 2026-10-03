@@ -8,6 +8,7 @@
   import Inspector from './components/Inspector.svelte';
   import InspectorTabs from './components/InspectorTabs.svelte';
   import Composer from './components/Composer.svelte';
+  import DeviceSheet from './components/DeviceSheet.svelte';
 
   onMount(() => {
     start();
@@ -29,6 +30,9 @@
   <div class="inspector-tabs"><InspectorTabs /></div>
 </div>
 
+{#if ui.sheet}
+  <DeviceSheet kind={ui.sheet} close={() => (ui.sheet = null)} />
+{/if}
 {#if ui.draft}
   <Composer />
 {/if}

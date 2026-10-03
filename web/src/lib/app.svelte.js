@@ -46,6 +46,8 @@ export const ui = $state({
   filter: storage.get('filter') ?? 'all', // the device list: 'all', 'running', 'iphone' or 'ipad'
   orientation: 'portrait', // the device's, as sent to it: see ROTATION
   inputShadowed: false, // Xcode's Device Hub holds this device's buttons (see checkInput)
+  sheet: null, // the … menu's dialog open now: 'rename', 'erase' or 'remove'
+  managing: null, // what the … menu is doing to the device: 'Shutting Down…' and so on
   reclaiming: false,
   recording: false,
   annotations: [],
@@ -1016,6 +1018,71 @@ export async function startDevice() {
   }
   sim.state = 'Booted';
   if (ui.udid === sim.udid) await selectDevice(sim);
+}
+
+// ---------- the … menu: shut down, restart, rename, reset, remove ----------
+
+async function reloadSims() {
+  ui.sims = await fetch('/api/sims').then((r) => (r.ok ? r.json() : ui.sims)).catch(() => ui.sims);
+}
+
+/** One of the host's simctl verbs on the selected device, then the list and the stage catch up. */
+async function manage(verb, { method = 'POST', body = {}, doing } = {}) {
+  const udid = ui.udid;
+  ui.managing = doing;
+  if (doing) setStatus(doing);
+  const res = await fetch(`/api/sims/${udid}${verb ? `/${verb}` : ''}`, {
+    method,
+    headers: { 'content-type': 'application/json' },
+    body: method === 'DELETE' ? undefined : JSON.stringify(body),
+  }).catch(() => null);
+  ui.managing = null;
+  setStatus('');
+  if (!res?.ok) {
+    flashStatus((await res?.json().catch(() => null))?.error ?? "Couldn't change the simulator", 6000);
+    return false;
+  }
+  await reloadSims();
+  return true;
+}
+
+async function reselect(udid) {
+  const sim = ui.sims.find((s) => s.udid === udid);
+  if (sim) await selectDevice(sim);
+}
+
+export async function shutdownDevice() {
+  const udid = ui.udid;
+  stopStream();
+  if (await manage('shutdown', { doing: 'Shutting Down…' })) await reselect(udid);
+}
+
+export async function restartDevice() {
+  const udid = ui.udid;
+  stopStream();
+  if (await manage('restart', { doing: 'Restarting…' })) await reselect(udid);
+}
+
+export async function renameDevice(name) {
+  const udid = ui.udid;
+  if (!(await manage('rename', { body: { name } }))) return false;
+  if (ui.udid === udid) ui.simName = name;
+  return true;
+}
+
+/** Erases all content and settings; a running device comes back up. */
+export async function eraseDevice() {
+  const udid = ui.udid;
+  stopStream();
+  if (await manage('erase', { doing: 'Erasing…' })) await reselect(udid);
+}
+
+/** Deletes the simulator, then shows another (a running one first). */
+export async function removeDevice() {
+  stopStream();
+  if (!(await manage('', { method: 'DELETE', doing: 'Removing…' }))) return;
+  const next = ui.sims.find((s) => s.state === 'Booted') ?? ui.sims[0];
+  if (next) await selectDevice(next);
 }
 
 // ---------- zoom ----------

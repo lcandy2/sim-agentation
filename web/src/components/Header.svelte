@@ -2,6 +2,7 @@
   import {
     ui, setMode, setZoom, zoomIn, zoomOut, togglePanel, toggleFocus,
     copyPending, clearDone, saveScreenshot, pressButton, pressAppSwitcher,
+    startDevice, shutdownDevice, restartDevice,
   } from '../lib/app.svelte.js';
   import { icon } from '../lib/icons.js';
   import Popover from './Popover.svelte';
@@ -10,6 +11,12 @@
 
   // The … menu: what has no button of its own in Device Hub's toolbar.
   const menu = $derived([
+    // Device Hub's device actions, each on its own, as there.
+    [ui.running ? { label: 'Shut Down', icon: 'power', run: shutdownDevice } : { label: 'Start', icon: 'power', run: startDevice }],
+    [{ label: 'Restart', icon: 'restart', run: restartDevice, disabled: !ui.running }],
+    [{ label: 'Rename…', icon: 'rename', run: () => (ui.sheet = 'rename') }],
+    [{ label: 'Reset Content and Settings…', icon: 'erase', run: () => (ui.sheet = 'erase') }],
+    [{ label: 'Remove…', icon: 'trash', run: () => (ui.sheet = 'remove') }],
     [
       { label: 'Copy Pending Annotations', icon: 'copy', run: copyPending },
       { label: 'Remove Resolved Annotations', icon: 'clear-done', run: clearDone },

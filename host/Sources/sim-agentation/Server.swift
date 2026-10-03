@@ -144,6 +144,16 @@ final class AppServer: @unchecked Sendable {
                 Task.detached { await InputSurface.healAfterBoot(udid: udid) }
                 return .respond(Self.json(JSONObject(["ok": .bool(true)])))
             }
+            // Device Hub's … menu: shut down, restart, rename, reset, remove.
+            if part(0) == "api" && part(1) == "sims", let udid = part(2), parts.count <= 4,
+               ["shutdown", "restart", "rename", "erase", nil].contains(part(3)),
+               (req.method == "POST" && part(3) != nil) || (req.method == "DELETE" && part(3) == nil) {
+                guard let device = (try? await blocking { Simulators.shared.find(udid) }) ?? nil else {
+                    return .respond(Self.json(JSONObject(["error": .string("no simulator \(udid)")]), status: 404))
+                }
+                try await manage(device, action: part(3) ?? "delete", body: req.body)
+                return .respond(Self.json(JSONObject(["ok": .bool(true)])))
+            }
             if part(0) == "api" && part(1) == "sims", let udid = part(2), part(3) == "input", req.method == "GET" {
                 let shadowed = await InputSurface.shadowed(udid: udid)
                 return .respond(Self.json(JSONObject(["shadowed": .bool(shadowed)])))
@@ -265,6 +275,37 @@ final class AppServer: @unchecked Sendable {
         else { throw BadRequest("name, deviceType and runtime are required") }
         let udid = try await blocking { try run(["xcrun", "simctl", "create", name, type, runtime]) }
         return JSONObject(["udid": .string(JS.trim(udid))])
+    }
+
+    /// `simctl` for the … menu. Erasing needs the device shut down; one that
+    /// was running comes back up afterwards (and gets its buttons back, as
+    /// any boot does). Removing shuts it down first.
+    private func manage(_ device: SimulatorDevice, action: String, body: Data) async throws {
+        let udid = device.udid
+        let running = device.state == .booted
+        switch action {
+        case "shutdown":
+            try await blocking { try Simulators.shared.shutdown(udid) }
+        case "restart":
+            try await blocking { try Simulators.shared.shutdown(udid) }
+            try await boot(udid)
+            Task.detached { await InputSurface.healAfterBoot(udid: udid) }
+        case "rename":
+            guard let name = try Self.parseBody(body)["name"]?.stringValue.map(JS.trim), !name.isEmpty else {
+                throw BadRequest("name is required")
+            }
+            _ = try await blocking { try run(["xcrun", "simctl", "rename", udid, name]) }
+        case "erase":
+            if running { try await blocking { try Simulators.shared.shutdown(udid) } }
+            _ = try await blocking { try run(["xcrun", "simctl", "erase", udid]) }
+            if running {
+                try await boot(udid)
+                Task.detached { await InputSurface.healAfterBoot(udid: udid) }
+            }
+        default: // delete
+            if running { try? await blocking { try Simulators.shared.shutdown(udid) } }
+            _ = try await blocking { try run(["xcrun", "simctl", "delete", udid]) }
+        }
     }
 
     private func boot(_ udid: String) async throws {
