@@ -26,6 +26,9 @@ export default defineConfig({
   server: {
     port: DEV_PORT,
     strictPort: true,
+    // The host's built page loads the source from here (web/src/main.js),
+    // so the dev server's URLs are absolute to it.
+    origin: `http://localhost:${DEV_PORT}`,
     proxy: {
       '/api': toHost,
       '/images': toHost,
