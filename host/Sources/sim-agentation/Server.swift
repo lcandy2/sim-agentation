@@ -154,6 +154,12 @@ final class AppServer: @unchecked Sendable {
                 try await manage(device, action: part(3) ?? "delete", body: req.body)
                 return .respond(Self.json(JSONObject(["ok": .bool(true)])))
             }
+            // Simulator.app's Features menu: appearance, text size, shake, Face ID.
+            if part(0) == "api" && part(1) == "sims", let udid = part(2), part(3) == "feature", req.method == "POST" {
+                guard let name = try Self.parseBody(req.body)["name"]?.stringValue else { throw BadRequest("name is required") }
+                let value = try await feature(udid, name: name)
+                return .respond(Self.json(JSONObject(["ok": .bool(true), "value": .string(value)])))
+            }
             if part(0) == "api" && part(1) == "sims", let udid = part(2), part(3) == "input", req.method == "GET" {
                 let shadowed = await InputSurface.shadowed(udid: udid)
                 return .respond(Self.json(JSONObject(["shadowed": .bool(shadowed)])))
@@ -305,6 +311,35 @@ final class AppServer: @unchecked Sendable {
         default: // delete
             if running { try? await blocking { try Simulators.shared.shutdown(udid) } }
             _ = try await blocking { try run(["xcrun", "simctl", "delete", udid]) }
+        }
+    }
+
+    /// Simulator.app's Features, through simctl: toggles the appearance, steps
+    /// the preferred text size, shakes, matches or fails Face ID and Touch ID
+    /// (a device listens for its own kind). Returns what it set.
+    private func feature(_ udid: String, name: String) async throws -> String {
+        func simctl(_ args: [String]) async throws -> String {
+            JS.trim(try await blocking { try run(["xcrun", "simctl"] + args) })
+        }
+        switch name {
+        case "appearance":
+            let next = try await simctl(["ui", udid, "appearance"]) == "dark" ? "light" : "dark"
+            _ = try await simctl(["ui", udid, "appearance", next])
+            return next
+        case "text-bigger", "text-smaller":
+            _ = try await simctl(["ui", udid, "content_size", name == "text-bigger" ? "increment" : "decrement"])
+            return try await simctl(["ui", udid, "content_size"])
+        case "shake":
+            _ = try await simctl(["notify_post", udid, "com.apple.UIKit.SimulatorShake"])
+            return name
+        case "biometric-match", "biometric-mismatch":
+            let outcome = name == "biometric-match" ? "match" : "nomatch"
+            for kind in ["pearl", "fingerTouch"] {
+                _ = try await simctl(["notify_post", udid, "com.apple.BiometricKit_Sim.\(kind).\(outcome)"])
+            }
+            return name
+        default:
+            throw BadRequest("no feature \(name)")
         }
     }
 

@@ -452,8 +452,20 @@ export function onWheel(e) {
 
 const KEY_CODES = new Set(['Enter', 'Backspace', 'Tab', 'Escape', 'Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']);
 
+// While the device has focus, Simulator.app's shortcuts (SHORTCUTS) work as
+// they do there, and the keys the browser and the Mac answer stay theirs:
+// switching tabs (⌘1–⌘8, ⌘⇧[ ⌘⇧], ⌃Tab) and windows (⌘`), new and closing
+// tabs, hiding, minimizing, quitting, settings, the developer tools (⌘⌥…).
+// The rest, editing keys included (⌘C ⌘V ⌘A ⌘Z, ⌘F), go to the device.
+const BROWSER_KEYS = new Set(['KeyT', 'KeyW', 'KeyN', 'KeyQ', 'KeyM', 'KeyH', 'Backquote', 'Comma']);
+function forBrowser(e) {
+  if (e.ctrlKey && e.code === 'Tab') return true;
+  if (!e.metaKey) return false;
+  return /^Digit[1-9]$/.test(e.code) || e.altKey || (e.shiftKey && (e.code === 'BracketLeft' || e.code === 'BracketRight')) || BROWSER_KEYS.has(e.code);
+}
+
 export function onScreenKey(e) {
-  if (ui.mode !== 'interact') return;
+  if (ui.mode !== 'interact' || SHORTCUTS[combo(e)] || forBrowser(e)) return;
   const mods = ['shift', 'control', 'option', 'command'].filter((m, i) => [e.shiftKey, e.ctrlKey, e.altKey, e.metaKey][i]);
   if (e.metaKey && e.key === 'v') {
     navigator.clipboard.readText().then((text) => text && send({ type: 'paste', text }));
@@ -467,18 +479,43 @@ export function onScreenKey(e) {
   e.preventDefault();
 }
 
-/** Window-level shortcuts: modes, Esc, ↑/↓ parent, S for SDK, ⌘ zoom keys. */
+// Simulator.app's shortcuts, from its menus, so hands used to it work here;
+// then this page's zoom keys. Keyed by physical key, modifiers first.
+const combo = (e) => [e.ctrlKey && 'ctrl', e.altKey && 'alt', e.shiftKey && 'shift', e.metaKey && 'meta', e.code].filter(Boolean).join('+');
+const SHORTCUTS = {
+  'meta+KeyS': () => saveScreenshot(),                      // File ▸ Save Screen
+  'meta+KeyR': () => toggleRecording(),                     // File ▸ Record Screen
+  'ctrl+meta+KeyC': () => copyScreen(),                     // Edit ▸ Copy Screen
+  'shift+meta+KeyH': () => pressButton('home'),             // I/O ▸ Home
+  'ctrl+shift+meta+KeyH': () => pressButton('app-switcher'), // I/O ▸ App Switcher
+  'meta+KeyL': () => pressButton('lock'),                   // I/O ▸ Lock
+  'meta+ArrowLeft': () => rotateBy(-1),                     // I/O ▸ Rotate Left
+  'meta+ArrowRight': () => rotateBy(1),                     // I/O ▸ Rotate Right
+  'meta+ArrowUp': () => pressButton('volume-up'),           // I/O ▸ Increase Volume
+  'meta+ArrowDown': () => pressButton('volume-down'),       // I/O ▸ Decrease Volume
+  'ctrl+meta+KeyZ': () => feature('shake'),                 // I/O ▸ Shake
+  'shift+meta+KeyA': () => feature('appearance'),           // Features ▸ Toggle Appearance
+  'alt+shift+meta+Equal': () => feature('text-bigger'),     // Features ▸ Increase Preferred Text Size
+  'alt+shift+meta+Minus': () => feature('text-smaller'),    // Features ▸ Decrease Preferred Text Size
+  'alt+meta+KeyM': () => feature('biometric-match'),        // Features ▸ Face ID ▸ Matching Face
+  'alt+meta+KeyN': () => feature('biometric-mismatch'),     // Features ▸ Face ID ▸ Non-matching Face
+  'meta+Digit4': () => setZoom('fit'),                      // Window ▸ Fit Screen
+  'meta+Digit9': () => setZoom('fit'),
+  'meta+Equal': () => zoomIn(),
+  'shift+meta+Equal': () => zoomIn(),
+  'meta+Minus': () => zoomOut(),
+};
+
+/** Window-level shortcuts: Simulator.app's and zoom, modes, Esc, ↑/↓ parent, S for SDK. */
 export function onWindowKey(e) {
   if (e.target.closest?.('.composer')) return;
-  if (e.metaKey) {
-    if (e.target.matches?.('input')) return;
-    const actions = { '=': zoomIn, '+': zoomIn, '-': zoomOut, 9: () => setZoom('fit') };
-    if (actions[e.key]) {
-      e.preventDefault();
-      actions[e.key]();
-    }
+  const shortcut = SHORTCUTS[combo(e)];
+  if (shortcut && !e.target.matches?.('input, textarea, select')) {
+    e.preventDefault();
+    shortcut();
     return;
   }
+  if (e.metaKey) return;
   if (e.key === 'Escape' && ui.mode === 'annotate') {
     e.preventDefault();
     setMode('interact');
@@ -538,12 +575,46 @@ export function pressButton(button, duration) {
 
 /** Saves what's on screen (the frozen frame while annotating). */
 export async function saveScreenshot() {
+  const png = await screenPNG();
+  if (png) download(png, 'png');
+}
+
+/** Copies what's on screen to the clipboard, as Simulator's Copy Screen does. */
+export async function copyScreen() {
+  const png = screenPNG();
+  if (!(await png)) return;
+  await navigator.clipboard.write([new ClipboardItem({ 'image/png': png })]);
+  flashStatus('Copied the screen');
+}
+
+function screenPNG() {
   const frame = rt.frozen?.bitmap ?? rt.frame;
-  if (!frame) return;
+  if (!frame) return Promise.resolve(null);
   const { width, height } = frameSize(frame);
   const out = new OffscreenCanvas(width, height);
   out.getContext('2d').drawImage(frame, 0, 0);
-  download(await out.convertToBlob({ type: 'image/png' }), 'png');
+  return out.convertToBlob({ type: 'image/png' });
+}
+
+/** Simulator.app's Features on the device: appearance, text size, shake, Face ID. */
+export async function feature(name) {
+  if (!ui.running) return;
+  const res = await fetch(`/api/sims/${ui.udid}/feature`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ name }),
+  }).catch(() => null);
+  const result = await res?.json().catch(() => null);
+  if (!res?.ok) return flashStatus(result?.error ?? "Couldn't change the simulator", 6000);
+  const SAID = {
+    appearance: `${result.value === 'dark' ? 'Dark' : 'Light'} Appearance`,
+    'text-bigger': `Text Size: ${result.value}`,
+    'text-smaller': `Text Size: ${result.value}`,
+    shake: 'Shake',
+    'biometric-match': 'Matching Face',
+    'biometric-mismatch': 'Non-matching Face',
+  };
+  flashStatus(SAID[name] ?? name);
 }
 
 function download(blob, extension) {
@@ -585,10 +656,15 @@ const TURN_ORDER = ['portrait', 'landscape-right', 'portrait-upside-down', 'land
 export const isLandscape = () => ui.running && ui.orientation.startsWith('landscape');
 
 /** Turns the device a quarter clockwise: iOS rotates its interface, the page rotates the device. */
-export async function rotate() {
+export function rotate() {
+  return rotateBy(1);
+}
+
+/** Turns the device a quarter: 1 clockwise (Rotate Right), -1 the other way. */
+export async function rotateBy(step) {
   if (!ui.running) return;
   await setMode('interact');
-  ui.orientation = TURN_ORDER[(TURN_ORDER.indexOf(ui.orientation) + 1) % TURN_ORDER.length];
+  ui.orientation = TURN_ORDER[(TURN_ORDER.indexOf(ui.orientation) + step + TURN_ORDER.length) % TURN_ORDER.length];
   send({ type: 'orientation', orientation: ui.orientation });
   await tick();
   updateScale();
