@@ -50,6 +50,18 @@ function visible(entry) {
 // cover most of the screen are window-level wrappers, not targets. `screen`
 // is the screen size in points; the tree's root can't be trusted for it,
 // because the simulator now reports the application element as 0×0.
+/**
+ * Whether the tree is SpringBoard's (the home screen and its other
+ * screens): its application element has no name, where an app's carries
+ * the app's.
+ */
+export function isSpringBoard(tree) {
+  return tree?.role === 'AXApplication' && !tree.label?.trim();
+}
+
+/** A home-screen widget, one element over its whole card: its value says "Widget" ("Widget, Stack" in a Smart Stack). */
+export const isWidget = (node) => typeof node?.value === 'string' && node.value.split(/,\s*/).includes('Widget');
+
 export function hitTest(tree, x, y, screen = tree.frame) {
   const limit = screen && area(screen) > 0 ? area(screen) * 0.6 : Infinity;
   let best = null;

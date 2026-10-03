@@ -4,8 +4,8 @@
 
 import { tick } from 'svelte';
 import { notify } from './notify.svelte.js';
-import { hitTest, describe, nodesInRect } from './ax.js';
-import { sampler, warm, containersAround, partsWithin } from './visual.js';
+import { hitTest, describe, nodesInRect, isSpringBoard, isWidget } from './ax.js';
+import { sampler, warm, containerAround, containersAround, partsWithin } from './visual.js';
 import { matchesFrontApp, sdkContainers, sourceFor, viewContext } from './sdk.js';
 import { createDecoder, decodeCapabilities, decodesSmoothly, formatLabel, pickFormat } from './stream.js';
 import { HIDDEN_FPS, createAuto, decide, newFormat, observe, probeFor, probed, restart } from './auto.js';
@@ -917,6 +917,10 @@ function targetsAt(p) {
   const k = f.pixels.width / f.points.width;
   const toMap = (r) => ({ x: r.x * k, y: r.y * k, width: r.width * k, height: r.height * k });
   const fromMap = (r) => ({ x: r.x / k, y: r.y / k, width: r.width / k, height: r.height / k });
+  // SpringBoard is its accessibility elements, as they are: its wallpaper
+  // has no cards and its icons no parts worth picking. Only a widget, one
+  // element over a whole card, gets what's drawn on the card.
+  if (isSpringBoard(f.tree)) return isWidget(hit?.node) ? [...partAt(hit, p, toMap, fromMap), ...targets] : targets;
   const containers = containersAround(f.pixels, toMap(seed)).map((r) => {
     const rect = fromMap(r);
     return { rect, label: containerLabel(rect) };
@@ -926,20 +930,36 @@ function targetsAt(p) {
 
 // The icon or text run under the pointer inside the element the tree found,
 // for elements the tree doesn't split further. Innermost, so it's picked
-// first; ↑ goes on to the element itself.
+// first; ↑ goes on to the element itself. When the pointer is on a card
+// drawn inside the element (a widget's), the parts are the card's, found
+// against the card, and the card is the next level up.
 const SLACK = 3; // pt around a part that still counts as on it
 function partAt(hit, p, toMap, fromMap) {
   if (!hit) return [];
-  const parts = partsWithin(rt.frozen.pixels, toMap(hit.node.frame)).map((r) => ({ ...fromMap(r), kind: r.kind }));
+  const img = rt.frozen.pixels;
+  const frame = toMap(hit.node.frame);
+  const mapped = toMap({ x: p.x, y: p.y, width: 1, height: 1 });
+  const card = containerAround(img, mapped);
+  const onCard =
+    card &&
+    card.x >= frame.x - 1 && card.y >= frame.y - 1 &&
+    card.x + card.width <= frame.x + frame.width + 1 && card.y + card.height <= frame.y + frame.height + 1 &&
+    card.width * card.height < frame.width * frame.height * 0.97;
+  const area = onCard ? { x: card.x + 2, y: card.y + 2, width: card.width - 4, height: card.height - 4 } : frame;
+  const parts = partsWithin(img, area, { panel: !!onCard }).map((r) => ({ ...fromMap(r), kind: r.kind }));
   const on = (r) => p.x >= r.x - SLACK && p.x <= r.x + r.width + SLACK && p.y >= r.y - SLACK && p.y <= r.y + r.height + SLACK;
   const part = parts.filter(on).sort((a, b) => a.width * a.height - b.width * b.height)[0];
-  if (!part) return [];
   const owner = describe(hit.node).replace(/"([^"]{28})[^"]+"/, '"$1…"'); // a row's label can be a paragraph
-  const texts = parts.filter((r) => r.kind === 'Text').length;
-  const name = hit.node.label?.trim();
-  const label = part.kind === 'Text' && texts === 1 && name ? `Text "${name}"` : `${part.kind} in ${owner}`;
-  const { kind, ...rect } = part;
-  return [{ rect, label }];
+  const out = [];
+  if (part) {
+    const texts = parts.filter((r) => r.kind === 'Text').length;
+    const name = hit.node.label?.trim();
+    const label = part.kind === 'Text' && texts === 1 && name && !onCard ? `Text "${name}"` : `${part.kind} in ${owner}`;
+    const { kind, ...rect } = part;
+    out.push({ rect, label });
+  }
+  if (onCard) out.push({ rect: fromMap(card), label: `Card in ${owner}` });
+  return out;
 }
 
 function containerLabel(rect) {

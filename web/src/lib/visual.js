@@ -10,6 +10,7 @@ const TOLERANCE = 5; // max per-channel difference to count as the same fill (ca
 const RING = 3; // pt outside the rect to sample the surrounding background
 const PAGE = 0.6; // a fill spanning more than this share of the screen is the page, not a container
 const MIN_PIXELS = 16;
+const SIDES = 0.8; // of a side's middle a container's fill covers (see cardLike)
 
 // Downscales the frame to `width`×`height` (1 pixel per point) and reads it.
 export function sampler(bitmap, width, height) {
@@ -115,14 +116,51 @@ function surrounding(img, rect) {
   return best;
 }
 
+// Whether a region is shaped like a card, a row or a bar: it fills half
+// its box or more (around what's drawn on it), and runs along at least
+// three of its sides (the middle 60%, clear of rounded corners, a few pt
+// in, clear of anti-aliasing; a fourth may shade off, as a widget's bottom
+// does). A wallpaper's gradient also has stretches of one colour, but they
+// are bands and blobs that fill a fraction of their box.
+function cardLike(img, id, minX, minY, maxX, maxY, count) {
+  const { label } = img.regions;
+  const { width } = img;
+  if (maxX - minX < 20 || maxY - minY < 20) return false;
+  if (count / ((maxX - minX + 1) * (maxY - minY + 1)) < 0.5) return false;
+  const covered = (x0, y0, x1, y1) => {
+    let n = 0;
+    let of = 0;
+    for (let y = y0; y <= y1; y++) {
+      for (let x = x0; x <= x1; x++) {
+        of++;
+        if (label[y * width + x] === id) n++;
+      }
+    }
+    return n / of >= SIDES;
+  };
+  const midX0 = Math.round(minX + (maxX - minX) * 0.2);
+  const midX1 = Math.round(maxX - (maxX - minX) * 0.2);
+  const midY0 = Math.round(minY + (maxY - minY) * 0.2);
+  const midY1 = Math.round(maxY - (maxY - minY) * 0.2);
+  const INSETS = [2, 3, 4, 6];
+  const sides = [
+    INSETS.some((i) => covered(midX0, minY + i, midX1, minY + i)),
+    INSETS.some((i) => covered(midX0, maxY - i, midX1, maxY - i)),
+    INSETS.some((i) => covered(minX + i, midY0, minX + i, midY1)),
+    INSETS.some((i) => covered(maxX - i, midY0, maxX - i, midY1)),
+  ];
+  return sides.filter(Boolean).length >= 3;
+}
+
 // Bounding box of the fill that surrounds `rect`, or null when that fill
-// is the page itself.
+// is the page itself or isn't shaped like a container.
 export function containerAround(img, rect) {
   const id = surrounding(img, rect);
   if (id < 0) return null;
   const { boxes } = img.regions;
   const [minX, minY, maxX, maxY, count] = boxes.slice(id * 5, id * 5 + 5);
   if (count < MIN_PIXELS) return null;
+  if (!cardLike(img, id, minX, minY, maxX, maxY, count)) return null;
   const x = Math.min(minX, rect.x);
   const y = Math.min(minY, rect.y);
   const box = {
@@ -154,7 +192,9 @@ export function containersAround(img, rect, levels = 3) {
 // a run of text, a chevron. These are the foreground pieces inside a rect,
 // grouped the way they read: glyphs of one size on one line merge into a
 // text run across letter and word spaces, while an icon, taller than the
-// text and further from it than a word space, stays apart from it.
+// text and further from it than a word space, stays apart from it. On a
+// card (`panel`: a widget's, say), the edges are read clear of its rounded
+// corners, where what's behind it shows.
 
 const TOUCH = 2; // pt: pieces this close always merge (parts of one glyph or shape)
 const DOT = 12; // pt: a piece at most this big, not part of a text run, may belong to a pattern
@@ -163,7 +203,7 @@ const WORD_SPACE = 0.75; // of the shorter piece's height: a word space, not a g
 const SAME_SIZE = 2; // height ratio within which pieces read as one line of text
 const INK = 28; // per-channel difference from the background that counts as ink
 
-export function partsWithin(img, rect) {
+export function partsWithin(img, rect, { panel = false } = {}) {
   const { data, width } = img;
   const x0 = Math.max(0, Math.round(rect.x));
   const y0 = Math.max(0, Math.round(rect.y));
@@ -173,22 +213,28 @@ export function partsWithin(img, rect) {
   const h = y1 - y0;
   if (w < 6 || h < 6) return [];
 
-  // The background, interpolated from the rect's four edges, so a solid fill
-  // and a wallpaper gradient both work. Ink is what stands out from it.
+  // The background, filled in from the rect's four edges as a Coons patch
+  // (which meets each edge exactly), so a solid fill and a wallpaper
+  // gradient both work. Ink is what stands out from it. Inside a panel the
+  // edges are read clear of its rounded corners, where what's behind it shows.
   const at = (x, y) => (y * width + x) * 4;
+  const corner = panel ? Math.min(16, Math.round(Math.min(w, h) * 0.15)) : 0;
+  const cx = (x) => Math.min(w - 1 - corner, Math.max(corner, x));
+  const cy = (y) => Math.min(h - 1 - corner, Math.max(corner, y));
+  const top = (x, c) => data[at(x0 + cx(x), y0) + c];
+  const bottom = (x, c) => data[at(x0 + cx(x), y1 - 1) + c];
+  const left = (y, c) => data[at(x0, y0 + cy(y)) + c];
+  const right = (y, c) => data[at(x1 - 1, y0 + cy(y)) + c];
   const ink = new Uint8Array(w * h);
   for (let y = 0; y < h; y++) {
-    const ty = h > 1 ? y / (h - 1) : 0;
-    const left = at(x0, y0 + y);
-    const right = at(x1 - 1, y0 + y);
+    const v = h > 1 ? y / (h - 1) : 0;
     for (let x = 0; x < w; x++) {
-      const tx = w > 1 ? x / (w - 1) : 0;
-      const top = at(x0 + x, y0);
-      const bottom = at(x0 + x, y1 - 1);
+      const u = w > 1 ? x / (w - 1) : 0;
       const k = at(x0 + x, y0 + y);
       let diff = 0;
       for (let c = 0; c < 3; c++) {
-        const bg = ((data[left + c] * (1 - tx) + data[right + c] * tx) + (data[top + c] * (1 - ty) + data[bottom + c] * ty)) / 2;
+        const corners = (1 - u) * (1 - v) * top(0, c) + u * (1 - v) * top(w - 1, c) + (1 - u) * v * bottom(0, c) + u * v * bottom(w - 1, c);
+        const bg = (1 - u) * left(y, c) + u * right(y, c) + (1 - v) * top(x, c) + v * bottom(x, c) - corners;
         diff = Math.max(diff, Math.abs(data[k + c] - bg));
       }
       ink[y * w + x] = diff > INK ? 1 : 0;
