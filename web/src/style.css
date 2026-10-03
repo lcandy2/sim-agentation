@@ -186,7 +186,12 @@ button { cursor: default; }
   transition: padding 220ms cubic-bezier(0.3, 0.7, 0.2, 1), gap 220ms cubic-bezier(0.3, 0.7, 0.2, 1);
 }
 #mode-annotate .mode-label {
-  max-width: 0;
+  display: grid;
+  grid-template-columns: 0fr;
+  transition: grid-template-columns 320ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+#mode-annotate .mode-label > span {
+  min-width: 0;
   overflow: hidden;
   opacity: 0;
   white-space: nowrap;
@@ -195,8 +200,10 @@ button { cursor: default; }
   line-height: 16px;
   transition: max-width 220ms cubic-bezier(0.3, 0.7, 0.2, 1), opacity 160ms ease;
 }
-#mode-annotate.on { padding: 0 12px 0 8px; gap: 5px; }
-#mode-annotate.on .mode-label { max-width: 110px; opacity: 1; }
+/* The spacing beside the name is content, so the column clips it too (padding wouldn't be). */
+#mode-annotate .mode-label > span::before { content: ""; display: inline-block; width: 5px; }
+#mode-annotate .mode-label > span::after { content: ""; display: inline-block; width: 6px; }
+#mode-annotate.on .mode-label { grid-template-columns: 1fr; }
 @media (prefers-reduced-motion: reduce) {
   #mode-annotate, #mode-annotate .mode-label { transition: none; }
 }
