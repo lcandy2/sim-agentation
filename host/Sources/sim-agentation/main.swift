@@ -28,8 +28,8 @@ case "serve":
         port = parsed
     }
     let store = Store(home: Config.home)
+    // Served per request, so `pnpm build` (or `pnpm dev`) shows up on reload.
     let dist = Config.webDirectory.map { Path.join($0, "dist") }
-        .flatMap { FileManager.default.fileExists(atPath: Path.join($0, "index.html")) ? $0 : nil }
     let app = AppServer(port: port, store: store, chrome: ChromeService(home: Config.home), dist: dist)
     let server: HTTPServer
     do {
@@ -40,7 +40,7 @@ case "serve":
     }
     if Config.webDirectory == nil {
         FileHandle.standardError.write(Data("sim-agentation: no web/ directory found; set SIM_AGENTATION_WEB\n".utf8))
-    } else if dist == nil {
+    } else if let dist, !FileManager.default.fileExists(atPath: Path.join(dist, "index.html")) {
         FileHandle.standardError.write(Data("sim-agentation: the UI isn't built; run `pnpm build` in the repo\n".utf8))
     }
     FileHandle.standardError.write(Data("sim-agentation: http://localhost:\(port)  (data in \(store.home))\n".utf8))

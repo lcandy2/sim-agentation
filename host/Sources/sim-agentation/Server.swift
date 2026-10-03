@@ -10,7 +10,7 @@ final class AppServer: @unchecked Sendable {
     let port: UInt16
     let store: Store
     let chrome: ChromeService
-    /// The built UI (web/dist), if any.
+    /// Where the built UI lives (web/dist); files are read per request.
     let dist: String?
     let sdkSession: URLSession
 

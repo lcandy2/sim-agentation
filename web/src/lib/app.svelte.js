@@ -6,7 +6,7 @@ import { tick } from 'svelte';
 import { hitTest, describe, nodesInRect } from './ax.js';
 import { sampler, warm, containersAround } from './visual.js';
 import { matchesFrontApp, sdkContainers, sourceFor, viewContext } from './sdk.js';
-import { createDecoder, pickFormat, playableFormats } from './stream.js';
+import { createDecoder, decodeCapabilities, formatLabel, pickFormat } from './stream.js';
 
 export const storage = {
   get(k) {
@@ -43,10 +43,13 @@ export const ui = $state({
   annotations: [],
   draft: null,        // { label, x, y } while the composer is open (viewport px)
   stream: {
-    format: storage.get('stream-format'), // 'avcc' (H.264), 'hevc' or 'mjpeg'; settled by start()
+    choice: storage.get('stream-format') ?? 'auto', // 'auto', or a format to always use
+    format: null,     // the format streaming now: 'hevc', 'hevc422', 'avcc' (H.264) or 'mjpeg'
+    skipped: [],      // [{ format, reason }]: what Auto gave up on this session
     scale: Number(storage.get('stream-scale')) || 1, // 1 full resolution, 2 half
     bitrate: Number(storage.get('stream-bitrate')) || 8_000_000, // video only
-    playable: { mjpeg: true, avcc: false, hevc: false },
+    playable: { mjpeg: true, avcc: false, hevc: false, hevc422: false },
+    hardwareDecode: { mjpeg: null, avcc: null, hevc: null, hevc422: null },
     fps: 0,           // frames painted in the last second
     mbps: 0,          // megabits received in the last second
     hardware: null,   // the video decoder runs in hardware (null: unknown or JPEG)
@@ -56,6 +59,8 @@ export const ui = $state({
 const rt = {
   ws: null,
   decoder: null,
+  decoderErrors: 0,
+  watchdog: null,
   pending: null,     // newest decoded frame, not painted yet
   frame: null,       // last painted frame: ImageBitmap or VideoFrame
   counts: { frames: 0, bytes: 0 },
@@ -64,6 +69,7 @@ const rt = {
   hover: null,       // { point, targets: [{ rect, label, node? }], level }
   drag: null,
   draft: null,       // { kind, rect, point?, label }
+  failed: new Set(), // formats Auto gave up on this session
   touching: false,
   canvas: null,
   ctx: null,
@@ -85,10 +91,10 @@ export function setStatus(text) {
 }
 
 /** Shows a message for a moment, then goes back to the current status. */
-export function flashStatus(text) {
+export function flashStatus(text, ms = 2000) {
   clearTimeout(flashTimer);
   ui.flash = text;
-  flashTimer = setTimeout(() => (ui.flash = null), 2000);
+  flashTimer = setTimeout(() => (ui.flash = null), ms);
 }
 
 // ---------- stage elements ----------
@@ -117,20 +123,29 @@ function connect(udid) {
         rt.pending?.close?.();
         rt.pending = frame;
       },
-      // A dead video decoder can't recover: start a new one from a fresh keyframe.
-      onError: () => {
+      // A dead video decoder can't recover: start a new one from a fresh
+      // keyframe. Auto gives up on the format if it dies again.
+      onError: (e) => {
         if (rt.ws !== ws) return;
+        if (++rt.decoderErrors >= 2 && fallBack(format, `decoder error: ${e?.message ?? e}`)) return;
         rt.decoder?.dispose();
         rt.decoder = newDecoder();
         send({ type: 'force_idr' });
       },
     });
   rt.decoder = newDecoder();
+  rt.decoderErrors = 0;
 
   ws.onopen = () => {
     ws.send(JSON.stringify({ type: 'snapshot' }));
     // Nudge with a harmless scroll so an idle screen still emits a frame.
     setTimeout(() => !rt.frame && send({ type: 'scroll', deltaX: 0, deltaY: 0 }), 600);
+    // The server re-encodes the screen 60 times a second even when it's
+    // still, so a working video stream decodes something within moments.
+    clearTimeout(rt.watchdog);
+    rt.watchdog = setTimeout(() => {
+      if (rt.ws === ws && !rt.decoder?.stats.decoded) fallBack(format, 'no frames decoded');
+    }, 4000);
   };
   ws.onmessage = (e) => {
     if (typeof e.data === 'string') return onText(JSON.parse(e.data));
@@ -150,6 +165,7 @@ function connect(udid) {
 function stopStream() {
   const ws = rt.ws;
   rt.ws = null;
+  clearTimeout(rt.watchdog);
   ui.live = false;
   rt.decoder?.dispose();
   rt.decoder = null;
@@ -187,12 +203,38 @@ function sampleStats() {
   rt.counts = { frames: 0, bytes: 0 };
 }
 
-/** Switches codec; the stream restarts in the new format. */
-export function setStreamFormat(format) {
-  if (format === ui.stream.format || !ui.stream.playable[format]) return;
+/** 'auto' or a format to always use; the stream restarts if the format changes. */
+export function setStreamChoice(choice) {
+  if (choice === ui.stream.choice) return;
+  if (choice !== 'auto' && !ui.stream.playable[choice]) return;
+  ui.stream.choice = choice;
+  storage.set('stream-format', choice);
+  // An explicit pick deserves a fresh try at everything.
+  rt.failed.clear();
+  ui.stream.skipped = [];
+  useFormat(pickFormat(choice, capabilities()));
+}
+
+const capabilities = () => ({ playable: ui.stream.playable, hardware: ui.stream.hardwareDecode });
+
+function useFormat(format) {
+  if (format === ui.stream.format) return;
   ui.stream.format = format;
-  storage.set('stream-format', format);
   if (ui.running && ui.udid) connect(ui.udid);
+}
+
+/**
+ * Auto only: drops a format that failed and moves to the next one. Returns
+ * false when the user picked the format, which then stays put.
+ */
+function fallBack(format, reason) {
+  if (ui.stream.choice !== 'auto' || format !== ui.stream.format || format === 'mjpeg') return false;
+  rt.failed.add(format);
+  ui.stream.skipped = [...ui.stream.skipped, { format, reason }];
+  const next = pickFormat('auto', capabilities(), rt.failed);
+  flashStatus(`${formatLabel(format)} failed (${reason}); using ${formatLabel(next)}`, 6000);
+  useFormat(next);
+  return true;
 }
 
 export function setStreamScale(scale) {
@@ -228,6 +270,9 @@ function onText(msg) {
   if (msg.type === 'describe_ui_result') {
     rt.pendingTree?.(msg.ok ? msg.tree : null);
     rt.pendingTree = null;
+  } else if (msg.type === 'stream_error') {
+    // The host couldn't encode this format (no encoder for it on this Mac).
+    if (!fallBack(msg.format, msg.error)) setStatus(msg.error);
   } else if (msg.type === 'error' || msg.ok === false) {
     setStatus(msg.error || 'Error');
   }
@@ -797,9 +842,10 @@ export function start() {
   requestAnimationFrame(paintLoop);
   const stats = setInterval(sampleStats, 1000);
   // Settle the format before the first device connects.
-  playableFormats().then((playable) => {
+  decodeCapabilities().then(({ playable, hardware }) => {
     ui.stream.playable = playable;
-    ui.stream.format = pickFormat(ui.stream.format, playable);
+    ui.stream.hardwareDecode = hardware;
+    ui.stream.format = pickFormat(ui.stream.choice, capabilities());
     loadDevices();
   });
   refresh();

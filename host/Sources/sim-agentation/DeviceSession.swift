@@ -49,6 +49,8 @@ final class DeviceSession: @unchecked Sendable {
     private var lastSent: UInt64 = 0
     private var pendingSeed = true
     private var pendingKeyframe = true
+    private var videoFailures = 0 // frames in a row the encoder didn't produce
+    private var reportedFailure = false
     private var idlePump: DispatchSourceTimer?
     private lazy var input = HIDInput(udid: udid)
 
@@ -83,7 +85,7 @@ final class DeviceSession: @unchecked Sendable {
                 Self.liveLock.lock(); Self.live[ObjectIdentifier(self)] = nil; Self.liveLock.unlock()
             }
         )
-        video?.onEncoded = { [weak self] encoded in self?.sent(encoded) }
+        video?.onEncoded = { [weak self] encoded in self?.encoded(encoded) }
         do {
             try capture.start { [weak self] surface in self?.frame(surface) }
         } catch {
@@ -167,8 +169,23 @@ final class DeviceSession: @unchecked Sendable {
                 return self.sent(nil)
             }
             if seed, let bytes = self.jpeg.encode(pixels) { self.socket.send(binary: Self.tagged(.seed, bytes)) }
-            if !video.encode(pixels, forceKeyframe: keyframe) { self.sent(nil) }
+            if !video.encode(pixels, forceKeyframe: keyframe) { self.encoded(nil) }
         }
+    }
+
+    /// Video output, or nil for a frame the encoder couldn't produce. After a
+    /// run of failures (say, no HEVC encoder on this Mac) the page hears
+    /// `stream_error` once, so Auto can move to the next format.
+    private func encoded(_ output: VideoEncoder.Encoded?) {
+        lock.lock()
+        videoFailures = output == nil ? videoFailures + 1 : 0
+        let report = videoFailures >= 5 && !reportedFailure
+        if report { reportedFailure = true }
+        lock.unlock()
+        if report {
+            socket.send(json: ["type": "stream_error", "format": format.rawValue, "error": "the encoder isn't producing frames"])
+        }
+        sent(output)
     }
 
     /// The frame in flight is done: sends video output, then the next frame.

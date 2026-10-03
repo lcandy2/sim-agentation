@@ -9,9 +9,10 @@
 // avcC/hvcC description, 0x02 a keyframe, 0x03 a delta frame and 0x04 a
 // JPEG seed that paints before the first keyframe decodes.
 
+// In the order Auto tries them.
 export const FORMATS = [
-  { id: 'avcc', label: 'H.264', name: 'H.264 (AVC)' },
   { id: 'hevc', label: 'H.265', name: 'H.265 (HEVC)' },
+  { id: 'avcc', label: 'H.264', name: 'H.264 (AVC)' },
   { id: 'mjpeg', label: 'JPEG', name: 'JPEG per frame' },
 ];
 
@@ -22,26 +23,45 @@ export const HEVC_422 = { id: 'hevc422', name: 'H.265 (HEVC) 4:2:2 10-bit' };
 // the real ones come from each stream's description.
 const PROBES = { avcc: 'avc1.640033', hevc: 'hvc1.1.6.L153.90', hevc422: 'hvc1.4.10.L153.BD.08' };
 
-/** Which formats this browser can play. WebCodecs needs a secure context, which localhost is. */
-export async function playableFormats() {
+// Auto tries these in order. H.265 first: same latency and frame rate as
+// H.264, better pictures per bit. H.264 decodes nearly everywhere. JPEG
+// needs no WebCodecs at all. 4:2:2 stays manual: twice the bitrate and no
+// low-latency rate control, for edges you only see zoomed in.
+export const AUTO_ORDER = FORMATS.map((f) => f.id);
+
+/**
+ * What this browser can do with each format: `playable` (WebCodecs can
+ * decode it; it needs a secure context, which localhost is) and `hardware`
+ * (decodes on the media engine; false means a software decoder, which is
+ * brutal at full resolution and 60 fps; null means unknown).
+ */
+export async function decodeCapabilities() {
   const playable = { mjpeg: true, avcc: false, hevc: false, hevc422: false };
-  if (typeof VideoDecoder === 'undefined') return playable;
+  const hardware = { mjpeg: null, avcc: null, hevc: null, hevc422: null };
+  if (typeof VideoDecoder === 'undefined') return { playable, hardware };
   await Promise.all(
     Object.entries(PROBES).map(async ([id, codec]) => {
       try {
         playable[id] = (await VideoDecoder.isConfigSupported({ codec })).supported === true;
       } catch {}
+      if (playable[id]) hardware[id] = await probeHardware(codec);
     }),
   );
-  return playable;
+  return { playable, hardware };
 }
 
-/** The stored preference when it plays here, else the best format that does. */
-export function pickFormat(stored, playable) {
-  if (stored && playable[stored]) return stored;
-  if (stored === 'hevc422' && playable.hevc) return 'hevc';
-  return FORMATS.find((f) => playable[f.id]).id;
+/**
+ * The format to stream for a choice: the chosen one when it plays here, or
+ * for 'auto' the first of AUTO_ORDER that plays in hardware and hasn't
+ * failed this session. JPEG always plays.
+ */
+export function pickFormat(choice, { playable, hardware }, failed = new Set()) {
+  if (choice !== 'auto' && playable[choice]) return choice;
+  if (choice === 'hevc422' && playable.hevc) return 'hevc';
+  return AUTO_ORDER.find((id) => playable[id] && hardware[id] !== false && !failed.has(id)) ?? 'mjpeg';
 }
+
+export const formatLabel = (id) => (id === HEVC_422.id ? 'H.265 4:2:2' : (FORMATS.find((f) => f.id === id)?.label ?? id));
 
 /**
  * A decoder for one stream. `onFrame` gets an ImageBitmap or a VideoFrame,
@@ -53,9 +73,15 @@ export function createDecoder(format, { onFrame, onError }) {
 }
 
 function jpegDecoder(onFrame) {
+  const stats = { chunks: 0, decoded: 0 };
   return {
+    stats,
     feed(buffer) {
-      createImageBitmap(new Blob([buffer], { type: 'image/jpeg' })).then(onFrame, () => {});
+      stats.chunks++;
+      createImageBitmap(new Blob([buffer], { type: 'image/jpeg' })).then((bitmap) => {
+        stats.decoded++;
+        onFrame(bitmap);
+      }, () => {});
     },
     hardware: null,
     dispose() {},
@@ -65,11 +91,18 @@ function jpegDecoder(onFrame) {
 function videoDecoder(format, onFrame, onError) {
   let timestamp = 0;
   const state = { hardware: null };
+  // Video chunks in and frames out, so a caller can tell a decoder that
+  // takes chunks but never produces a picture (the JPEG seed doesn't count).
+  const stats = { chunks: 0, decoded: 0 };
   const decoder = new VideoDecoder({
-    output: onFrame,
+    output: (frame) => {
+      stats.decoded++;
+      onFrame(frame);
+    },
     error: (e) => onError?.(e),
   });
   return {
+    stats,
     get hardware() {
       return state.hardware;
     },
@@ -92,6 +125,7 @@ function videoDecoder(format, onFrame, onError) {
           onError?.(e);
         }
       } else if ((tag === 0x02 || tag === 0x03) && decoder.state === 'configured') {
+        stats.chunks++;
         try {
           decoder.decode(new EncodedVideoChunk({ type: tag === 0x02 ? 'key' : 'delta', timestamp, data: payload }));
           timestamp += 16667; // never displayed; only has to increase
