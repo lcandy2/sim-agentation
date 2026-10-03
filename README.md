@@ -16,7 +16,7 @@ Your app needs no SDK. Everything comes from the simulator's accessibility tree,
 bun src/cli.ts serve --open
 ```
 
-This opens http://localhost:4848 and starts `baguette serve` if it isn't running yet.
+This opens http://localhost:38470 and starts `baguette serve` if it isn't running yet.
 
 - **Interact** (`I`): use the app. Click and drag to touch, scroll with the wheel, type with the keyboard.
 - **Annotate** (`A`): freezes the screen. Hover to see elements, click one to annotate it, or drag a box over any area. Press ⌘↩ to add the note and Esc to go back to the live screen.
@@ -51,7 +51,7 @@ Add `sdk/SimAgentationPlus` to an app you build yourself to get exact selections
 import SimAgentationPlus
 
 RootView()
-    .simAgentation()      // starts a local inspector on 127.0.0.1:4850 (Debug only)
+    .simAgentation()      // starts a local inspector on 127.0.0.1:38471 (Debug only)
 
 ShowRow(show: show)
     .simTag()             // selectable as "ShowRow · ContentView.swift:34"
@@ -69,10 +69,10 @@ When the app in front has the SDK, the status reads **Frozen · SDK**. Parents t
 
 | Variable | Default |
 |---|---|
-| `SIM_AGENTATION_PORT` | `4848` |
+| `SIM_AGENTATION_PORT` | `38470` |
 | `SIM_AGENTATION_HOME` | `~/.sim-agentation` (annotations and screenshots) |
 | `BAGUETTE_URL` | `http://127.0.0.1:8421` |
-| `SIM_AGENTATION_SDK_URL` | `http://127.0.0.1:4850` |
+| `SIM_AGENTATION_SDK_URL` | `http://127.0.0.1:38471` |
 
 ## Limits
 

@@ -48,10 +48,11 @@ enum SnapshotBuilder {
             .compactMap { $0 as? UIWindowScene }
             .flatMap(\.windows)
             .filter { !$0.isHidden }
-        let info = Bundle.main.infoDictionary
         return Snapshot(
             bundleId: Bundle.main.bundleIdentifier,
-            appName: (info?["CFBundleDisplayName"] ?? info?["CFBundleName"]) as? String,
+            // Localized when available, matching the name the accessibility tree reports.
+            appName: (Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName")
+                ?? Bundle.main.object(forInfoDictionaryKey: "CFBundleName")) as? String,
             screen: Rect(windows.first?.screen.bounds ?? .zero),
             tags: TagRegistry.shared.visible,
             windows: windows.compactMap { node($0, in: $0) }

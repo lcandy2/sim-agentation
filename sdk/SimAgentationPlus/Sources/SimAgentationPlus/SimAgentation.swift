@@ -5,20 +5,24 @@ import SwiftUI
 /// Call `.simAgentation()` on your root view and `.simTag()` on the views
 /// you want to be selectable by name. In Release builds both are no-ops.
 public enum SimAgentation {
-    public static let defaultPort: UInt16 = 4850
+    public static let defaultPort: UInt16 = 38471
 
     /// Starts the local inspector server. Safe to call more than once.
+    ///
+    /// `port` defaults to `defaultPort`, resolved here rather than in a default
+    /// argument: Swift evaluates default arguments in the caller, so an app
+    /// that isn't recompiled would keep an old SDK's port.
     @MainActor
-    public static func start(port: UInt16 = defaultPort) {
+    public static func start(port: UInt16? = nil) {
         #if DEBUG
-        InspectorServer.shared.start(port: port)
+        InspectorServer.shared.start(port: port ?? defaultPort)
         #endif
     }
 }
 
 public extension View {
     /// Starts the sim-agentation inspector when this view appears (Debug only).
-    func simAgentation(port: UInt16 = SimAgentation.defaultPort) -> some View {
+    func simAgentation(port: UInt16? = nil) -> some View {
         #if DEBUG
         onAppear { SimAgentation.start(port: port) }
         #else
