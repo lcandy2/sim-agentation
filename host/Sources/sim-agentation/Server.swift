@@ -306,6 +306,12 @@ final class AppServer: @unchecked Sendable {
         if JS.same(b["kind"]?.stringValue, "element"), let point, let tree {
             hit = AX.hitTest(tree, x: JS.number(point["x"]), y: JS.number(point["y"]))
         }
+        // An area (a box, or an icon or text run found in the pixels) names the
+        // innermost element it sits in, so the agent knows where to look.
+        var within: AX.Entry?
+        if hit == nil, let tree, let x = rect["x"], let y = rect["y"], let w = rect["width"], let h = rect["height"] {
+            within = AX.hitTest(tree, x: JS.number(x) + JS.number(w) / 2, y: JS.number(y) + JS.number(h) / 2)
+        }
         let device = (try? await blocking { Simulators.shared.all() })?.first { $0.udid == udid }
         let id = Store.newId()
         let now = Store.timestamp()
@@ -326,7 +332,9 @@ final class AppServer: @unchecked Sendable {
                 "runtime": device.map { .string($0.runtime) } ?? .null,
             ])),
             "rect": rect,
+            "label": b["label"]?.stringValue.map { .string(JS.trim($0)) } ?? .null,
             "target": hit.map { AX.summarize($0.node) } ?? .null,
+            "within": within.map { AX.summarize($0.node) } ?? .null,
             "targetPath": .array((hit?.path.dropFirst() ?? []).map(JSON.string)),
             "inside": .array(tree.map { AX.nodesInRect($0, rect).prefix(20).map { AX.summarize($0.node) } } ?? []),
             "screen": AX.screenContext(tree),

@@ -9,7 +9,7 @@
 
   // A box the SDK matched to a tagged view has no accessibility target; name the view instead.
   const tag = $derived(a.source?.[0]);
-  const target = $derived(a.target ? describe(a.target) : tag ? `${tag.name} · ${fileName(tag.file)}:${tag.line}` : 'Area');
+  const target = $derived(a.target ? describe(a.target) : tag ? `${tag.name} · ${fileName(tag.file)}:${tag.line}` : (a.label ?? 'Area'));
 
   async function remove() {
     deleting = true;

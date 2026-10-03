@@ -147,3 +147,127 @@ export function containersAround(img, rect, levels = 3) {
   }
   return out;
 }
+
+// ---------- parts inside an element ----------
+// The accessibility tree often stops at a whole row or button (a Settings
+// cell, a home-screen app). Its pixels don't: on its background sit an icon,
+// a run of text, a chevron. These are the foreground pieces inside a rect,
+// grouped the way they read: glyphs within GAP points on one line merge into
+// a text run, while the wider gap between an icon and its label keeps them
+// apart.
+
+const GAP = 5; // pt between glyphs that still belong to one run
+const INK = 28; // per-channel difference from the background that counts as ink
+
+export function partsWithin(img, rect) {
+  const { data, width } = img;
+  const x0 = Math.max(0, Math.round(rect.x));
+  const y0 = Math.max(0, Math.round(rect.y));
+  const x1 = Math.min(img.width, Math.round(rect.x + rect.width));
+  const y1 = Math.min(img.height, Math.round(rect.y + rect.height));
+  const w = x1 - x0;
+  const h = y1 - y0;
+  if (w < 6 || h < 6) return [];
+
+  // The background, interpolated from the rect's four edges, so a solid fill
+  // and a wallpaper gradient both work. Ink is what stands out from it.
+  const at = (x, y) => (y * width + x) * 4;
+  const ink = new Uint8Array(w * h);
+  for (let y = 0; y < h; y++) {
+    const ty = h > 1 ? y / (h - 1) : 0;
+    const left = at(x0, y0 + y);
+    const right = at(x1 - 1, y0 + y);
+    for (let x = 0; x < w; x++) {
+      const tx = w > 1 ? x / (w - 1) : 0;
+      const top = at(x0 + x, y0);
+      const bottom = at(x0 + x, y1 - 1);
+      const k = at(x0 + x, y0 + y);
+      let diff = 0;
+      for (let c = 0; c < 3; c++) {
+        const bg = ((data[left + c] * (1 - tx) + data[right + c] * tx) + (data[top + c] * (1 - ty) + data[bottom + c] * ty)) / 2;
+        diff = Math.max(diff, Math.abs(data[k + c] - bg));
+      }
+      ink[y * w + x] = diff > INK ? 1 : 0;
+    }
+  }
+
+  // Ink as 8-connected components. Along the rect's edge, thin ones are
+  // separators, sparse ones spanning it are outlines, and small ones in a
+  // corner are rounded corners; a solid block there (a home-screen icon as
+  // wide as its button) is content.
+  const seen = new Uint8Array(w * h);
+  const queue = new Int32Array(w * h);
+  const pieces = [];
+  for (let start = 0; start < w * h; start++) {
+    if (seen[start] || !ink[start]) continue;
+    let head = 0;
+    let tail = 0;
+    queue[tail++] = start;
+    seen[start] = 1;
+    let minX = start % w, maxX = minX, minY = (start - minX) / w, maxY = minY;
+    while (head < tail) {
+      const i = queue[head++];
+      const x = i % w;
+      const y = (i - x) / w;
+      if (x < minX) minX = x;
+      if (x > maxX) maxX = x;
+      if (y < minY) minY = y;
+      if (y > maxY) maxY = y;
+      for (let dy = -1; dy <= 1; dy++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          const nx = x + dx;
+          const ny = y + dy;
+          if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+          const j = ny * w + nx;
+          if (seen[j] || !ink[j]) continue;
+          seen[j] = 1;
+          queue[tail++] = j;
+        }
+      }
+    }
+    const pw = maxX - minX + 1;
+    const ph = maxY - minY + 1;
+    const edgeX = minX === 0 || maxX === w - 1;
+    const edgeY = minY === 0 || maxY === h - 1;
+    const solid = tail / (pw * ph); // share of the box that is ink
+    if (edgeX || edgeY) {
+      if (pw <= 3 || ph <= 3) continue;
+      if (edgeX && edgeY && pw * ph < w * h * 0.05) continue;
+      if (solid < 0.2 && (pw >= w * 0.9 || ph >= h * 0.9)) continue;
+    }
+    pieces.push({ x: minX, y: minY, x2: maxX + 1, y2: maxY + 1, pieces: 1 });
+  }
+
+  // Merge pieces on one line within GAP of each other, and overlapping ones.
+  const overlapY = (a, b) => Math.min(a.y2, b.y2) - Math.max(a.y, b.y);
+  const near = (a, b) => {
+    const gapX = Math.max(a.x, b.x) - Math.min(a.x2, b.x2);
+    const lineUp = overlapY(a, b) >= Math.min(a.y2 - a.y, b.y2 - b.y) * 0.5;
+    return (gapX <= GAP && lineUp) || (gapX <= 0 && overlapY(a, b) > 0);
+  };
+  let merged = true;
+  while (merged) {
+    merged = false;
+    for (let i = 0; i < pieces.length && !merged; i++) {
+      for (let j = i + 1; j < pieces.length; j++) {
+        const a = pieces[i];
+        const b = pieces[j];
+        if (!near(a, b)) continue;
+        pieces[i] = { x: Math.min(a.x, b.x), y: Math.min(a.y, b.y), x2: Math.max(a.x2, b.x2), y2: Math.max(a.y2, b.y2), pieces: a.pieces + b.pieces };
+        pieces.splice(j, 1);
+        merged = true;
+        break;
+      }
+    }
+  }
+
+  return pieces
+    .map((p) => {
+      const part = { x: x0 + p.x, y: y0 + p.y, width: p.x2 - p.x, height: p.y2 - p.y };
+      const aspect = part.width / part.height;
+      // Several glyphs on a wide line read as text; a squarish block as an icon.
+      part.kind = p.pieces >= 3 && aspect > 1.6 ? 'Text' : aspect > 0.55 && aspect < 1.8 && part.width >= 8 ? 'Icon' : 'Shape';
+      return part;
+    })
+    .filter((p) => p.width * p.height < w * h * 0.85 && p.width >= 3 && p.height >= 3);
+}

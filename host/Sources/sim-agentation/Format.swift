@@ -42,7 +42,7 @@ enum Format {
     /// Strings worth grepping the Swift sources for.
     private static func searchTerms(_ a: JSONObject) -> [String] {
         var terms: [String] = []
-        for n in ([a["target"]] + items(a["inside"]).map(Optional.some)) where JS.truthy(n) {
+        for n in ([a["target"], a["within"]] + items(a["inside"]).map(Optional.some)) where JS.truthy(n) {
             for key in ["identifier", "label", "title"] {
                 guard let t = JS.trimmed(n?[key]), !t.isEmpty, JS.length(t) > 1, JS.length(t) < 60 else { continue }
                 if !terms.contains(where: { JS.same($0, t) }) { terms.append(t) }
@@ -91,7 +91,9 @@ enum Format {
             let path = items(a["targetPath"])
             if path.count > 1 { lines.append("- **Path**: \(join(path, " › "))") }
         } else {
-            lines.append("- **Area**: \(frame(a["rect"]))")
+            let picked = JS.trimmed(a["label"]).flatMap { $0.isEmpty || $0 == "Area" ? nil : $0 }
+            lines.append("- **Area**: \(picked.map { "\($0) at " } ?? "")\(frame(a["rect"]))")
+            if JS.truthy(a["within"]) { lines.append("- **Within**: \(node(a["within"])) at \(frame(a["within"]?["frame"]))") }
         }
         let inside = items(a["inside"]).filter { !strictEquals($0, target) }.prefix(12)
         if !inside.isEmpty {

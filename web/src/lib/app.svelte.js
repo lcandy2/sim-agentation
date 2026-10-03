@@ -4,7 +4,7 @@
 
 import { tick } from 'svelte';
 import { hitTest, describe, nodesInRect } from './ax.js';
-import { sampler, warm, containersAround } from './visual.js';
+import { sampler, warm, containersAround, partsWithin } from './visual.js';
 import { matchesFrontApp, sdkContainers, sourceFor, viewContext } from './sdk.js';
 import { createDecoder, decodeCapabilities, formatLabel, pickFormat } from './stream.js';
 import { sdkToPortrait, treeToPortrait, uprightDegrees } from './rotation.js';
@@ -85,7 +85,7 @@ const rt = {
 };
 
 // For poking at from the devtools console.
-if (typeof window !== 'undefined') window.simAgentation = { ui, rt, hover: () => rt.hover };
+if (typeof window !== 'undefined') window.simAgentation = { ui, rt, hover: () => rt.hover, partsWithin };
 
 // ---------- status ----------
 
@@ -624,7 +624,25 @@ function targetsAt(p) {
     const rect = fromMap(r);
     return { rect, label: containerLabel(rect) };
   });
-  return [...targets, ...containers];
+  return [...partAt(hit, p, toMap, fromMap), ...targets, ...containers];
+}
+
+// The icon or text run under the pointer inside the element the tree found,
+// for elements the tree doesn't split further. Innermost, so it's picked
+// first; ↑ goes on to the element itself.
+const SLACK = 3; // pt around a part that still counts as on it
+function partAt(hit, p, toMap, fromMap) {
+  if (!hit) return [];
+  const parts = partsWithin(rt.frozen.pixels, toMap(hit.node.frame)).map((r) => ({ ...fromMap(r), kind: r.kind }));
+  const on = (r) => p.x >= r.x - SLACK && p.x <= r.x + r.width + SLACK && p.y >= r.y - SLACK && p.y <= r.y + r.height + SLACK;
+  const part = parts.filter(on).sort((a, b) => a.width * a.height - b.width * b.height)[0];
+  if (!part) return [];
+  const owner = describe(hit.node);
+  const texts = parts.filter((r) => r.kind === 'Text').length;
+  const name = hit.node.label?.trim();
+  const label = part.kind === 'Text' && texts === 1 && name ? `Text "${name}"` : `${part.kind} in ${owner}`;
+  const { kind, ...rect } = part;
+  return [{ rect, label }];
 }
 
 function containerLabel(rect) {
@@ -727,6 +745,7 @@ export async function submitComposer(comment) {
     udid: ui.udid,
     comment,
     kind: draft.kind,
+    label: draft.label,
     rect: r,
     point: draft.point,
     tree: f.tree,
