@@ -330,6 +330,14 @@ button { cursor: default; }
   white-space: nowrap;
 }
 .menu-item svg { width: 18px; height: 18px; margin: 0 -3px; flex: none; }
+.menu-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+/* Figma's Shortcuts: a 12 pt slot per glyph, 1 pt apart, tertiary (burned in). */
+.shortcut { display: flex; gap: 1px; margin-left: 24px; color: var(--menu-disabled); }
+.shortcut span { width: 12px; text-align: center; }
+.menu-chevron { width: 12px; margin-left: 24px; text-align: center; font-weight: 700; }
+.menu-item:hover:not(:disabled) .shortcut { color: inherit; }
+/* A submenu's item stays marked while it's open (#e6e6e6, burned in). */
+.menu-item.opened:not(:hover) { background: var(--menu-separator); }
 .menu-item:hover:not(:disabled) { background: var(--menu-highlight); color: #fff; }
 .menu-item:disabled { color: var(--menu-disabled); }
 /* A menu with checkmarks moves every title in 16 pt, the mark centered 12 pt in. */

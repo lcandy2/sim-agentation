@@ -34,6 +34,17 @@ const paths = {
   record: '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.6" fill="currentColor" stroke="none"/>',
   'record-stop': '<circle cx="12" cy="12" r="8"/><rect x="9" y="9" width="6" height="6" rx="1.2" fill="currentColor" stroke="none"/>',
   rotate: '<rect x="7" y="8" width="10" height="10" rx="2"/><path d="M14 3.5h1.5a4 4 0 0 1 4 4V9"/><path d="m17.5 7.2 2 2 2-2"/><path d="M10 22.5H8.5a4 4 0 0 1-4-4V17"/><path d="m6.5 18.8-2-2-2 2"/>',
+  // The … menu's Device and Features submenus.
+  'rotate-left': '<rect x="7" y="8" width="10" height="10" rx="2"/><path d="M10 3.5H8.5a4 4 0 0 0-4 4V9"/><path d="m6.5 7.2-2 2-2-2"/><path d="M14 22.5h1.5a4 4 0 0 0 4-4V17"/><path d="m17.5 18.8 2-2 2 2"/>',
+  'volume-up': '<path d="M4 9.5h3l4.5-4v13l-4.5-4H4z"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/>',
+  'volume-down': '<path d="M4 9.5h3l4.5-4v13l-4.5-4H4z"/><path d="M15.5 9a4 4 0 0 1 0 6"/>',
+  shake: '<rect x="8" y="3" width="8" height="18" rx="2"/><path d="M4.5 8v8M19.5 8v8M2 10v4M22 10v4"/>',
+  features: '<path d="M11 3l1.6 4.4L17 9l-4.4 1.6L11 15l-1.6-4.4L5 9l4.4-1.6z"/><path d="M18 14l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/>',
+  appearance: '<circle cx="12" cy="12" r="8.5"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17z" fill="currentColor" stroke="none"/>',
+  'text-bigger': '<path d="M3 18l5-12 5 12M4.8 14h6.4"/><path d="M18 7.5v6M15 10.5h6"/>',
+  'text-smaller': '<path d="M3 18l5-12 5 12M4.8 14h6.4"/><path d="M15 10.5h6"/>',
+  'face-id': '<path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><path d="M9 9.5v1M15 9.5v1M12 9.5V13h-1M9.5 15.5a4 4 0 0 0 5 0"/>',
+  'face-id-off': '<path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><path d="M9 9.5v1M15 9.5v1M9.5 16.5a4 4 0 0 1 5 0"/>',
   'empty-doc': '<path d="M7 3h7l5 5v11a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M14 3v5h5M9 13h6M9 17h4M4 4l16 17"/>',
   // Device Hub's … menu: Shut Down, Restart, Rename, Reset, (Remove is trash).
   power: '<path d="M12 3.5v8"/><path d="M7 6.3a7.5 7.5 0 1 0 10 0"/>',
