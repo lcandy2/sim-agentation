@@ -1,33 +1,37 @@
-/* Laid out after Xcode's Device Hub (reference screenshots, 2026-10-03): the
-   device list | the device with its toolbar | an inspector with three tabs.
-   Sizes are the screenshots' proportions on a 13 px sidebar font; colors are
-   the earlier App Store palette. */
+/* Laid out after Xcode's Device Hub, measured pixel by pixel from its window
+   at 1100 x 800 pt, 2x (Xcode 27.2 beta, 2026-10-03): a floating sidebar
+   panel | a white canvas with its toolbar | an inspector with three tabs. */
 
 :root {
-  /* The earlier, softer palette (after the App Store on the web): one page
-     gray, hairline-separated panels, gray fills, white raised segments. */
-  --sidebar: rgba(60, 60, 67, 0.03);
-  --canvas: #f5f5f7;
-  --inspector: #f5f5f7;
-  --text: rgba(0, 0, 0, 0.88);
-  --secondary: rgba(0, 0, 0, 0.56);
-  --tertiary: rgba(0, 0, 0, 0.48);
-  --separator: rgba(0, 0, 0, 0.15);
+  /* Device Hub's light colors. */
+  --window: #f5f5f5;      /* behind the floating sidebar */
+  --sidebar: #fafafa;     /* the sidebar panel */
+  --canvas: #ffffff;
+  --inspector: #fafafa;
+  --text: rgba(0, 0, 0, 0.85);
+  --secondary: rgba(0, 0, 0, 0.5);
+  --tertiary: rgba(0, 0, 0, 0.26);
+  --sidebar-text: #000000;
+  --sidebar-secondary: rgba(0, 0, 0, 0.56);
+  --separator: rgba(0, 0, 0, 0.09);
   --hover: rgba(0, 0, 0, 0.05);
-  --pressed: rgba(60, 60, 67, 0.1);
-  --field: #ffffff;
+  --pressed: rgba(0, 0, 0, 0.1);
+  --field: rgba(0, 0, 0, 0.07);
   --fill: rgba(0, 0, 0, 0.05);
-  --control: var(--fill);
+  --control: rgba(253, 253, 253, 0.92);
   --control-edge: transparent;
-  --control-shadow: none;
+  --control-shadow: inset 0 0 0 1px #ffffff, 0 2px 40px rgba(0, 0, 0, 0.09);
+  --control-on: rgba(0, 0, 0, 0.1);
   --menu: #ffffff;
   --card: #ffffff;
   --segment: #ffffff;
-  --selection: var(--pressed);
-  --on-selection: var(--text);
+  --selection: #2962d9;
+  --on-selection: #ffffff;
   --menu-highlight: #007aff;
   --thumb: #ffffff;
-  --thumb-off: var(--fill);
+  --thumb-off: rgba(0, 0, 0, 0.045);
+  --start: rgba(0, 0, 0, 0.14);
+  --on-start: rgba(0, 0, 0, 0.87);
   --accent: #007aff;
   --accent-tint: rgba(0, 122, 255, 0.06);
   --on-accent: rgba(255, 255, 255, 0.92);
@@ -43,17 +47,27 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --sidebar: rgba(235, 235, 245, 0.03);
-    --canvas: #151515;
-    --inspector: #151515;
-    --text: rgba(255, 255, 255, 0.92);
-    --secondary: rgba(255, 255, 255, 0.64);
-    --tertiary: rgba(255, 255, 255, 0.4);
+    /* Not yet measured against Device Hub in dark mode: macOS dark equivalents. */
+    --window: #1c1c1c;
+    --sidebar: #262626;
+    --canvas: #1e1e1e;
+    --inspector: #262626;
+    --text: rgba(255, 255, 255, 0.85);
+    --secondary: rgba(255, 255, 255, 0.55);
+    --tertiary: rgba(255, 255, 255, 0.25);
+    --sidebar-text: #ffffff;
+    --sidebar-secondary: rgba(255, 255, 255, 0.55);
     --separator: rgba(255, 255, 255, 0.1);
     --hover: rgba(255, 255, 255, 0.05);
-    --pressed: rgba(235, 235, 245, 0.1);
-    --field: #1f1f1f;
+    --pressed: rgba(255, 255, 255, 0.1);
+    --field: rgba(255, 255, 255, 0.08);
     --fill: rgba(255, 255, 255, 0.05);
+    --control: rgba(50, 50, 50, 0.92);
+    --control-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08), 0 2px 40px rgba(0, 0, 0, 0.3);
+    --control-on: rgba(255, 255, 255, 0.14);
+    --thumb-off: rgba(255, 255, 255, 0.08);
+    --start: rgba(255, 255, 255, 0.16);
+    --on-start: rgba(255, 255, 255, 0.9);
     --menu: #262626;
     --card: #1f1f1f;
     --segment: #3a3a3c;
@@ -82,14 +96,14 @@ button { cursor: default; }
 [data-icon] { display: inline-grid; place-items: center; }
 [data-icon] svg { width: 18px; height: 18px; }
 
-.window { display: flex; height: 100%; overflow: hidden; }
+.window { display: flex; height: 100%; overflow: hidden; background: var(--window); }
 
 /* ---------- controls ---------- */
 
 .icon-btn {
   position: relative;
-  width: 34px;
-  height: 32px;
+  width: 36px;
+  height: 34px;
   border: 0;
   border-radius: 999px;
   background: none;
@@ -103,30 +117,33 @@ button { cursor: default; }
 .icon-btn:hover { background: var(--hover); opacity: 1; }
 .icon-btn:active { background: var(--pressed); }
 .icon-btn:disabled { opacity: 0.25; background: none; }
-.icon-btn.on { background: var(--segment); box-shadow: var(--glass-shadow); opacity: 1; }
+.icon-btn.on { background: var(--control-on); opacity: 1; }
 .icon-btn.open { background: var(--pressed); opacity: 1; }
 .icon-btn.small { width: 28px; height: 28px; }
 .icon-btn.small svg { width: 16px; height: 16px; }
 #mode-annotate.on { background: var(--mark); color: #fff; }
 
-/* A gray capsule that groups buttons; only the bar over the device is glass. */
+/* Device Hub's glass capsules: 36 pt tall, near-white with a white rim and a
+   wide, soft shadow; buttons 36 pt apart, 8 pt between capsules. */
 .pill {
   display: inline-flex;
   align-items: center;
-  gap: 2px;
-  height: 40px;
-  padding: 0 3px;
+  gap: 0;
+  height: 36px;
+  padding: 0 1px;
   border-radius: 1000px;
   background: var(--control);
-  border: 1px solid var(--control-edge);
+  border: 0;
   box-shadow: var(--control-shadow);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
 }
-.pill .sep { width: 1px; height: 18px; background: var(--separator); flex: none; }
+.pill .sep { width: 1px; height: 18px; background: var(--fill); flex: none; }
 .circle-btn {
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   background: var(--control);
-  border: 1px solid var(--control-edge);
+  border: 0;
   box-shadow: var(--control-shadow);
   opacity: 1;
 }
@@ -235,54 +252,62 @@ kbd {
 
 /* ---------- sidebar: devices ---------- */
 
+/* A floating panel 8 pt in from the window's left, top and bottom edges,
+   240 pt wide, with a white rim and a faint shadow. */
 .sidebar {
-  width: 260px;
+  width: 240px;
+  margin: 8px 0 8px 8px;
   flex: none;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
+  border-radius: 17.5px;
   background: var(--sidebar);
-  border-right: 1px solid var(--separator);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.9), 0 0 12px rgba(0, 0, 0, 0.04);
+  color: var(--sidebar-text);
 }
-/* Device Hub's top bar: + and filter in a capsule, then the sidebar toggle. */
-.sidebar-top { height: 56px; flex: none; display: flex; align-items: center; justify-content: flex-end; gap: 8px; padding: 0 11px; }
+/* Device Hub's top bar: + and filter in a capsule, then the sidebar toggle,
+   centered 26 pt from the window's top. */
+.sidebar-top { height: 36px; flex: none; display: flex; align-items: center; justify-content: flex-end; gap: 8px; padding: 0 5px; }
 .bar-pill { gap: 0; }
-.bar-pill .icon-btn { width: 36px; }
 
 .search {
-  margin: 4px 12px 0 13px;
-  height: 30px;
+  margin: 17px 10px 0;
+  height: 28px;
   flex: none;
   display: flex;
   align-items: center;
   gap: 6px;
   padding: 0 10px;
-  border-radius: 1000px;
+  border-radius: 14px;
   background: var(--field);
-  border: 1px solid var(--separator);
+  border: 0;
   color: var(--secondary);
 }
 .search [data-icon] svg { width: 15px; height: 15px; }
-.search input { flex: 1; min-width: 0; border: 0; background: none; outline: none; color: var(--text); }
+.search input { flex: 1; min-width: 0; border: 0; background: none; outline: none; color: var(--text); font-size: 13px; }
 .search input::placeholder { color: var(--secondary); }
 .search input::-webkit-search-cancel-button { opacity: 0.5; }
 .search:focus-within { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent); }
 
-.devices { flex: 1; overflow-y: auto; padding: 0 12px 16px 14px; }
-.devices h3 { margin: 22px 6px 7px; font-size: 12px; line-height: 15px; font-weight: 500; color: var(--tertiary); }
-.devices .none { margin: 12px 6px; color: var(--secondary); }
+.devices { flex: 1; overflow-y: auto; padding: 0 10px 16px; }
+.devices h3 { margin: 18px 6px 8px; font-size: 12px; line-height: 15px; font-weight: 400; color: var(--sidebar-secondary); }
+.devices .none { margin: 12px 6px; color: var(--sidebar-secondary); }
 
+/* Rows are 46 pt tall, 220 pt wide, radius 9; selected is solid blue. */
 .device-row {
   width: 100%;
-  height: 47px;
+  height: 46px;
   display: grid;
   grid-template-columns: 32px 1fr auto;
   align-items: center;
-  gap: 11px;
-  margin-bottom: 1px;
-  padding: 0 10px 0 6px;
+  gap: 8px;
+  margin: 0;
+  padding: 0 7px 0 6px;
   border: 0;
-  border-radius: 10px;
+  border-radius: 9px;
   background: none;
+  color: inherit;
   text-align: left;
 }
 .device-row .thumb {
@@ -299,15 +324,18 @@ kbd {
 .device-row.booted .thumb img { filter: none; }
 .device-row .thumb svg { width: 18px; height: 18px; }
 .device-row .text { min-width: 0; display: grid; } /* lets long names truncate instead of pushing the version out */
-.device-row .name { font-weight: 600; line-height: 17px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.device-row .kind { font-size: 11px; line-height: 14px; color: var(--secondary); }
-.device-row .version { font-size: 12px; color: var(--tertiary); font-variant-numeric: tabular-nums; }
+.device-row .name { font-weight: 500; line-height: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.device-row .kind { font-size: 11px; line-height: 14px; color: var(--sidebar-secondary); }
+.device-row .version { font-size: 11px; color: var(--sidebar-secondary); font-variant-numeric: tabular-nums; }
 .device-row.selected { background: var(--selection); color: var(--on-selection); }
+.device-row.selected .kind,
+.device-row.selected .version { color: rgba(255, 255, 255, 0.85); }
+.device-row.selected .thumb { background: rgba(255, 255, 255, 0.2); }
 
 /* ---------- canvas: device ---------- */
 
 .canvas { position: relative; flex: 1; min-width: 0; display: flex; flex-direction: column; background: var(--canvas); }
-.canvas-top { height: 56px; flex: none; display: flex; align-items: center; gap: 10px; padding: 0 10px 0 22px; }
+.canvas-top { height: 52px; flex: none; display: flex; align-items: center; gap: 8px; padding: 0 7px 0 20px; }
 .window.no-sidebar .canvas-top { padding-left: 12px; }
 .title { flex: 1; min-width: 0; }
 .title-name { font-weight: 600; font-size: 14px; line-height: 18px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -429,11 +457,12 @@ kbd {
 /* Selection layers on the screen. --unrotate turns labels and markers back
    upright when the device is turned. */
 .hl, .hl-label, .sel, .marker { position: absolute; pointer-events: none; }
-.hl { border: 1.5px solid var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); border-radius: 4px; }
+/* Outlines sit just outside the box so they never cover the text they mark. */
+.hl { outline: 1.5px solid var(--accent); outline-offset: 2px; background: color-mix(in srgb, var(--accent) 10%, transparent); border-radius: 3px; }
 .hl-label {
   z-index: 1;
   transform-origin: 0 0;
-  transform: rotate(var(--unrotate, 0deg)) translate(-1px, calc(-100% - 3px));
+  transform: rotate(var(--unrotate, 0deg)) translate(-4px, calc(-100% - 6px));
   background: var(--accent);
   color: #fff;
   font-size: 11px;
@@ -444,7 +473,7 @@ kbd {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.sel { border: 2px solid var(--mark); background: rgba(255, 59, 48, 0.1); border-radius: 4px; }
+.sel { outline: 2px solid var(--mark); outline-offset: 2px; background: rgba(255, 59, 48, 0.1); border-radius: 3px; }
 .marker {
   width: 20px;
   height: 20px;

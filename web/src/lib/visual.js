@@ -152,11 +152,15 @@ export function containersAround(img, rect, levels = 3) {
 // The accessibility tree often stops at a whole row or button (a Settings
 // cell, a home-screen app). Its pixels don't: on its background sit an icon,
 // a run of text, a chevron. These are the foreground pieces inside a rect,
-// grouped the way they read: glyphs within GAP points on one line merge into
-// a text run, while the wider gap between an icon and its label keeps them
-// apart.
+// grouped the way they read: glyphs of one size on one line merge into a
+// text run across letter and word spaces, while an icon, taller than the
+// text and further from it than a word space, stays apart from it.
 
-const GAP = 5; // pt between glyphs that still belong to one run
+const TOUCH = 2; // pt: pieces this close always merge (parts of one glyph or shape)
+const DOT = 12; // pt: a piece at most this big, not part of a text run, may belong to a pattern
+const DOT_GAP = 8; // pt between dots of one pattern (a dotted ring, a grid of specks)
+const WORD_SPACE = 0.75; // of the shorter piece's height: a word space, not a gap between items
+const SAME_SIZE = 2; // height ratio within which pieces read as one line of text
 const INK = 28; // per-channel difference from the background that counts as ink
 
 export function partsWithin(img, rect) {
@@ -238,35 +242,58 @@ export function partsWithin(img, rect) {
     pieces.push({ x: minX, y: minY, x2: maxX + 1, y2: maxY + 1, pieces: 1 });
   }
 
-  // Merge pieces on one line within GAP of each other, and overlapping ones.
+  // Merge overlapping pieces, touching ones on a line, and same-size ones
+  // within a word space: a line of text.
   const overlapY = (a, b) => Math.min(a.y2, b.y2) - Math.max(a.y, b.y);
   const near = (a, b) => {
     const gapX = Math.max(a.x, b.x) - Math.min(a.x2, b.x2);
-    const lineUp = overlapY(a, b) >= Math.min(a.y2 - a.y, b.y2 - b.y) * 0.5;
-    return (gapX <= GAP && lineUp) || (gapX <= 0 && overlapY(a, b) > 0);
+    const ha = a.y2 - a.y;
+    const hb = b.y2 - b.y;
+    const lineUp = overlapY(a, b) >= Math.min(ha, hb) * 0.5;
+    if (gapX <= 0 && overlapY(a, b) > 0) return true;
+    if (!lineUp) return false;
+    if (gapX <= TOUCH) return true;
+    // Word spacing scales with the text. Between two runs of glyphs the
+    // line's height sets it (a lowercase word is shorter than its line);
+    // next to a single piece (an icon) the shorter one does, so a tall icon
+    // doesn't stretch the gap it may bridge.
+    const run = (p, hp) => p.pieces > 1 && (p.x2 - p.x) / hp > 1.2; // glyphs side by side, not a squarish icon in parts
+    const line = run(a, ha) && run(b, hb) ? Math.max(ha, hb) : Math.min(ha, hb);
+    return Math.max(ha, hb) / Math.min(ha, hb) <= SAME_SIZE && gapX <= line * WORD_SPACE;
   };
-  let merged = true;
-  while (merged) {
-    merged = false;
-    for (let i = 0; i < pieces.length && !merged; i++) {
-      for (let j = i + 1; j < pieces.length; j++) {
-        const a = pieces[i];
-        const b = pieces[j];
-        if (!near(a, b)) continue;
-        pieces[i] = { x: Math.min(a.x, b.x), y: Math.min(a.y, b.y), x2: Math.max(a.x2, b.x2), y2: Math.max(a.y2, b.y2), pieces: a.pieces + b.pieces };
-        pieces.splice(j, 1);
-        merged = true;
-        break;
+  const join = (a, b, extra) => ({ x: Math.min(a.x, b.x), y: Math.min(a.y, b.y), x2: Math.max(a.x2, b.x2), y2: Math.max(a.y2, b.y2), pieces: a.pieces + b.pieces, ...extra });
+  const mergeAll = (rule, extra) => {
+    let merged = true;
+    while (merged) {
+      merged = false;
+      for (let i = 0; i < pieces.length && !merged; i++) {
+        for (let j = i + 1; j < pieces.length; j++) {
+          if (!rule(pieces[i], pieces[j])) continue;
+          pieces[i] = join(pieces[i], pieces[j], extra);
+          pieces.splice(j, 1);
+          merged = true;
+          break;
+        }
       }
     }
-  }
+  };
+  mergeAll(near);
+
+  // Then patterns: the dots left over (not letters of a run) cluster with
+  // each other, and a cluster takes in what lies inside it, so a dotted ring
+  // around a logo is one image rather than thirty specks.
+  const isText = (p) => p.pieces >= 3 && (p.x2 - p.x) / (p.y2 - p.y) > 1.6;
+  const isDot = (p) => p.dots || (!isText(p) && Math.max(p.x2 - p.x, p.y2 - p.y) <= DOT);
+  const gap = (a, b) => Math.max(Math.max(a.x, b.x) - Math.min(a.x2, b.x2), Math.max(a.y, b.y) - Math.min(a.y2, b.y2));
+  mergeAll((a, b) => (isDot(a) && isDot(b) && gap(a, b) <= DOT_GAP) || ((a.dots || b.dots) && gap(a, b) < 0), { dots: true });
 
   return pieces
     .map((p) => {
       const part = { x: x0 + p.x, y: y0 + p.y, width: p.x2 - p.x, height: p.y2 - p.y };
       const aspect = part.width / part.height;
-      // Several glyphs on a wide line read as text; a squarish block as an icon.
-      part.kind = p.pieces >= 3 && aspect > 1.6 ? 'Text' : aspect > 0.55 && aspect < 1.8 && part.width >= 8 ? 'Icon' : 'Shape';
+      // A cluster of dots is an image; several glyphs on a wide line read as
+      // text; a squarish block as an icon.
+      part.kind = p.dots && p.pieces >= 4 ? 'Image' : isText(p) ? 'Text' : aspect > 0.55 && aspect < 1.8 && part.width >= 8 ? 'Icon' : 'Shape';
       return part;
     })
     .filter((p) => p.width * p.height < w * h * 0.85 && p.width >= 3 && p.height >= 3);

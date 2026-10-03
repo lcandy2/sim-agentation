@@ -637,7 +637,7 @@ function partAt(hit, p, toMap, fromMap) {
   const on = (r) => p.x >= r.x - SLACK && p.x <= r.x + r.width + SLACK && p.y >= r.y - SLACK && p.y <= r.y + r.height + SLACK;
   const part = parts.filter(on).sort((a, b) => a.width * a.height - b.width * b.height)[0];
   if (!part) return [];
-  const owner = describe(hit.node);
+  const owner = describe(hit.node).replace(/"([^"]{28})[^"]+"/, '"$1…"'); // a row's label can be a paragraph
   const texts = parts.filter((r) => r.kind === 'Text').length;
   const name = hit.node.label?.trim();
   const label = part.kind === 'Text' && texts === 1 && name ? `Text "${name}"` : `${part.kind} in ${owner}`;
@@ -728,7 +728,9 @@ export async function submitComposer(comment) {
   fc.drawImage(img, 0, 0);
   fc.strokeStyle = '#ff3b30';
   fc.lineWidth = Math.max(3, scale * 1.5);
-  fc.strokeRect(r.x * scale, r.y * scale, r.width * scale, r.height * scale);
+  // Just outside the box, as on screen, so the line doesn't cover the text.
+  const out = 2 + fc.lineWidth / scale / 2;
+  fc.strokeRect((r.x - out) * scale, (r.y - out) * scale, (r.width + out * 2) * scale, (r.height + out * 2) * scale);
 
   // Close-up with some context around the box.
   const pad = 16;
