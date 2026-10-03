@@ -16,10 +16,12 @@ final class DeviceSession: @unchecked Sendable {
     private let inputQueue = DispatchQueue(label: "sim-agentation.input", qos: .userInteractive)
     private let lock = NSLock()
     private var encoding = false
-    private var lastSent = DispatchTime(uptimeNanoseconds: 0)
+    private var latest: IOSurface? // newest frame not yet sent
+    private var retryScheduled = false
+    private var lastSent: UInt64 = 0
     private lazy var input = HIDInput(udid: udid)
 
-    /// Frames closer together than this are dropped (about 60 fps).
+    /// At most one frame per this interval (about 60 fps).
     private static let minFrameInterval: UInt64 = 16_000_000
 
     init(udid: String, socket: WebSocket) {
@@ -54,25 +56,46 @@ final class DeviceSession: @unchecked Sendable {
 
     // MARK: - frames
 
-    /// Called on the capture queue. Encodes the newest frame unless one is
-    /// still encoding or the socket is behind; the idle refresh sends the
-    /// final state of a still screen.
+    /// Called on the capture queue.
     private func frame(_ surface: IOSurface) {
-        let now = DispatchTime.now()
+        lock.lock(); latest = surface; lock.unlock()
+        pump()
+    }
+
+    /// Sends the newest frame once the encoder is free, the socket has caught
+    /// up and the frame interval has passed. A frame that arrives too early
+    /// waits instead of being dropped: dropping one that came a hair under
+    /// 16 ms left a 33 ms gap, and dropping the last frame of an animation
+    /// left the screen stale until the idle refresh.
+    private func pump() {
         lock.lock()
-        let busy = encoding || now.uptimeNanoseconds - lastSent.uptimeNanoseconds < Self.minFrameInterval
-        if !busy { encoding = true; lastSent = now }
-        lock.unlock()
-        guard !busy, !socket.isBackedUp else {
-            if !busy { lock.lock(); encoding = false; lock.unlock() }
+        guard !encoding, let surface = latest else { lock.unlock(); return }
+        let now = DispatchTime.now().uptimeNanoseconds
+        let due = lastSent + Self.minFrameInterval
+        if now < due || socket.isBackedUp {
+            if !retryScheduled {
+                retryScheduled = true
+                let delay = max(due > now ? due - now : 0, 2_000_000)
+                encodeQueue.asyncAfter(deadline: .now() + .nanoseconds(Int(delay))) { [weak self] in
+                    guard let self else { return }
+                    self.lock.lock(); self.retryScheduled = false; self.lock.unlock()
+                    self.pump()
+                }
+            }
+            lock.unlock()
             return
         }
+        encoding = true
+        latest = nil
+        lastSent = now
+        lock.unlock()
         IOSurfaceIncrementUseCount(surface)
         encodeQueue.async { [weak self] in
             defer { IOSurfaceDecrementUseCount(surface) }
             guard let self else { return }
             if let jpeg = self.encoder.encode(surface) { self.socket.send(binary: jpeg) }
             self.lock.lock(); self.encoding = false; self.lock.unlock()
+            self.pump()
         }
     }
 
