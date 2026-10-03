@@ -30,6 +30,17 @@
 </script>
 
 <header class="canvas-top">
+  <!-- The sidebar button stays in the canvas, before the title, whether the
+       sidebar is in or out. -->
+  <div class="pill sidebar-toggle">
+    <button
+      id="toggle-sidebar"
+      class="icon-btn"
+      title={ui.panels.sidebar ? 'Hide the device list' : 'Show the device list'}
+      aria-label={ui.panels.sidebar ? 'Hide the device list' : 'Show the device list'}
+      onclick={() => togglePanel('sidebar')}
+    >{@html icon('sidebar')}</button>
+  </div>
   <div class="title">
     <div class="title-name">{ui.simName}</div>
     <div class="title-sub"><span>{ui.runtime}</span><span class="status">{status}</span></div>

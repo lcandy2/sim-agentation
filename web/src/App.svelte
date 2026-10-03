@@ -1,7 +1,6 @@
 <script>
   import { onMount } from 'svelte';
-  import { ui, start, onWindowKey, togglePanel } from './lib/app.svelte.js';
-  import { icon } from './lib/icons.js';
+  import { ui, start, onWindowKey } from './lib/app.svelte.js';
   import { attachGlass } from './lib/glass.js';
   import Sidebar from './components/Sidebar.svelte';
   import Header from './components/Header.svelte';
@@ -19,17 +18,6 @@
 
 <div class="window" class:no-sidebar={!ui.panels.sidebar} class:no-inspector={!ui.panels.inspector}>
   <Sidebar />
-  <!-- One sidebar button for both states: it rides along with the slide, from
-       the sidebar's top bar to the left of the title and back. -->
-  <div class="pill sidebar-toggle">
-    <button
-      id="toggle-sidebar"
-      class="icon-btn"
-      title={ui.panels.sidebar ? 'Hide the device list' : 'Show the device list'}
-      aria-label={ui.panels.sidebar ? 'Hide the device list' : 'Show the device list'}
-      onclick={() => togglePanel('sidebar')}
-    >{@html icon('sidebar')}</button>
-  </div>
   <main class="canvas" class:offline={!ui.running}>
     <Header />
     <DeviceStage />
