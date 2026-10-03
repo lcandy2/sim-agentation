@@ -84,4 +84,4 @@ When the app in front has the SDK, the status reads **Frozen · SDK**. Parents t
 
 ## Credits
 
-The simulator code in `host/Sources/SimBridge` is adapted from [baguette](https://github.com/tddworks/baguette) by tddworks, under the Apache License 2.0 (`host/Sources/SimBridge/LICENSE-baguette`). Each adapted file notes what changed.
+The simulator code in `host/Sources/SimBridge` is adapted from [baguette](https://github.com/tddworks/baguette) by tddworks, under the Apache License 2.0 (`host/Sources/SimBridge/LICENSE-baguette`). Recovering collapsed accessibility children (`CollapsedChildrenRecovery.swift`) is adapted from [sim-use](https://github.com/lycorp-jp/sim-use) by LY Corporation, under the Apache License 2.0 (`host/Sources/SimBridge/LICENSE-sim-use`), and restarting a stale accessibility bridge follows [idb](https://github.com/facebook/idb). Each adapted file notes what changed.

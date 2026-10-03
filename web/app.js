@@ -96,7 +96,7 @@ function fetchTree() {
         state.pendingTree = null;
         resolve(null);
       }
-    }, 4000);
+    }, 10000); // the host may probe for up to ~5 s, or restart a stale accessibility bridge
   });
 }
 
@@ -350,7 +350,7 @@ function annotateUp(e) {
 // element, then the cards and rows drawn around it.
 function targetsAt(p) {
   const f = state.frozen;
-  const hit = f.tree ? hitTest(f.tree, p.x, p.y) : null;
+  const hit = f.tree ? hitTest(f.tree, p.x, p.y, f.points) : null;
   const targets = hit ? [{ rect: hit.node.frame, label: describe(hit.node), node: hit.node }] : [];
   // With the in-app SDK we know the real views and layers; otherwise guess from pixels.
   if (f.sdk) return [...targets, ...sdkContainers(f.sdk, p, hit?.node.frame)];
@@ -559,7 +559,20 @@ function renderItem(a) {
   body.querySelector('.t').textContent = `${a.id} · ${target}`;
   for (const r of a.replies) addNote(body, r.from, r.message);
   if (a.resolution) addNote(body, a.status === 'dismissed' ? 'dismissed' : 'done', a.resolution);
-  li.append(img, body);
+  const remove = Object.assign(document.createElement('button'), { className: 'item-delete icon-btn', title: 'Delete annotation' });
+  remove.setAttribute('aria-label', `Delete annotation ${a.id}`);
+  remove.innerHTML = icon('trash');
+  remove.onclick = async () => {
+    remove.disabled = true;
+    const res = await fetch(`/api/annotations/${a.id}`, { method: 'DELETE' }).catch(() => null);
+    if (!res?.ok) {
+      remove.disabled = false;
+      return flashStatus("Couldn't delete the annotation");
+    }
+    li.remove();
+    refresh();
+  };
+  li.append(img, body, remove);
   return li;
 }
 

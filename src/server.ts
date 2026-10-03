@@ -245,6 +245,7 @@ export async function serve() {
           const a = store.get(parts[2]);
           if (!a) return json({ error: 'not found' }, 404);
           if (req.method === 'GET') return json({ ...a, markdown: toMarkdown(a) });
+          if (req.method === 'DELETE') return json({ ok: store.remove(a.id) });
           if (req.method === 'PATCH') {
             const { patch, reply } = parsePatch(await req.json());
             return json(store.update(a.id, patch, reply));

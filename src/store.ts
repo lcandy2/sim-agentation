@@ -114,6 +114,16 @@ export function update(id: string, patch: Partial<Annotation>, reply?: Reply) {
   return a;
 }
 
+/** Deletes one annotation and its screenshots. */
+export function remove(id: string) {
+  const a = get(id);
+  if (!a) return false;
+  annotations = annotations.filter((x) => x !== a);
+  save();
+  for (const path of [a.images.full, a.images.crop]) rmSync(path, { force: true });
+  return true;
+}
+
 export function clearFinished() {
   const open = (a: Annotation) => a.status === 'pending' || a.status === 'acknowledged';
   const finished = annotations.filter((a) => !open(a));

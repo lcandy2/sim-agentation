@@ -1,8 +1,10 @@
 // Adapted from baguette (https://github.com/tddworks/baguette),
 // Copyright 2026 tddworks, licensed under the Apache License 2.0 (see
 // LICENSE-baguette). Changes: merged AXPTranslatorAccessibility, AXNode,
-// AXElementReader, AXFrameTransform, AXHitTestGrid and AXNodeMerge into
-// one file; nodes are emitted as JSON-ready dictionaries.
+// AXElementReader and AXFrameTransform into one file; nodes are emitted as
+// JSON-ready dictionaries; the fixed-grid hit-test sweep is replaced by
+// sim-use's CollapsedChildrenRecovery; a stale hierarchy is remediated the
+// way idb does it (see `remediateStaleHierarchy`).
 
 import CoreGraphics
 import Foundation
@@ -12,14 +14,58 @@ import ObjectiveC
 /// private AccessibilityPlatformTranslation framework, the same path the
 /// Accessibility Inspector uses. Frames come back in screen points.
 public enum Accessibility {
-    /// The whole tree, plus elements found by probing uncovered screen areas
-    /// (SwiftUI often leaves leaves out of `accessibilityChildren`).
-    public static func describe(udid: String) -> AXNode? {
-        withContext(udid: udid) { ctx in
+    /// The whole tree as JSON, with collapsed children recovered by probing
+    /// (SwiftUI often leaves elements out of `accessibilityChildren`).
+    public static func describe(udid: String) -> [String: Any]? {
+        if let tree = describeOnce(udid: udid) { return tree }
+        guard remediateStaleHierarchy(udid: udid) else { return nil }
+        return describeOnce(udid: udid)
+    }
+
+    /// Nil when the hierarchy looks stale: the frontmost application came
+    /// back with a zero frame and no children.
+    private static func describeOnce(udid: String) -> [String: Any]? {
+        var stale = false
+        let tree: [String: Any]? = withContext(udid: udid) { ctx in
             stampSubtree(ctx.root, token: ctx.token, depth: 0)
             let base = AXNode.walk(ctx.root, transform: ctx.transform, deadline: ctx.deadline)
-            return sweep(base, ctx: ctx)
+            if base.frame.isEmpty && base.children.isEmpty {
+                stale = true
+                return nil
+            }
+            // The application element can come back 0×0 (AXPTranslator has no
+            // host window to size it against); give it the screen.
+            let (recovered, probes) = CollapsedChildrenRecovery.recover(
+                in: base.withScreenFrame(ctx.transform.pointSize).json,
+                probe: { point in discover(at: point, ctx: ctx, depthCap: 0)?.json },
+                deadline: min(ctx.deadline, Date().addingTimeInterval(recoveryBudget))
+            )
+            log("accessibility: recovered with \(probes) probes")
+            return recovered
         }
+        return stale ? nil : tree
+    }
+
+    nonisolated(unsafe) private static var lastRemediation: [String: Date] = [:]
+
+    /// The simulator's accessibility bridge can keep serving an application
+    /// whose process has gone (after SpringBoard or the app restarts), which
+    /// reads as a zero-framed root with no children. idb's remedy: stop
+    /// com.apple.CoreSimulator.bridge inside the simulator; launchd restarts
+    /// it with a fresh hierarchy. At most once per 20 s per simulator.
+    private static func remediateStaleHierarchy(udid: String) -> Bool {
+        if let last = lastRemediation[udid], Date().timeIntervalSince(last) < 20 { return false }
+        lastRemediation[udid] = Date()
+        log("accessibility: hierarchy looks stale; restarting com.apple.CoreSimulator.bridge")
+        let task = Process()
+        task.executableURL = URL(fileURLWithPath: "/usr/bin/xcrun")
+        task.arguments = ["simctl", "spawn", udid, "launchctl", "stop", "com.apple.CoreSimulator.bridge"]
+        task.standardOutput = FileHandle.nullDevice
+        task.standardError = FileHandle.nullDevice
+        guard (try? task.run()) != nil else { return false }
+        task.waitUntilExit()
+        Thread.sleep(forTimeInterval: 1.0)
+        return task.terminationStatus == 0
     }
 
     /// The topmost element at a point, in screen points.
@@ -35,10 +81,9 @@ public enum Accessibility {
     // MARK: - context
 
     private static let maxDepth = 60
-    private static let timeout: TimeInterval = 5
-    private static let gridStep: Double = 32
-    private static let gridCap = 600
-    private static let sweepBudget: TimeInterval = 2.5
+    private static let timeout: TimeInterval = 8
+    /// Wall-clock cap on recovery probes, inside `timeout`.
+    private static let recoveryBudget: TimeInterval = 4.5
 
     private struct Context {
         let translator: NSObject
@@ -48,7 +93,7 @@ public enum Accessibility {
         let deadline: Date
     }
 
-    private static func withContext(udid: String, _ body: (Context) -> AXNode?) -> AXNode? {
+    private static func withContext<T>(udid: String, _ body: (Context) -> T?) -> T? {
         guard let translator = sharedTranslator, let device = Simulators.shared.object(for: udid) else { return nil }
         let token = UUID().uuidString
         let deadline = Date().addingTimeInterval(timeout)
@@ -59,29 +104,6 @@ public enum Accessibility {
         guard let root = macElement(translator, translation) else { return nil }
         let transform = FrameTransform(rootFrame: frame(of: root), pointSize: pointSize(of: device))
         return body(Context(translator: translator, token: token, root: root, transform: transform, deadline: deadline))
-    }
-
-    private static func sweep(_ base: AXNode, ctx: Context) -> AXNode {
-        let size = ctx.transform.pointSize
-        let deadline = min(ctx.deadline, Date().addingTimeInterval(sweepBudget))
-        let covered = base.contentLeafFrames()
-        var found: [AXNode] = []
-        var y = gridStep / 2
-        var probes = 0
-        outer: while y < size.height {
-            var x = gridStep / 2
-            while x < size.width {
-                let p = CGPoint(x: x, y: y)
-                if !covered.contains(where: { $0.contains(p) }) {
-                    if Date() >= deadline || probes >= gridCap { break outer }
-                    probes += 1
-                    if let node = discover(at: p, ctx: ctx, depthCap: 0) { found.append(node) }
-                }
-                x += gridStep
-            }
-            y += gridStep
-        }
-        return base.merging(found)
     }
 
     private static func discover(at point: CGPoint, ctx: Context, depthCap: Int) -> AXNode? {
@@ -292,54 +314,14 @@ public struct AXNode: Sendable {
         )
     }
 
+    func withScreenFrame(_ size: CGSize) -> AXNode {
+        guard frame.isEmpty else { return self }
+        return AXNode(role: role, subrole: subrole, label: label, value: value, identifier: identifier, title: title, help: help, frame: CGRect(origin: .zero, size: size), enabled: enabled, focused: focused, hidden: hidden, children: children)
+    }
+
     func hitTest(_ p: CGPoint) -> AXNode? {
         for child in children { if let hit = child.hitTest(p) { return hit } }
         return frame.contains(p) ? self : nil
-    }
-
-    private static let contentLeafRoles: Set<String> = [
-        "AXStaticText", "AXButton", "AXImage", "AXTextField", "AXTextArea", "AXSecureTextField", "AXLink",
-        "AXCheckBox", "AXRadioButton", "AXSlider", "AXSwitch", "AXStepper", "AXValueIndicator",
-        "AXPopUpButton", "AXMenuItem", "AXMenuButton", "AXDisclosureTriangle", "AXProgressIndicator",
-    ]
-
-    func contentLeafFrames() -> [CGRect] {
-        if children.isEmpty && Self.contentLeafRoles.contains(role) { return [frame] }
-        return children.flatMap { $0.contentLeafFrames() }
-    }
-
-    private var key: String {
-        "\(role)|\(identifier ?? "")|\(label ?? "")|\(frame.minX.rounded()),\(frame.minY.rounded()),\(frame.width.rounded()),\(frame.height.rounded())"
-    }
-
-    private func keys(into set: inout Set<String>) {
-        set.insert(key)
-        for child in children { child.keys(into: &set) }
-    }
-
-    /// Adds probed nodes the walk missed, each under the deepest existing
-    /// node that contains its centre.
-    func merging(_ discovered: [AXNode]) -> AXNode {
-        var seen = Set<String>()
-        keys(into: &seen)
-        var fresh: [AXNode] = []
-        for node in discovered where !seen.contains(node.key) {
-            seen.insert(node.key)
-            fresh.append(node)
-        }
-        return fresh.isEmpty ? self : graft(fresh)
-    }
-
-    private func graft(_ fresh: [AXNode]) -> AXNode {
-        var unclaimed = fresh
-        let center = { (n: AXNode) in CGPoint(x: n.frame.midX, y: n.frame.midY) }
-        let newChildren = children.map { child -> AXNode in
-            let claimed = unclaimed.filter { child.frame.contains(center($0)) }
-            guard !claimed.isEmpty else { return child }
-            unclaimed.removeAll { child.frame.contains(center($0)) }
-            return child.graft(claimed)
-        }
-        return AXNode(role: role, subrole: subrole, label: label, value: value, identifier: identifier, title: title, help: help, frame: frame, enabled: enabled, focused: focused, hidden: hidden, children: newChildren + unclaimed)
     }
 
     /// The JSON shape the web UI and agents read.

@@ -15,7 +15,7 @@ let package = Package(
     targets: [
         .target(
             name: "SimBridge",
-            exclude: ["LICENSE-baguette"],
+            exclude: ["LICENSE-baguette", "LICENSE-sim-use"],
             linkerSettings: [
                 .linkedFramework("IOSurface"),
                 .linkedFramework("CoreVideo"),

@@ -98,13 +98,13 @@ final class DeviceSession: @unchecked Sendable {
         let point = (msg["x"] as? Double).flatMap { x in (msg["y"] as? Double).map { CGPoint(x: x, y: $0) } }
         // AXPTranslator only answers on the main thread.
         DispatchQueue.main.async { [udid, socket] in
-            let node: AXNode? = if let point {
-                Accessibility.describe(udid: udid, at: point)
+            let tree: [String: Any]? = if let point {
+                Accessibility.describe(udid: udid, at: point)?.json
             } else {
                 Accessibility.describe(udid: udid)
             }
-            if let node {
-                socket.send(json: ["type": "describe_ui_result", "ok": true, "tree": node.json])
+            if let tree {
+                socket.send(json: ["type": "describe_ui_result", "ok": true, "tree": tree])
             } else {
                 socket.send(json: ["type": "describe_ui_result", "ok": false, "error": "no accessibility data"])
             }

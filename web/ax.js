@@ -47,13 +47,15 @@ function visible(entry) {
 }
 
 // Smallest visible node under a point: what a click targets. Nodes that
-// cover most of the screen are window-level wrappers, not targets.
-export function hitTest(tree, x, y) {
-  const screen = tree.frame ? area(tree.frame) : Infinity;
+// cover most of the screen are window-level wrappers, not targets. `screen`
+// is the screen size in points; the tree's root can't be trusted for it,
+// because the simulator now reports the application element as 0×0.
+export function hitTest(tree, x, y, screen = tree.frame) {
+  const limit = screen && area(screen) > 0 ? area(screen) * 0.6 : Infinity;
   let best = null;
   for (const entry of flatten(tree)) {
     if (!visible(entry) || !contains(entry.node.frame, x, y)) continue;
-    if (area(entry.node.frame) > screen * 0.6) continue;
+    if (area(entry.node.frame) > limit) continue;
     if (!best || area(entry.node.frame) <= area(best.node.frame)) best = entry;
   }
   return best;
