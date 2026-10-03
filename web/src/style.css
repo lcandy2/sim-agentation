@@ -330,7 +330,8 @@ button { cursor: default; }
   color: var(--text);
   overflow: visible;
 }
-.sheet::backdrop { background: none; }
+/* Figma's Overlay (node 690:10672) dims the window behind the dialog. */
+.sheet::backdrop { background: rgba(0, 0, 0, 0.2); }
 .sheet-grid {
   display: grid;
   grid-template-columns: 1fr 223px;
