@@ -72,6 +72,13 @@
   // the turned outline, so layout and fit-to-window see the right size.
   const degrees = $derived(ui.running ? ROTATION[ui.orientation] : 0);
   const sideways = $derived(Math.abs(degrees) === 90);
+  // The angle on screen stays continuous so every turn animates the short
+  // way: the third quarter turn goes 180° → 270°, not back round to -90°.
+  let angle = $state(0);
+  $effect.pre(() => {
+    const target = degrees;
+    untrack(() => { angle += ((((target - angle) % 360) + 540) % 360) - 180; });
+  });
   const outer = $derived(chrome ? { w: chrome.size.width + MARGIN * 2, h: chrome.size.height + MARGIN * 2 } : { w: 0, h: 0 });
 </script>
 
@@ -83,8 +90,8 @@
         class:annotating={ui.mode === 'annotate'}
         style:width={chrome && px(chrome.size.width)}
         style:height={chrome && px(chrome.size.height)}
-        style:transform="translate(-50%, -50%) rotate({degrees}deg)"
-        style:--unrotate="{-degrees}deg"
+        style:transform="translate(-50%, -50%) rotate({angle}deg)"
+        style:--unrotate="{-angle}deg"
       >
         {#if chrome}
           <div id="side-buttons">
