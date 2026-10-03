@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "build": "vite build && swift build --package-path host",
-    "dev": "vite",
+    "dev": "vite build --mode handoff && vite",
     "watch": "vite build --watch",
     "start": "host/.build/debug/sim-agentation serve --open",
     "mcp": "host/.build/debug/sim-agentation mcp"

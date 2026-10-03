@@ -1,15 +1,16 @@
 import { mount } from 'svelte';
 import './style.css';
 
-// Hot reload wherever the UI is opened. The Swift host (38470) serves the
-// built files; when `pnpm dev` runs, a built page hands over to the Vite dev
-// server instead: its HMR client and the source entry load from there, while
-// the page stays on the host, whose API and WebSocket it keeps talking to.
-// Keep DEV in step with vite.config.js.
+// Hot reload on the host's page (38470) too. `pnpm dev` first builds a copy
+// of the UI in the "handoff" mode, and only that copy, on finding the Vite
+// dev server, hands over to it: its HMR client and the source entry load
+// from there, while the page stays on the host, whose API and WebSocket it
+// keeps talking to. A production build has none of this, so it never runs
+// code from another port. Keep DEV in step with vite.config.js.
 const DEV = 'http://localhost:38472';
 
 async function handOverToDevServer() {
-  if (!import.meta.env.PROD) return false;
+  if (import.meta.env.MODE !== 'handoff') return false;
   try {
     if (!(await fetch(`${DEV}/@vite/client`, { cache: 'no-store' })).ok) return false;
   } catch {
