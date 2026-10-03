@@ -426,8 +426,8 @@ kbd {
 .search:focus-within { box-shadow: var(--control-shadow), 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent); }
 
 .devices { flex: 1; overflow-y: auto; padding: 0 10px 16px; }
-.devices h3 { margin: 18px 6px 8px; font-size: 12px; line-height: 15px; font-weight: 400; color: var(--sidebar-secondary); }
-.devices .none { margin: 12px 6px; color: var(--sidebar-secondary); }
+.devices h3 { margin: 18px 0 8px; font-size: 12px; line-height: 15px; font-weight: 400; color: var(--sidebar-secondary); }
+.devices .none { margin: 12px 0; color: var(--sidebar-secondary); }
 
 /* Rows are 46 pt tall, 220 pt wide, radius 9; selected is solid blue. */
 .device-row {
@@ -438,7 +438,7 @@ kbd {
   align-items: center;
   gap: 8px;
   margin: 0;
-  padding: 0 7px;
+  padding: 0; /* the picture starts where "Available" does */
   border: 0;
   border-radius: 9px;
   background: none;
