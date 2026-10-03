@@ -1,9 +1,11 @@
 <script>
   import { onMount } from 'svelte';
-  import { ui, simulatorOptions, createSimulator } from '../lib/app.svelte.js';
+  import { ui, simulatorOptions, createSimulator, chromeOf } from '../lib/app.svelte.js';
+  import { thumbnail } from '../lib/thumbnail.js';
+  import { icon } from '../lib/icons.js';
 
-  // `simctl create` from the sidebar's + button, as macOS 27's small dialog
-  // (Figma, macOS 27 Community, node 690:10197). Esc cancels.
+  // `simctl create` from the sidebar's + button, as macOS 27's Alert (Figma,
+  // Alerts page) with its fields below the message. Esc cancels.
   let { close } = $props();
 
   let dialog = $state(null);
@@ -72,6 +74,18 @@
     if (!named) name = types.find((t) => t.identifier === deviceType)?.name ?? '';
   });
 
+  // The alert's icon: the chosen device type's picture, from a simulator of
+  // that type if there is one.
+  let picture = $state(null);
+  $effect(() => {
+    const sim = ui.sims.find((s) => s.deviceType === deviceType);
+    picture = null;
+    if (!sim) return;
+    let current = true;
+    chromeOf(sim.udid).then((c) => c && thumbnail(c, 64)).then((url) => current && (picture = url));
+    return () => (current = false);
+  });
+
   async function submit(e) {
     e.preventDefault();
     busy = true;
@@ -81,28 +95,26 @@
 </script>
 
 <dialog class="sheet" bind:this={dialog} onclose={close} oncancel={(e) => { e.preventDefault(); dismiss(); }} aria-labelledby="new-sim-title">
-  <form onsubmit={submit}>
-    <div class="sheet-grid">
-      <div class="sheet-message">
-        <h2 id="new-sim-title">New Simulator</h2>
-        <p>Choose an OS and a device. The simulator shows up in the device list, ready to start.</p>
-      </div>
-      <label for="new-sim-os">OS:</label>
-      <select id="new-sim-os" class="popup" bind:value={runtime} disabled={!options}>
+  <form class="alert-body" onsubmit={submit}>
+    <div class="alert-icon">{#if picture}<img src={picture} alt="">{:else}{@html icon('devices')}{/if}</div>
+    <div class="alert-text">
+      <h2 id="new-sim-title">New Simulator</h2>
+      <p>Choose an OS and a device. The simulator shows up in the device list, ready to start.</p>
+    </div>
+    <div class="alert-fields">
+      <select class="popup" aria-label="OS" bind:value={runtime} disabled={!options}>
         {#if !options}<option value="">Loading…</option>{/if}
         {#each runtimes as r (r.identifier)}<option value={r.identifier}>{r.name}</option>{/each}
       </select>
-      <label for="new-sim-device">Device:</label>
-      <select id="new-sim-device" class="popup" bind:value={deviceType} disabled={!options}>
+      <select class="popup" aria-label="Device" bind:value={deviceType} disabled={!options}>
         {#if !options}<option value="">Loading…</option>{/if}
         {#each types as t (t.identifier)}<option value={t.identifier}>{t.name}</option>{/each}
       </select>
-      <label for="new-sim-name">Name:</label>
-      <input id="new-sim-name" class="field" bind:value={name} oninput={() => (named = true)} spellcheck="false" autocomplete="off">
+      <input class="field" aria-label="Name" placeholder="Name" bind:value={name} oninput={() => (named = true)} spellcheck="false" autocomplete="off">
     </div>
-    <div class="sheet-buttons">
-      <button type="button" class="push-btn" onclick={dismiss}>Cancel</button>
-      <button type="submit" class="push-btn default" disabled={busy || !deviceType || !name.trim()}>{busy ? 'Creating…' : 'Create'}</button>
+    <div class="alert-buttons">
+      <button type="button" class="alert-btn" onclick={dismiss}>Cancel</button>
+      <button type="submit" class="alert-btn default" disabled={busy || !deviceType || !name.trim()}>{busy ? 'Creating…' : 'Create'}</button>
     </div>
   </form>
 </dialog>

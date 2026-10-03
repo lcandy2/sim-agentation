@@ -177,7 +177,7 @@
       <!-- Device Hub holds this device's buttons; say so where they are. -->
       <div class="notice input-notice" role="status">
         <span>Xcode's Device Hub has taken this simulator's buttons.</span>
-        <button class="push-btn" disabled={ui.reclaiming} title="Restarts the simulator's SpringBoard; open apps close" onclick={reclaimInput}>
+        <button class="alert-btn default" disabled={ui.reclaiming} title="Restarts the simulator's SpringBoard; open apps close" onclick={reclaimInput}>
           {ui.reclaiming ? 'Taking Back…' : 'Take Back'}
         </button>
       </div>

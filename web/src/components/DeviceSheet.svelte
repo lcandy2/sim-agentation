@@ -4,9 +4,9 @@
   import { thumbnail } from '../lib/thumbnail.js';
 
   // The … menu's dialogs, as macOS's sheet (see NewSimulator for the
-  // measured motion): Rename asks for a name in the small dialog; Reset and
-  // Remove confirm in macOS 27's Alert (Figma, Alerts page), the device's
-  // picture as its icon.
+  // measured motion), in macOS 27's Alert (Figma, Alerts page) with the
+  // device's picture as its icon: Rename asks for a name, Reset and Remove
+  // confirm.
   let { kind, close } = $props();
 
   let dialog = $state(null);
@@ -39,7 +39,6 @@
   const name = ui.simName;
   let picture = $state(null);
   $effect(() => {
-    if (kind === 'rename') return;
     chromeOf(ui.udid).then((c) => c && thumbnail(c, 64)).then((url) => (picture = url));
   });
   let newName = $state(name);
@@ -69,40 +68,25 @@
   }
 </script>
 
-<dialog class="sheet" class:alert={kind !== 'rename'} bind:this={dialog} onclose={close} oncancel={(e) => { e.preventDefault(); dismiss(); }} aria-labelledby="device-sheet-title">
-  {#if kind !== 'rename'}
-    <form class="alert-body" onsubmit={submit}>
-      <div class="alert-icon">{#if picture}<img src={picture} alt="">{/if}</div>
-      <div class="alert-text">
-        <h2 id="device-sheet-title">{copy.title}</h2>
-        <p>{copy.text}</p>
-      </div>
-      <div class="alert-buttons">
-        <button type="button" class="alert-btn" onclick={dismiss}>Cancel</button>
-        <button type="submit" class="alert-btn destructive" disabled={busy}>{copy.action}</button>
-      </div>
-    </form>
-  {:else}
-  <form onsubmit={submit}>
-    <div class="sheet-grid">
-      <div class="sheet-message">
-        <h2 id="device-sheet-title">{copy.title}</h2>
-        <p>{copy.text}</p>
-      </div>
-      {#if kind === 'rename'}
-        <label for="device-sheet-name">Name:</label>
-        <input id="device-sheet-name" class="field" bind:this={field} bind:value={newName} spellcheck="false" autocomplete="off">
-      {/if}
+<dialog class="sheet" bind:this={dialog} onclose={close} oncancel={(e) => { e.preventDefault(); dismiss(); }} aria-labelledby="device-sheet-title">
+  <form class="alert-body" onsubmit={submit}>
+    <div class="alert-icon">{#if picture}<img src={picture} alt="">{/if}</div>
+    <div class="alert-text">
+      <h2 id="device-sheet-title">{copy.title}</h2>
+      <p>{copy.text}</p>
     </div>
-    <div class="sheet-buttons">
-      <button type="button" class="push-btn" onclick={dismiss}>Cancel</button>
+    {#if kind === 'rename'}
+      <div class="alert-fields">
+        <input class="field" aria-label="Name" bind:this={field} bind:value={newName} spellcheck="false" autocomplete="off">
+      </div>
+    {/if}
+    <div class="alert-buttons">
+      <button type="button" class="alert-btn" onclick={dismiss}>Cancel</button>
       <button
         type="submit"
-        class="push-btn default"
-        class:destructive={kind !== 'rename'}
+        class="alert-btn {kind === 'rename' ? 'default' : 'destructive'}"
         disabled={busy || (kind === 'rename' && (!newName.trim() || newName.trim() === name))}
       >{copy.action}</button>
     </div>
   </form>
-  {/if}
 </dialog>

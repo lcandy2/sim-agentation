@@ -56,8 +56,8 @@
     <textarea class="field" rows="3" placeholder="What should change?" bind:this={text} bind:value={comment} onkeydown={keydown}></textarea>
     <div class="composer-row">
       <span class="hint">⌘↩ to add · Esc to cancel</span>
-      <button type="button" class="push-btn" onclick={cancelComposer}>Cancel</button>
-      <button type="submit" class="push-btn default">Add</button>
+      <button type="button" class="alert-btn" onclick={cancelComposer}>Cancel</button>
+      <button type="submit" class="alert-btn default">Add</button>
     </div>
   </form>
   {#if place}

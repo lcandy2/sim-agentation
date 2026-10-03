@@ -50,16 +50,15 @@
   --menu-disabled: rgba(0, 0, 0, 0.28); /* #bfbfbf */
   --menu-separator: rgba(0, 0, 0, 0.11); /* #e6e6e6 */
   --menu-highlight: var(--selection);
-  /* macOS 27's small dialog (Figma, node 690:10197). */
   /* macOS 27's Popover (Figma, Popovers page): white at 70% under #bfbfbf at
      10% (lib/glass.js draws them through its glass; this is the fallback),
      corners of 20; its shadow is drawn by components/Composer.svelte. */
   --popover-fill: linear-gradient(rgba(191, 191, 191, 0.1) 0 0), rgba(255, 255, 255, 0.7);
-  --sheet: #ffffff;
-  --sheet-shadow: 0 0 0.4px rgba(0, 0, 0, 0.8), 0 18px 21.6px rgba(0, 0, 0, 0.3);
+  /* Text fields, pop-ups and focus rings (from Figma's small dialog, node
+     690:10197), and the Alert's shadow (Figma's radius 48 is CSS's 38). */
+  --alert-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.141), 1.25px 0 0 -0.75px rgba(0, 0, 0, 0.141), -1.25px 0 0 -0.75px rgba(0, 0, 0, 0.141), 0 18px 38px rgba(0, 0, 0, 0.25);
   --sheet-fill: rgba(0, 0, 0, 0.08);
   --sheet-field-border: rgba(0, 0, 0, 0.08);
-  --sheet-default: var(--accent);
   --sheet-focus: color-mix(in srgb, var(--accent) 50%, transparent);
   --popup-chevrons: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='rgba(0,0,0,0.85)' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 9.5l3-3 3 3M9 14.5l3 3 3-3'/%3E%3C/svg%3E");
   --menu: #ffffff;
@@ -123,8 +122,6 @@
     --menu-disabled: rgba(255, 255, 255, 0.25);
     --menu-separator: rgba(255, 255, 255, 0.1);
     --popover-fill: #262626;
-    --sheet: #2a2a2a;
-    --sheet-shadow: 0 0 0.5px rgba(0, 0, 0, 0.8), 0 18px 27px rgba(0, 0, 0, 0.5);
     --sheet-fill: rgba(255, 255, 255, 0.1);
     --sheet-field-border: rgba(255, 255, 255, 0.1);
     --popup-chevrons: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.85)' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 9.5l3-3 3 3M9 14.5l3 3 3-3'/%3E%3C/svg%3E");
@@ -343,32 +340,34 @@ button { cursor: default; }
 /* A menu with checkmarks moves every title in 16 pt, the mark centered 12 pt in. */
 .menu-item .check { width: 12px; margin: 0 -2px 0 6px; flex: none; font-size: 10px; font-weight: 700; text-align: center; }
 
-/* The New Simulator dialog: macOS 27's small dialog (Figma, macOS 27
-   Community, node 690:10197): labels right-aligned beside their fields,
-   the title and message above them, the buttons at the bottom right. */
+/* Every dialog is macOS 27's Alert (Figma, Alerts page): 260 wide, its
+   glass (lib/glass.js) with corners of 34 and a deep shadow; the icon,
+   title and message left-aligned, any fields below them, capsule buttons
+   side by side. */
 .sheet {
-  width: 390px;
+  width: 260px;
   padding: 0;
   border: 0;
-  border-radius: 16px;
-  background: var(--sheet);
-  box-shadow: var(--sheet-shadow);
+  border-radius: 34px;
+  background: rgba(255, 255, 255, 0.75);
+  box-shadow: var(--alert-shadow);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
   color: var(--text);
   overflow: visible;
 }
+.sheet.glass-filtered { background: none; }
+.sheet.glass-on::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: var(--glass-light) center / 100% 100% no-repeat;
+  pointer-events: none;
+}
 /* Figma's Overlay (node 690:10672) dims the window behind the dialog. */
 .sheet::backdrop { background: rgba(0, 0, 0, 0.2); }
-.sheet-grid {
-  display: grid;
-  grid-template-columns: 1fr 223px;
-  gap: 12px 6px;
-  align-items: center;
-  padding: 20px 40px 10px;
-}
-.sheet-message { grid-column: 2; display: grid; gap: 6px; padding-bottom: 8px; }
-.sheet-message h2 { margin: 0; font-size: 13px; line-height: 16px; font-weight: 700; }
-.sheet-message p { margin: 0; font-size: 11px; line-height: 14px; }
-.sheet-grid label { font-size: 13px; line-height: 24px; font-weight: 500; letter-spacing: -0.26px; text-align: right; color: var(--secondary); }
 .field,
 .popup {
   width: 100%;
@@ -389,50 +388,11 @@ button { cursor: default; }
 .popup:focus-visible { box-shadow: 0 0 0 3.5px var(--sheet-focus); }
 .popup:disabled { color: var(--secondary); }
 .setting .popup { width: auto; max-width: 60%; }
-.sheet-buttons { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 20px 20px; }
-/* macOS 27's push buttons (the dialog's, node 690:10197), in the dialog and
-   the composer. */
-.push-btn {
-  min-width: 74px;
-  height: 24px;
-  padding: 0 16px;
-  border: 0;
-  border-radius: 6px;
-  background: var(--sheet-fill);
-  color: var(--text);
-  font-size: 13px;
-  line-height: 16px;
-  font-weight: 500;
-}
-.push-btn.default { background: var(--sheet-default); color: #fff; }
-/* An action that erases or deletes: macOS's destructive button, red. */
-.push-btn.default.destructive { background: var(--mark); }
-.push-btn:disabled { opacity: 0.5; }
-
-/* macOS 27's Alert (Figma, Alerts page): 260 wide, its glass (lib/glass.js)
-   with corners of 34 and a deep shadow; the icon, title and message
-   left-aligned, capsule buttons side by side. */
-.sheet.alert {
-  width: 260px;
-  border-radius: 34px;
-  background: rgba(255, 255, 255, 0.75);
-  box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.141), 1.25px 0 0 -0.75px rgba(0, 0, 0, 0.141), -1.25px 0 0 -0.75px rgba(0, 0, 0, 0.141), 0 18px 38px rgba(0, 0, 0, 0.25);
-  -webkit-backdrop-filter: blur(8px);
-  backdrop-filter: blur(8px);
-}
-.sheet.alert.glass-filtered { background: none; }
-.sheet.alert.glass-on::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  border-radius: inherit;
-  background: var(--glass-light) center / 100% 100% no-repeat;
-  pointer-events: none;
-}
 .alert-body { display: grid; gap: 14px; padding: 20px 16px 16px; }
-.alert-icon { height: 64px; padding: 0 6px; }
+.alert-icon { height: 64px; padding: 0 6px; color: var(--secondary); }
 .alert-icon img { height: 64px; filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.25)); }
+.alert-icon svg { width: 64px; height: 64px; stroke-width: 1.2; }
+.alert-fields { display: grid; gap: 8px; padding: 0 6px; }
 .alert-text { display: grid; gap: 10px; padding: 0 6px 2px; color: rgba(0, 0, 0, 0.85); }
 .alert-text h2 { margin: 0; font-size: 13px; line-height: 16px; font-weight: 700; }
 .alert-text p { margin: 0; font-size: 11px; line-height: 14px; }
@@ -663,17 +623,17 @@ kbd {
 }
 .bottom-row { display: flex; gap: 8px; }
 /* Device Hub holds the device's buttons: a note over the bottom bar, with the fix. */
-/* macOS 27's Notification (Figma, Notifications page): its glass
-   (lib/glass.js), corners of 20, the menu's hairlines and deep shadow. The
-   screenshot banner, and the notice that Device Hub holds the buttons. */
+/* Toasts, as the Alert: its glass (lib/glass.js), its hairlines and deep
+   shadow, round corners, capsule actions. The screenshot banner, and the
+   notice that Device Hub holds the buttons. */
 .notice {
   position: relative;
   border: 0;
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.92);
-  box-shadow: var(--menu-shadow);
-  -webkit-backdrop-filter: blur(12.5px);
-  backdrop-filter: blur(12.5px);
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.75);
+  box-shadow: var(--alert-shadow);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
   /* Figma's vibrant labels (#1a1a1a, plus-darker): burned into the glass
      they come out black, which Chrome can't blend through glass, so the
      color they land on. */
@@ -707,12 +667,14 @@ kbd {
 .banner-text span { font-size: 13px; line-height: 16px; letter-spacing: -0.008em; }
 .banner-text > * { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .banner-time { align-self: flex-start; font-size: 11px; line-height: 14px; color: rgba(0, 0, 0, 0.25); } /* #bfbfbf, burned in */
+.input-notice .alert-btn { flex: none; padding: 0 16px; }
 .input-notice {
   pointer-events: auto;
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px 12px 10px 16px;
+  padding: 6px 6px 6px 18px;
+  border-radius: 1000px;
   font-size: 13px;
   line-height: 16px;
   white-space: nowrap;
@@ -893,7 +855,7 @@ kbd {
 .item-delete svg { width: 16px; height: 16px; }
 .item:hover .item-delete,
 .item-delete:focus-visible { opacity: 1; }
-.item-delete:hover { background: var(--hover); color: var(--mark); }
+.item-delete:hover { background: var(--hover); color: var(--text); }
 @media (hover: none) { .item-delete { opacity: 1; } }
 .item-comment { margin: 0; font-size: 13px; line-height: 16px; color: var(--text); white-space: pre-wrap; word-break: break-word; }
 .item-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; color: var(--secondary); font-size: 11px; line-height: 14px; }
@@ -919,7 +881,7 @@ kbd {
 
 /* macOS 27's Popover (Figma, Popovers page): its glass (lib/glass.js), 20 pt
    in with 8 pt between; the target as a headline, the note in a text field,
-   push buttons at the bottom right. Its box takes in its pointer, Figma's
+   the Alert's capsule buttons. Its box takes in its pointer, Figma's
    Cartouche, 10.5 by 46, on the edge facing the selection: the box's
    clip-path is body and pointer as one (components/Composer.svelte). */
 .composer-at { position: fixed; z-index: 10; }
@@ -951,6 +913,7 @@ kbd {
 .composer-target { font-size: 13px; line-height: 16px; font-weight: 700; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .composer .field { height: auto; padding: 4px 8px; line-height: 16px; resize: none; }
 .composer-row { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+.composer-row .alert-btn { flex: none; min-width: 80px; padding: 0 16px; }
 .composer-row .hint { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; color: var(--secondary); font-size: 11px; line-height: 14px; white-space: nowrap; }
 
 /* ---------- narrow windows ---------- */
