@@ -58,7 +58,6 @@
     </div>
     <div class="pill" role="group" aria-label="Zoom">
       <button id="zoom-out" class="icon-btn" title="Zoom out (⌘−)" data-icon="zoom-out" onclick={zoomOut}>{@html icon('zoom-out')}</button>
-      <i class="sep"></i>
       <button
         id="zoom-fit"
         class="icon-btn"
@@ -67,7 +66,6 @@
         data-icon="zoom-fit"
         onclick={() => setZoom('fit')}
       >{@html icon('zoom-fit')}</button>
-      <i class="sep"></i>
       <button id="zoom-in" class="icon-btn" title="Zoom in (⌘+)" data-icon="zoom-in" onclick={zoomIn}>{@html icon('zoom-in')}</button>
     </div>
     <div class="pill" role="group" aria-label="View">

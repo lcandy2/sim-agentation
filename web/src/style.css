@@ -18,9 +18,19 @@
   --pressed: rgba(0, 0, 0, 0.1);
   --field: rgba(0, 0, 0, 0.07);
   --fill: rgba(0, 0, 0, 0.05);
-  --control: rgba(253, 253, 253, 0.92);
-  --control-shadow: inset 0 0 0 1px #ffffff, 0 8px 36px rgba(0, 0, 0, 0.07);
+  /* macOS 27's Segmented Control (Figma, macOS 27 Community, node 4370:41840).
+     Its Fill is white 25% over black 25%, then #444 60% plus-lighter, then
+     #f8f8f8 20% luminosity; over any backdrop the first two come to exactly
+     #efefef at 43.75%. Its selection (#e6e6e6) and separators (#d9d9d9)
+     blend plus-darker, which Chrome lacks and which couldn't reach through
+     the glass's backdrop filter anyway; over the glass they take 10% and
+     15.5% off, as black at those alphas does (221 and 208 on 246). */
+  --control: rgba(239, 239, 239, 0.4375);
+  --control-luminosity: rgba(248, 248, 248, 0.2);
+  --control-shadow: 1.25px 0 0 -0.75px #d0d0d0, -1.25px 0 0 -0.75px #d0d0d0, 0 0 0 0.5px #e8e8e8, 0 8px 15px rgba(0, 0, 0, 0.02);
+  --control-label: #1a1a1a;
   --control-on: rgba(0, 0, 0, 0.1);
+  --control-separator: rgba(0, 0, 0, 0.155);
   --menu: #ffffff;
   --card: #ffffff;
   --segment: #ffffff;
@@ -60,9 +70,13 @@
     --pressed: rgba(255, 255, 255, 0.1);
     --field: rgba(255, 255, 255, 0.08);
     --fill: rgba(255, 255, 255, 0.05);
+    /* The control's design is light only; these keep the earlier dark look. */
     --control: rgba(50, 50, 50, 0.92);
+    --control-luminosity: transparent;
     --control-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08), 0 2px 40px rgba(0, 0, 0, 0.3);
+    --control-label: rgba(255, 255, 255, 0.85);
     --control-on: rgba(255, 255, 255, 0.14);
+    --control-separator: rgba(255, 255, 255, 0.05);
     --thumb-off: rgba(255, 255, 255, 0.08);
     --start: rgba(255, 255, 255, 0.16);
     --on-start: rgba(255, 255, 255, 0.9);
@@ -115,39 +129,59 @@ button { cursor: default; }
 .icon-btn:hover { background: var(--hover); opacity: 1; }
 .icon-btn:active { background: var(--pressed); }
 .icon-btn:disabled { opacity: 0.25; background: none; }
-.icon-btn.on { background: var(--control-on); opacity: 1; }
+.icon-btn.on { opacity: 1; }
 .icon-btn.open { background: var(--pressed); opacity: 1; }
 .icon-btn.small { width: 28px; height: 28px; }
 .icon-btn.small svg { width: 16px; height: 16px; }
 #mode-annotate.on { background: var(--mark); color: #fff; }
 
-/* Device Hub's glass capsules: 36 pt tall, near-white with a white rim and a
-   wide, soft shadow; buttons 36 pt apart, 8 pt between capsules. */
+/* macOS 27's toolbar Segmented Control (Figma, macOS 27 Community, node
+   4370:41840): a 36 pt capsule, 4 pt in; 32 x 28 buttons with 13 pt symbols;
+   3 pt between them holding a 1 x 20 separator, left out beside the selected
+   button. Bottom up: Figma's Fill (the background, then ::before), its Glass
+   Effect (the backdrop filter and ::after, from lib/glass.js), the buttons. */
 .pill {
+  position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 0;
   height: 36px;
-  padding: 0 1px;
+  padding: 4px;
   border-radius: 1000px;
   background: var(--control);
-  border: 0;
   box-shadow: var(--control-shadow);
-  /* Prefixed first: the build's CSS minifier keeps only the last of the pair. */
-  -webkit-backdrop-filter: saturate(180%) blur(20px);
-  backdrop-filter: saturate(180%) blur(20px);
+  /* Figma's Frost 6; lib/glass.js adds the refraction. Prefixed first: the
+     build's CSS minifier keeps only the last of the pair. */
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
 }
-.pill .sep { width: 1px; height: 18px; background: var(--fill); flex: none; }
-.circle-btn {
-  width: 36px;
-  height: 36px;
-  background: var(--control);
-  border: 0;
-  box-shadow: var(--control-shadow);
-  opacity: 1;
+.pill::before,
+.pill::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  pointer-events: none;
 }
-.circle-btn:hover { background: var(--pressed); }
-.circle-btn svg { opacity: 0.8; }
+.pill::before { background: var(--control-luminosity); mix-blend-mode: luminosity; }
+.pill.glass-on::after { background: var(--glass-light) center / 100% 100% no-repeat; }
+.pill > * + * { margin-left: 3px; }
+.pill > * + *::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: -2px;
+  width: 1px;
+  height: 20px;
+  margin-top: -10px;
+  background: var(--control-separator);
+  pointer-events: none;
+}
+.pill > .on::before,
+.pill > .on + *::before { display: none; }
+.pill .icon-btn { width: 32px; height: 28px; border-radius: 100px; color: var(--control-label); opacity: 1; }
+.pill .icon-btn svg { width: 20px; height: 20px; }
+.pill .icon-btn.on { background: var(--control-on); }
 
 .glass {
   background: var(--glass);
@@ -270,7 +304,7 @@ kbd {
 }
 /* Device Hub's top bar: + and filter in a capsule, then the sidebar toggle,
    centered 26 pt from the window's top. */
-.sidebar-top { height: 36px; flex: none; display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 0 49px 0 10px; }
+.sidebar-top { height: 36px; flex: none; display: flex; align-items: center; justify-content: space-between; gap: 2px; padding: 0 53px 0 10px; }
 /* The product name where macOS puts a window's title; the right end leaves
    room for the sidebar button, which floats (see .sidebar-toggle). */
 .brand { font-size: 13px; line-height: 16px; font-weight: 700; color: var(--sidebar-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -342,13 +376,12 @@ kbd {
 .canvas { position: relative; flex: 1; min-width: 0; display: flex; flex-direction: column; background: var(--canvas); }
 .canvas-top { height: 52px; flex: none; display: flex; align-items: center; gap: 8px; padding: 0 7px 0 20px; transition: padding-left 320ms cubic-bezier(0.4, 0, 0.2, 1); }
 /* With the sidebar out, the title moves over for the sidebar button. */
-.window.no-sidebar .canvas-top { padding-left: 56px; }
+.window.no-sidebar .canvas-top { padding-left: 60px; }
 .title { flex: 1; min-width: 0; }
 .title-name { font-weight: 700; font-size: 13px; line-height: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .title-sub { font-size: 11px; line-height: 14px; color: var(--secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .title-sub .status:not(:empty)::before { content: " · "; }
 .toolbar { display: flex; align-items: center; gap: 8px; }
-.toolbar .pill[aria-label="Mode"] .icon-btn { width: 39px; }
 
 .stage {
   flex: 1;
@@ -450,9 +483,6 @@ kbd {
 }
 .bottom-row { display: flex; gap: 8px; }
 .canvas-bottom .pill { pointer-events: auto; }
-/* Device Hub draws the device buttons in solid black, heavier than the toolbar. */
-.canvas-bottom .icon-btn { color: var(--sidebar-text); opacity: 1; }
-.canvas-bottom .icon-btn svg { stroke-width: 2; }
 .icon-btn.recording { color: var(--mark); opacity: 1; }
 #frozen-badge {
   white-space: nowrap;
@@ -547,13 +577,13 @@ kbd {
 .settings-group + .settings-group { border-top: 1px solid var(--separator); padding-top: 16px; }
 .setting { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .setting > span { white-space: nowrap; }
+.setting-value { color: var(--secondary); font-variant-numeric: tabular-nums; }
 .setting-note { display: grid; gap: 3px; font-size: 11.5px; line-height: 15px; color: var(--secondary); font-variant-numeric: tabular-nums; }
 .setting-note p { margin: 0; }
 .setting-note .warn { color: var(--warn); }
 .switch {
   appearance: none;
   width: 32px;
-.setting-value { color: var(--secondary); font-variant-numeric: tabular-nums; }
   height: 19px;
   margin: 0;
   border-radius: 999px;
@@ -674,7 +704,7 @@ kbd {
   position: absolute;
   z-index: 6;
   top: 8px;
-  left: calc(var(--sidebar-w) - 42px);
+  left: calc(var(--sidebar-w) - 46px);
   transition: left 320ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 .window.no-sidebar .sidebar-toggle { left: 12px; }
