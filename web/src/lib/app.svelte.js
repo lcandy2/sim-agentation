@@ -647,24 +647,31 @@ export function pressButton(button, duration) {
  *  puts it on the Desktop, and a banner opens it in Finder. */
 export async function saveScreenshot() {
   const png = await screenPNG();
-  if (!png) return;
+  if (png) saveFile({ route: 'screenshots', field: 'png', blob: png, extension: 'png', title: 'Screenshot Saved', picture: png });
+}
+
+/** Has the host save a screenshot or recording where Simulator.app puts
+ *  them, then says so in a banner that opens it in Finder. A host that
+ *  can't (an older one, or a recording too long to send): the browser's
+ *  download instead. */
+async function saveFile({ route, field, blob, extension, title, picture }) {
   const data = await new Promise((done) => {
     const reader = new FileReader();
     reader.onload = () => done(String(reader.result).split(',')[1]);
-    reader.readAsDataURL(png);
+    reader.readAsDataURL(blob);
   });
-  const res = await fetch('/api/screenshots', {
+  const res = await fetch(`/api/${route}`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ udid: ui.udid, png: data }),
+    body: JSON.stringify({ udid: ui.udid, [field]: data }),
   }).catch(() => null);
   const saved = res?.ok ? await res.json().catch(() => null) : null;
-  if (!saved) return download(png, 'png'); // a host without it: the browser's download
+  if (!saved) return download(blob, extension);
   notify({
-    image: URL.createObjectURL(png),
-    title: 'Screenshot Saved',
+    image: picture && URL.createObjectURL(picture),
+    title,
     message: 'Open in Finder',
-    action: () => fetch(`/api/screenshots/${saved.id}/reveal`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' }),
+    action: () => fetch(`/api/${route}/${saved.id}/reveal`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' }),
   });
 }
 
@@ -726,11 +733,14 @@ export function toggleRecording() {
   const chunks = [];
   recorder = new MediaRecorder(stream, { ...(type && { mimeType: type }), videoBitsPerSecond: 12_000_000 });
   recorder.ondataavailable = (e) => e.data.size && chunks.push(e.data);
-  recorder.onstop = () => {
+  recorder.onstop = async () => {
     stream.getTracks().forEach((t) => t.stop());
-    download(new Blob(chunks, { type: recorder.mimeType }), recorder.mimeType.startsWith('video/mp4') ? 'mp4' : 'webm');
+    const video = new Blob(chunks, { type: recorder.mimeType });
+    const extension = recorder.mimeType.startsWith('video/mp4') ? 'mp4' : 'webm';
     recorder = null;
     ui.recording = false;
+    // The banner's picture: the screen as the recording ends.
+    saveFile({ route: 'recordings', field: 'video', blob: video, extension, title: 'Recording Saved', picture: await screenPNG() });
   };
   recorder.start(1000);
   ui.recording = true;

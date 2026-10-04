@@ -20,8 +20,8 @@ final class AppServer: @unchecked Sendable {
     private let localHosts: Set<String>
     private let localOrigins: Set<String>
 
-    /// Screenshots saved to the Desktop, by id: only these can be revealed.
-    private var savedScreenshots: [String: String] = [:]
+    /// Screenshots and recordings saved to the Desktop, by id: only these can be revealed.
+    private var savedFiles: [String: String] = [:]
     private let savedLock = NSLock()
 
     init(port: UInt16, store: Store, chrome: ChromeService, dist: String?) {
@@ -158,14 +158,17 @@ final class AppServer: @unchecked Sendable {
                 try await manage(device, action: part(3) ?? "delete", body: req.body)
                 return .respond(Self.json(JSONObject(["ok": .bool(true)])))
             }
-            // Simulator.app's Save Screen: the PNG goes where it puts it.
+            // Simulator.app's Save Screen and Record Screen: the file goes where it puts them.
             if path == "/api/screenshots" && req.method == "POST" {
                 return .respond(Self.json(try await saveScreenshot(req), status: 201))
             }
-            if part(0) == "api" && part(1) == "screenshots", let id = part(2), part(3) == "reveal", req.method == "POST" {
-                let file = savedLock.withLock { savedScreenshots[id] }
+            if path == "/api/recordings" && req.method == "POST" {
+                return .respond(Self.json(try await saveRecording(req), status: 201))
+            }
+            if part(0) == "api", part(1) == "screenshots" || part(1) == "recordings", let id = part(2), part(3) == "reveal", req.method == "POST" {
+                let file = savedLock.withLock { savedFiles[id] }
                 guard let file, FileManager.default.fileExists(atPath: file) else {
-                    return .respond(Self.json(JSONObject(["error": .string("no such screenshot")]), status: 404))
+                    return .respond(Self.json(JSONObject(["error": .string("no such file")]), status: 404))
                 }
                 _ = try await blocking { try run(["open", "-R", file]) }
                 return .respond(Self.json(JSONObject(["ok": .bool(true)])))
@@ -351,7 +354,29 @@ final class AppServer: @unchecked Sendable {
         guard let encoded = body["png"]?.stringValue, let png = Data(base64Encoded: encoded),
               png.count <= 64 << 20, png.starts(with: [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A])
         else { throw BadRequest("a PNG is required") }
-        let udid = body["udid"]?.stringValue ?? ""
+        return try await saveToDesktop(png, as: "Simulator Screenshot", ext: "png", udid: body["udid"]?.stringValue ?? "")
+    }
+
+    /// Saves a screen recording as Simulator.app's Record Screen does: on the
+    /// Desktop, "Simulator Screen Recording - <device> - <date> at <time>",
+    /// as the page recorded it. Takes { udid, video: base64 } and MP4 or WebM
+    /// only (by their signatures).
+    private func saveRecording(_ req: Request) async throws -> JSONObject {
+        let body = try Self.parseBody(req.body)
+        guard let encoded = body["video"]?.stringValue, let video = Data(base64Encoded: encoded), video.count <= 96 << 20
+        else { throw BadRequest("a video is required") }
+        let ext: String
+        if video.count > 8, video[video.startIndex + 4 ..< video.startIndex + 8].elementsEqual(Array("ftyp".utf8)) { ext = "mp4" }
+        else if video.starts(with: [0x1A, 0x45, 0xDF, 0xA3]) { ext = "webm" }
+        else { throw BadRequest("an MP4 or WebM video is required") }
+        return try await saveToDesktop(video, as: "Simulator Screen Recording", ext: ext, udid: body["udid"]?.stringValue ?? "")
+    }
+
+    /// Writes data to the Desktop under Simulator.app's naming, "<what> -
+    /// <device> - <date> at <time>.<ext>", numbered rather than overwriting,
+    /// and remembers it for Open in Finder. The device's name comes from the
+    /// host's own list.
+    private func saveToDesktop(_ data: Data, as what: String, ext: String, udid: String) async throws -> JSONObject {
         let device = (try? await blocking { Simulators.shared.find(udid) }) ?? nil
         let name = (device?.name ?? "Simulator").replacingOccurrences(of: "/", with: "-").replacingOccurrences(of: ":", with: "-")
         let stamp = DateFormatter()
@@ -359,16 +384,16 @@ final class AppServer: @unchecked Sendable {
         stamp.dateFormat = "yyyy-MM-dd 'at' HH.mm.ss"
         let desktop = FileManager.default.urls(for: .desktopDirectory, in: .userDomainMask).first
             ?? URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent("Desktop")
-        let base = "Simulator Screenshot - \(name) - \(stamp.string(from: Date()))"
-        var file = desktop.appendingPathComponent("\(base).png")
+        let base = "\(what) - \(name) - \(stamp.string(from: Date()))"
+        var file = desktop.appendingPathComponent("\(base).\(ext)")
         var n = 2
         while FileManager.default.fileExists(atPath: file.path) {
-            file = desktop.appendingPathComponent("\(base) (\(n)).png")
+            file = desktop.appendingPathComponent("\(base) (\(n)).\(ext)")
             n += 1
         }
-        try png.write(to: file, options: .withoutOverwriting)
+        try data.write(to: file, options: .withoutOverwriting)
         let id = UUID().uuidString
-        savedLock.withLock { savedScreenshots[id] = file.path }
+        savedLock.withLock { savedFiles[id] = file.path }
         return JSONObject(["id": .string(id), "name": .string(file.lastPathComponent)])
     }
 
