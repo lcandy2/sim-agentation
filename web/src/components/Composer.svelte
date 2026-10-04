@@ -28,9 +28,22 @@
     const top = Math.min(Math.max(middle - h / 2, 12), innerHeight - h - 12);
     // A composer right of the selection points left, and the other way round.
     const pointer = { side: side === 'right' ? 'left' : 'right', y: Math.round(Math.min(Math.max(middle - top, CLEAR), h - CLEAR)) };
-    place = { left, top, h, pointer, outline: outlinePath(WIDTH, h, RADIUS, pointer) };
+    place = { left, top, h, middle, pointer, outline: outlinePath(WIDTH, h, RADIUS, pointer) };
     // Once it's shown: hidden until placed, the field can't take focus.
     tick().then(() => text?.focus());
+  });
+  // As the note grows (or shrinks) the composer keeps its place, moving up
+  // only to stay in the window, and its outline and pointer follow.
+  $effect(() => {
+    const sizes = new ResizeObserver(() => {
+      if (!place || form.offsetHeight === place.h) return;
+      const h = form.offsetHeight;
+      const top = Math.max(Math.min(place.top, innerHeight - h - 12), 12);
+      const pointer = { ...place.pointer, y: Math.round(Math.min(Math.max(place.middle - top, CLEAR), h - CLEAR)) };
+      place = { ...place, top, h, pointer, outline: outlinePath(WIDTH, h, RADIUS, pointer) };
+    });
+    sizes.observe(form);
+    return () => sizes.disconnect();
   });
 
   // NSPopover's motion, measured from a 60 fps recording on macOS 26: it
@@ -168,6 +181,9 @@
         placeholder="What should change?"
         style:padding-top="{8 + start.top}px"
         style:text-indent="{start.indent}px"
+        style:min-height="{8 + start.top + 3 * 16 + 8}px"
+        style:max-height="{8 + start.top + 10 * 16 + 8}px"
+        onscroll={() => (chips.style.transform = `translateY(${-text.scrollTop}px)`)}
         bind:this={text}
         bind:value={comment}
         onkeydown={keydown}

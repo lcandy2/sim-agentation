@@ -434,10 +434,9 @@ img { -webkit-user-drag: none; }
 .alert-btn.destructive { background: rgba(245, 47, 50, 0.23); color: #f52f32; } /* Figma: red at 23%, red label */
 .alert-btn:disabled { opacity: 0.5; }
 .alert-btn:focus-visible { outline: none; box-shadow: 0 0 0 3.5px var(--sheet-focus); }
-/* Liquid Glass's prominent button (Figma, Materials page: Liquid Glass -
-   Small, State=Primary), round: the accent under the controls' glass,
-   painted whole by lib/glass.js (this is the fallback), a soft shadow and
-   side hairlines that Linear Burn #e6e6e6. */
+/* Liquid Glass's prominent button, round: on macOS 27 over a light page
+   it's the tint flat, no highlight top or bottom (measured), with Figma's
+   soft shadow and side hairlines that Linear Burn #e6e6e6. */
 .glass-btn {
   position: relative;
   width: 32px;
@@ -451,7 +450,6 @@ img { -webkit-user-drag: none; }
   background: var(--accent);
   color: #fff;
   box-shadow: 0 8px 12px rgba(0, 0, 0, 0.02), 1.25px 0 0 -0.75px rgba(0, 0, 0, 0.098), -1.25px 0 0 -0.75px rgba(0, 0, 0, 0.098);
-  isolation: isolate; /* its light goes over its face, under its symbol */
   touch-action: none; /* a finger presses and leans it too (components/Composer.svelte) */
   transition: transform 100ms ease-out; /* settling back after a lean */
 }
@@ -459,16 +457,6 @@ img { -webkit-user-drag: none; }
 .glass-btn.pressed { filter: brightness(0.92); }
 @media (prefers-reduced-motion: reduce) { .glass-btn { transition: none; } }
 .glass-btn svg { width: 18px; height: 18px; stroke-width: 2.2; }
-.glass-btn.glass-on { background: var(--glass-face) center / 100% 100% no-repeat; }
-.glass-btn.glass-on::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  border-radius: inherit;
-  background: var(--glass-light) center / 100% 100% no-repeat;
-  pointer-events: none;
-}
 .glass-btn:disabled { opacity: 0.4; }
 .glass-btn:focus-visible { outline: none; box-shadow: 0 0 0 3.5px var(--sheet-focus); }
 
@@ -768,7 +756,9 @@ kbd {
 /* Outlines sit just outside the box (1 pt) so they never cover the text they mark. */
 /* Hover and selection are Design Mode's color, like its button and the
    device's outline: see-through while hovering, solid once selected. */
-.hl { outline: 1.5px solid color-mix(in srgb, var(--design) 50%, transparent); outline-offset: 1px; background: color-mix(in srgb, var(--design) 6%, transparent); border-radius: 3px; }
+/* Hover and selection draw one and the same box; only their colours differ. */
+.hl, .sel { outline: 1.5px solid var(--box-line); outline-offset: 1px; background: var(--box-fill); border-radius: 3px; }
+.hl { --box-line: color-mix(in srgb, var(--design) 50%, transparent); --box-fill: color-mix(in srgb, var(--design) 6%, transparent); }
 .hl-label {
   z-index: 1;
   transform-origin: 0 0;
@@ -783,7 +773,7 @@ kbd {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.sel { outline: 2px solid var(--pick, var(--design)); outline-offset: 0.5px; background: color-mix(in srgb, var(--pick, var(--design)) 12%, transparent); border-radius: 3px; }
+.sel { --box-line: var(--pick, var(--design)); --box-fill: color-mix(in srgb, var(--pick, var(--design)) 12%, transparent); }
 .marker {
   width: 20px;
   height: 20px;
@@ -1002,7 +992,10 @@ kbd {
 .composer .field.note { position: relative; height: auto; padding: 0; border-radius: 16px; }
 .composer .field.note:focus-within { box-shadow: 0 0 0 1px var(--sheet-field-border), var(--focus-ring); }
 .note-chips { position: absolute; top: 8px; left: 12px; right: 36px; display: flex; flex-wrap: wrap; column-gap: 8px; pointer-events: none; }
-.note-text { display: block; width: 100%; padding: 8px 36px 8px 12px; border: 0; border-radius: inherit; background: none; outline: none; color: var(--text); font-size: 13px; font-weight: 500; line-height: 16px; resize: none; caret-color: var(--accent); }
+/* It grows with the note from 3 lines to 10, then scrolls, the chips with
+   it (components/Composer.svelte sets the bounds, past the chips' lines). */
+.composer .field.note { overflow: hidden; }
+.note-text { display: block; width: 100%; padding: 8px 36px 8px 12px; border: 0; border-radius: inherit; background: none; outline: none; color: var(--text); font-size: 13px; font-weight: 500; line-height: 16px; resize: none; caret-color: var(--accent); field-sizing: content; overflow-y: auto; }
 /* A selection's chip, as Cursor's: its symbol and short name in its color;
    hovered, the symbol is an x that takes the selection away. */
 .chip { pointer-events: auto; display: inline-flex; align-items: center; gap: 3px; height: 16px; padding: 0; border: 0; background: none; color: var(--pick); font-size: 13px; font-weight: 500; line-height: 16px; white-space: nowrap; }
