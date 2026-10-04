@@ -307,17 +307,19 @@ img { -webkit-user-drag: none; }
 
 /* Menus: macOS 27's (Figma, macOS 27 Community, nodes 4370:42750 and
    4370:42756), in the top layer (components/Popover.svelte) under their
-   button: 24 pt rows 12 pt in, 13 pt medium titles after 12 pt symbols,
-   11 pt separators, a blue highlight 5 pt from the edges. Figma's medium
-   weight is 510; Chrome would round that up to Semibold, so 500 here and
-   in the dialog and search field. */
+   button: 24 pt rows, 13 pt medium titles after 12 pt symbols, 11 pt
+   separators, a blue highlight 5 pt from the edges. Their sides as macOS
+   27's own menus (measured against Xcode's): 18 pt in rather than Figma's
+   12, symbols drawn 16 pt rather than 18, 10 pt to the title, the title
+   regular. Figma's medium weight is 510; Chrome would round that up to
+   Semibold, so 500 where it's kept, in the dialog and search field. */
 .popover-anchor { position: relative; display: inline-grid; }
 .popover {
   position: fixed;
   inset: auto;
   margin: 0;
   width: max-content;
-  padding: 5px 12px;
+  padding: 5px 18px;
   border: 0;
   border-radius: 12px;
   overflow: visible;
@@ -341,20 +343,20 @@ img { -webkit-user-drag: none; }
 .menu-item {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   height: 24px;
-  margin: 0 -7px;
-  padding: 0 7px;
+  margin: 0 -13px; /* the highlight 5 pt from the panel's edges */
+  padding: 0 13px;
   border: 0;
   border-radius: 8px;
   background: none;
   color: var(--menu-label);
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 400; /* regular, as macOS 27 draws its menus (Figma has 510) */
   text-align: left;
   white-space: nowrap;
 }
-.menu-item svg { width: 18px; height: 18px; margin: 0 -3px; flex: none; }
+.menu-item svg { width: 16px; height: 16px; margin: 0 -2px; flex: none; }
 .menu-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 /* Figma's Shortcuts: a 12 pt slot per glyph, 1 pt apart, tertiary (burned in). */
 .shortcut { display: flex; gap: 1px; margin-left: 24px; color: var(--menu-disabled); }
@@ -372,8 +374,9 @@ img { -webkit-user-drag: none; }
 .menu-item.blink-off:not(:disabled) .shortcut { color: var(--menu-disabled); }
 .menu-item.blink-on:not(:disabled) { background: var(--menu-highlight); color: #fff; }
 .menu-item.blink-on:not(:disabled) .shortcut { color: inherit; }
-/* A menu with checkmarks moves every title in 16 pt, the mark centered 12 pt in. */
-.menu-item .check { width: 12px; margin: 0 -2px 0 6px; flex: none; font-size: 10px; font-weight: 700; text-align: center; }
+/* A menu with checkmarks (the filter) puts the mark in its leading inset,
+   as macOS 27's do: centered 13.5 pt in, what follows from 25.5. */
+.menu-item .check { width: 12px; margin: 0 -4px 0 -10.5px; flex: none; font-size: 10px; font-weight: 700; text-align: center; }
 
 /* Every dialog is macOS 27's Alert (Figma, Alerts page): 260 wide, its
    glass (lib/glass.js) with corners of 34 and a deep shadow; the icon,
@@ -498,7 +501,9 @@ kbd {
    a selected row does, so their edges meet its blue. */
 .sidebar-top { height: 36px; flex: none; margin: 0 -7px; display: flex; align-items: center; gap: 6px; }
 /* The product name where macOS puts a window's title, then + and filter. */
-.brand-icon { flex: none; width: 24px; height: 24px; }
+/* On the content line, like the "Available" heading and the rows: the top bar
+   reaches 7 px past it for the rows' highlight, the icon shouldn't. */
+.brand-icon { flex: none; width: 24px; height: 24px; margin-left: 7px; }
 .brand { flex: 1; min-width: 0; font-size: 17px; line-height: 22px; font-weight: 700; color: var(--sidebar-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 @media (max-width: 1100px) { .brand { font-size: 15px; } } /* the narrower sidebar still fits it whole */
 
@@ -563,8 +568,10 @@ kbd {
 .device-row .kind { font-size: 11px; line-height: 14px; color: var(--sidebar-secondary); }
 .device-row .version { font-size: 11px; color: var(--sidebar-secondary); font-variant-numeric: tabular-nums; }
 .device-row.selected { background: var(--selection); color: var(--on-selection); }
-/* The row a context menu is for, ringed in the accent as macOS marks it. */
-.device-row.context-target { outline: 2px solid var(--accent); outline-offset: 1px; }
+/* The row a context menu is for, ringed in the accent as macOS marks it:
+   inside the row, where the list's scrolling can't cut it off, a white
+   line within so it shows on a selected row too. */
+.device-row.context-target { box-shadow: inset 0 0 0 2px var(--accent), inset 0 0 0 3px rgba(255, 255, 255, 0.9); }
 .device-row.selected .kind,
 .device-row.selected .version { color: rgba(255, 255, 255, 0.85); }
 /* Selected, Device Hub's circle shows whether the device runs: 70% white
