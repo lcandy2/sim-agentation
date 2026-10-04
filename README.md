@@ -36,13 +36,24 @@ Your app needs no SDK. Everything comes from the simulator's accessibility tree,
 
 ## Getting started
 
-You need macOS on Apple Silicon with Xcode 26 (27.1 for iPhone Duo), and Node with [pnpm](https://pnpm.io) to build the UI. From the repo:
+You need macOS on Apple Silicon with Xcode 26 (27.1 for iPhone Duo).
+
+```sh
+brew install lcandy2/tap/sim-agentation
+sim-agentation serve --open
+```
+
+`brew services start sim-agentation` keeps it running in the background instead.
+
+To build from source you also need Node with [pnpm](https://pnpm.io). From the repo:
 
 ```sh
 pnpm install
 pnpm build    # the UI into app/web/dist, then the Swift binary
 pnpm start    # app/host/.build/debug/sim-agentation serve --open
 ```
+
+`app/scripts/package.sh` builds the release tarball the formula installs.
 
 The page opens on http://localhost:38470. Pick a simulator on the left; one that isn't running shows a **Start** button, and nothing boots until you press it.
 
@@ -103,13 +114,33 @@ Folding and turning go through a small helper that runs inside the simulator and
 
 The MCP server runs over stdio, and starts the web server if it isn't running.
 
-### Claude Code
+### Plugins
+
+This repository is a plugin marketplace for Claude Code and Codex. The plugin brings the MCP server, which runs the `sim-agentation` Homebrew installed, and the two [skills](#skills).
 
 ```sh
-claude mcp add sim-agentation -- /path/to/Sim-Agentation/app/host/.build/debug/sim-agentation mcp
+# Claude Code
+/plugin marketplace add lcandy2/sim-agentation
+/plugin install sim-agentation@sim-agentation
+
+# Codex
+codex plugin marketplace add https://github.com/lcandy2/sim-agentation.git
+codex plugin add sim-agentation@sim-agentation
 ```
 
-To have each annotation land in a conversation as you send it, start or resume it with the server as a channel. An idle session takes them too, with no `sim_watch` loop:
+Set `SIM_AGENTATION_BIN` to run a build of your own instead.
+
+### Claude Code
+
+Without the plugin, add the server yourself:
+
+```sh
+claude mcp add sim-agentation -- sim-agentation mcp
+```
+
+From a source build, the command is `/path/to/Sim-Agentation/app/host/.build/debug/sim-agentation mcp`.
+
+To have each annotation land in a conversation as you send it, start or resume it with the server, added as above, as a channel. An idle session takes them too, with no `sim_watch` loop:
 
 ```sh
 claude --dangerously-load-development-channels server:sim-agentation
@@ -124,7 +155,7 @@ If several sessions get the same annotation, the first to acknowledge it takes i
 ### Codex and other clients
 
 ```sh
-codex mcp add sim-agentation -- /path/to/Sim-Agentation/app/host/.build/debug/sim-agentation mcp
+codex mcp add sim-agentation -- sim-agentation mcp
 ```
 
 Any client that runs a stdio MCP server takes the same command.
@@ -145,7 +176,7 @@ Status changes and replies show up in the browser's inspector.
 
 ### Skills
 
-[`skills/`](skills) holds two agent skills. `sim-agentation` works through annotations: what each line of one tells the agent, how to find code whose label was built at runtime, and when to reply instead of editing. `sim-agentation-sdk` adds the SDK to an app, with a script that adds the package to a plain `.xcodeproj`. Copy a folder into `~/.claude/skills` for Claude Code, or `~/.agents/skills` for Codex.
+[`skills/`](skills) holds two agent skills. `sim-agentation` works through annotations: what each line of one tells the agent, how to find code whose label was built at runtime, and when to reply instead of editing. `sim-agentation-sdk` adds the SDK to an app, with a script that adds the package to a plain `.xcodeproj`. The plugins include both; without them, copy a folder into `~/.claude/skills` for Claude Code, or `~/.agents/skills` for Codex.
 
 ## SimAgentationPlus SDK
 

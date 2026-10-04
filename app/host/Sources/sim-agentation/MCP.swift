@@ -114,7 +114,7 @@ final class MCPServer: @unchecked Sendable {
                     // Echo the client's version when we support it, otherwise offer our newest.
                     "protocolVersion": .string(version),
                     "capabilities": .object(capabilities),
-                    "serverInfo": .object(JSONObject(["name": .string("sim-agentation"), "version": .string("0.1.0")])),
+                    "serverInfo": .object(JSONObject(["name": .string("sim-agentation"), "version": .string(Config.version)])),
                     "instructions": .string(
                         "The user annotates a running iOS simulator in the browser (http://localhost:\(port)). "
                             + "Fetch annotations with sim_get_pending, Read the screenshot paths to see the UI, find the SwiftUI/UIKit code, fix it, then sim_resolve."

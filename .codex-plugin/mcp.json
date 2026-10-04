@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "sim-agentation": {
+      "command": "/bin/sh",
+      "args": [
+        "-c",
+        "for b in \"$SIM_AGENTATION_BIN\" \"$(command -v sim-agentation)\" /opt/homebrew/bin/sim-agentation /usr/local/bin/sim-agentation; do [ -n \"$b\" ] && [ -x \"$b\" ] && exec \"$b\" mcp; done; echo 'sim-agentation is not installed: brew install lcandy2/tap/sim-agentation' >&2; exit 1"
+      ]
+    }
+  }
+}

@@ -1,0 +1,86 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  app:
+    name: Host, web UI and package
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v5
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Build (UI, then the debug host)
+        run: pnpm build
+      - run: app/host/.build/debug/sim-agentation version
+      - name: Package (release build)
+        run: app/scripts/package.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sim-agentation-macos-arm64
+          path: dist/*.tar.gz
+
+  sdk:
+    name: SDK on every platform, and the demo app
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v5
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+      - name: Build the package for macOS
+        run: swift build
+      - name: Type-check each platform, Debug and Release
+        # swiftc against each SDK: unlike xcodebuild, it doesn't need the
+        # platform's simulator runtime installed.
+        working-directory: Sources/SimAgentationPlus
+        run: |
+          for pair in iphonesimulator:arm64-apple-ios17.0-simulator \
+                      macosx:arm64-apple-macos14.0 \
+                      appletvsimulator:arm64-apple-tvos17.0-simulator \
+                      watchsimulator:arm64-apple-watchos10.0-simulator \
+                      xrsimulator:arm64-apple-xros1.0-simulator; do
+            for debug in -DDEBUG ""; do
+              echo "${pair#*:} ${debug:-release}"
+              xcrun -sdk "${pair%%:*}" swiftc -swift-version 6 -module-name SimAgentationPlus \
+                -parse-as-library -target "${pair#*:}" $debug -typecheck *.swift
+            done
+          done
+      - name: Build for Mac Catalyst
+        run: xcodebuild build -scheme SimAgentationPlus -destination 'generic/platform=macOS,variant=Mac Catalyst' -quiet
+      - name: Build the demo app
+        working-directory: examples/DemoApp
+        run: xcodebuild build -workspace DemoApp.xcworkspace -scheme DemoApp -destination 'generic/platform=iOS Simulator' -quiet
+
+  plugins:
+    name: Plugin manifests and skills
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Manifests parse
+        run: |
+          for f in .claude-plugin/*.json .codex-plugin/*.json .agents/plugins/*.json skills/*/evals/*.json; do
+            python3 -m json.tool "$f" > /dev/null && echo "ok $f"
+          done
+      - name: Skills have front matter
+        run: |
+          for f in skills/*/SKILL.md; do
+            head -1 "$f" | grep -qx -- '---' && grep -q '^name:' "$f" && grep -q '^description:' "$f" && echo "ok $f"
+          done
+      - run: python3 -m py_compile skills/sim-agentation-sdk/scripts/add_package.py

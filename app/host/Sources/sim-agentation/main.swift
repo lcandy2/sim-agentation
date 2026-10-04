@@ -5,6 +5,7 @@ import SimBridge
 //
 //   sim-agentation serve [--port 38470] [--open]
 //   sim-agentation mcp
+//   sim-agentation version
 
 let arguments = Array(CommandLine.arguments.dropFirst())
 // No command means serve.
@@ -58,10 +59,14 @@ case "mcp":
     await MCPServer(port: Config.defaultPort).run()
     exit(0)
 
+case "version":
+    print(Config.version)
+
 default:
     fail("""
     Usage:
       sim-agentation serve [--port N] [--open]   Start the browser UI on http://localhost:\(Config.defaultPort)
       sim-agentation mcp                         Run the MCP server over stdio (for Claude Code, Codex, …)
+      sim-agentation version                     Print the version
     """)
 }

@@ -1,0 +1,44 @@
+{
+  "name": "sim-agentation",
+  "version": "0.2.0",
+  "description": "Annotate a running iOS simulator in the browser and hand each note to your agent: the sim-agentation MCP server, plus skills for working through annotations and adding the SimAgentationPlus SDK.",
+  "author": {
+    "name": "lcandy2",
+    "url": "https://github.com/lcandy2"
+  },
+  "homepage": "https://github.com/lcandy2/sim-agentation",
+  "repository": "https://github.com/lcandy2/sim-agentation",
+  "license": "MIT",
+  "keywords": [
+    "ios",
+    "simulator",
+    "annotation",
+    "design-review",
+    "swiftui",
+    "uikit",
+    "mcp"
+  ],
+  "skills": "./skills/",
+  "mcpServers": "./.codex-plugin/mcp.json",
+  "interface": {
+    "displayName": "SimAgentation",
+    "shortDescription": "Turn notes drawn on an iOS simulator into code changes.",
+    "longDescription": "Freeze the simulator's screen in your browser, click an element or drag a box around anything, and write what should change. Codex gets the element, the screen, strings to search the source for, and screenshots, then fixes the SwiftUI or UIKit code and reports back on each note.",
+    "developerName": "lcandy2",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Interactive",
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "https://github.com/lcandy2/sim-agentation",
+    "brandColor": "#6E56CF",
+    "composerIcon": "./app/web/public/icon.svg",
+    "logo": "./app/web/public/icon.svg",
+    "defaultPrompt": [
+      "Go through my pending simulator annotations",
+      "Watch for my simulator annotations and fix them as they come in",
+      "Add the SimAgentationPlus SDK to this app"
+    ]
+  }
+}

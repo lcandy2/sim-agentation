@@ -6,3 +6,4 @@ xcuserdata/
 DerivedData/
 app/web/dist/
 app/web/.dev-server.json
+/dist/

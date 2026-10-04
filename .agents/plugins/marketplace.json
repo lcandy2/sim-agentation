@@ -1,0 +1,20 @@
+{
+  "name": "sim-agentation",
+  "interface": {
+    "displayName": "SimAgentation"
+  },
+  "plugins": [
+    {
+      "name": "sim-agentation",
+      "source": {
+        "source": "local",
+        "path": "./"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    }
+  ]
+}

@@ -2,12 +2,14 @@
 
 ## Connecting the tools
 
-The MCP server is the `sim-agentation` binary built from the SimAgentation repository (`pnpm build` there), run with `mcp`. It speaks stdio and starts the web server on port 38470 if it isn't running.
+The MCP server is the `sim-agentation` binary, run with `mcp`. It speaks stdio and starts the web server on port 38470 if it isn't running. Homebrew installs it (`brew install lcandy2/tap/sim-agentation`), and the SimAgentation plugin for Claude Code or Codex configures the server. Without the plugin:
 
 ```sh
-claude mcp add sim-agentation -- /path/to/Sim-Agentation/app/host/.build/debug/sim-agentation mcp
-codex mcp add sim-agentation -- /path/to/Sim-Agentation/app/host/.build/debug/sim-agentation mcp
+claude mcp add sim-agentation -- sim-agentation mcp
+codex mcp add sim-agentation -- sim-agentation mcp
 ```
+
+A source build's binary is `app/host/.build/debug/sim-agentation` in the SimAgentation repository.
 
 To have each annotation arrive in a Claude Code session as the user sends it, the session is started or resumed with the server as a channel:
 
@@ -24,7 +26,7 @@ Adding an MCP server changes the user's configuration, so suggest the command an
 
 | Symptom | What it means |
 |---|---|
-| No `sim_*` tools | The MCP server isn't configured for this client, or failed to start. |
+| No `sim_*` tools | The MCP server isn't configured for this client, or failed to start. The plugin's server says "sim-agentation is not installed" when Homebrew hasn't installed it. |
 | "Unable to connect" | The web server isn't up and couldn't be started. The user can run `pnpm start` in the SimAgentation repository and open http://localhost:38470. |
 | "another agent session is already working on this annotation" | Another session acknowledged it first. Leave it. |
 | `sim_watch` returns "Nothing new yet" | It timed out (about 100 seconds). Call it again to keep waiting. |

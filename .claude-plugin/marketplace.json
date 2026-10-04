@@ -1,0 +1,19 @@
+{
+  "name": "sim-agentation",
+  "owner": {
+    "name": "lcandy2",
+    "url": "https://github.com/lcandy2"
+  },
+  "metadata": {
+    "description": "SimAgentation: annotate iOS simulators for coding agents.",
+    "version": "0.2.0"
+  },
+  "plugins": [
+    {
+      "name": "sim-agentation",
+      "source": "./",
+      "description": "Annotate a running iOS simulator in the browser and hand each note to your agent: the sim-agentation MCP server, plus skills for working through annotations and adding the SimAgentationPlus SDK.",
+      "category": "development"
+    }
+  ]
+}
