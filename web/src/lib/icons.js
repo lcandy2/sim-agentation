@@ -53,6 +53,7 @@ const paths = {
   // iPhone Duo's poses, as Device Hub's picker draws them: shut, open (bent), flat.
   'pose-closed': '<rect x="7" y="3" width="10" height="18" rx="2.2" fill="currentColor" fill-opacity=".15"/><path d="M9.6 17.6h1.8"/>',
   'pose-open': '<path d="M5 5.5q3.5 0 7 1.8 3.5-1.8 7-1.8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2q-3.5 0-7-1.8-3.5 1.8-7 1.8a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2z" fill="currentColor" fill-opacity=".15"/>',
+  'view-3d': '<path d="M12 3 4 7.5v9l8 4.5 8-4.5v-9z"/><path d="m4 7.5 8 4.5 8-4.5M12 12v9"/>',
   'pose-flat': '<rect x="3" y="5.5" width="18" height="13" rx="2.2" fill="currentColor" fill-opacity=".15"/><path d="M5.6 15.6h1.8"/>',
   rotate: '<rect x="7" y="8" width="10" height="10" rx="2"/><path d="M14 3.5h1.5a4 4 0 0 1 4 4V9"/><path d="m17.5 7.2 2 2 2-2"/><path d="M10 22.5H8.5a4 4 0 0 1-4-4V17"/><path d="m6.5 18.8-2-2-2 2"/>',
   // The … menu's Device and Features submenus.

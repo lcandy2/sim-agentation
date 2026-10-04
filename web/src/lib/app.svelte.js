@@ -60,6 +60,9 @@ export const ui = $state({
   hinge: null,        // a foldable's hinge, in degrees, as the host last read it
   hingeDrag: null,    // the hinge slider's angle while it's dragged (see slideHinge)
   posing: false,      // a pose is being played (see setPose)
+  prefer3d: storage.get('view-3d') !== 'off', // a foldable drawn in 3D, as Device Hub draws it (see is3D)
+  scene: null,        // the 3D book from the host: { pieces, buttons, width, height }, where its screen and keys land
+  box3d: null,        // the 3D view's size on the page, CSS px
   annotations: [],
   draft: null,        // { label, box } while the composer is open: the selection's box, viewport px
   stream: {
@@ -140,6 +143,8 @@ export function attachStage({ canvas, overlay, float, stage, previewInfo }) {
   rt.float = float;
   rt.stage = stage;
   rt.previewInfo = previewInfo;
+  // The 3D book is rendered on the stage's color, which the theme changes.
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => syncView());
 }
 
 // ---------- stream ----------
@@ -180,6 +185,9 @@ function connect(udid) {
   });
 
   ws.onopen = () => {
+    ui.scene = null;
+    sentView = '';
+    syncView();
     ws.send(JSON.stringify({ type: 'snapshot' }));
     ws.send(JSON.stringify({ type: 'orientation', orientation: ui.orientation, sync: true }));
     // Nudge with a harmless scroll so an idle screen still emits a frame.
@@ -426,6 +434,13 @@ function onText(msg) {
     onPanel(msg);
   } else if (msg.type === 'hinge') {
     ui.hinge = msg.degrees;
+  } else if (msg.type === 'scene') {
+    ui.scene = { pieces: msg.pieces, buttons: msg.buttons, width: msg.width, height: msg.height };
+  } else if (msg.type === 'view_result') {
+    if (!msg.ok) {
+      ui.scene = null;
+      setStatus(msg.error);
+    }
   } else if (msg.type === 'pose_result') {
     ui.posing = false;
     if (!msg.ok) setStatus(msg.error);
@@ -481,9 +496,63 @@ function fraction(e) {
 }
 
 function inputPoint(e) {
-  const { fx, fy } = fraction(e);
   const { width, height } = ui.chrome.screen;
-  return { x: fx * width, y: fy * height, width, height };
+  if (is3D()) {
+    // The overlay is the rendered frame: through the screen's pieces
+    // straight into the lit panel's framebuffer, where touches land.
+    const el = rt.overlay;
+    const hit = locate(ui.scene.pieces, e.offsetX / el.clientWidth, e.offsetY / el.clientHeight);
+    return { x: hit.u * width, y: hit.v * height, width, height, inside: hit.inside };
+  }
+  const { fx, fy } = fraction(e);
+  return { x: fx * width, y: fy * height, width, height, inside: true };
+}
+
+/**
+ * A frame point (normalized) → the framebuffer point it shows, through
+ * whichever of the host's screen pieces it lands on: each a quad with its
+ * corners in the framebuffer's order and the part of the buffer it shows.
+ * Off every piece it's placed on the first, so a drag that leaves the
+ * screen keeps a position. Ported from baguette's ScreenPieces.
+ */
+function locate(pieces, px, py) {
+  let fallback = { u: 0, v: 0, inside: false };
+  for (const [i, piece] of pieces.entries()) {
+    const hit = locateInQuad(piece.corners, px, py);
+    const clamp = (x) => Math.max(0, Math.min(1, x));
+    const placed = {
+      u: piece.u[0] + clamp(hit.u) * (piece.u[1] - piece.u[0]),
+      v: piece.v[0] + clamp(hit.v) * (piece.v[1] - piece.v[0]),
+      inside: hit.inside,
+    };
+    if (placed.inside) return placed;
+    if (i === 0) fallback = placed;
+  }
+  return fallback;
+}
+
+/** (u, v) in the quad [TL, TR, BR, BL] whose bilinear blend lands on (px, py): baguette's ScreenQuad.locate. */
+function locateInQuad([a, b, c, d], px, py) {
+  const cross = (p, q) => p[0] * q[1] - p[1] * q[0];
+  const e = [b[0] - a[0], b[1] - a[1]];
+  const f = [d[0] - a[0], d[1] - a[1]];
+  const g = [a[0] - b[0] - d[0] + c[0], a[1] - b[1] - d[1] + c[1]];
+  const h = [px - a[0], py - a[1]];
+  const qa = cross(g, f), qb = cross(e, f) + cross(h, g), qc = cross(h, e);
+  let v;
+  if (Math.abs(qa) < 1e-9) {
+    v = Math.abs(qb) < 1e-9 ? 0 : -qc / qb;
+  } else {
+    const disc = qb * qb - 4 * qa * qc;
+    if (disc < 0) return { u: 0.5, v: 0.5, inside: false };
+    const v1 = (-qb + Math.sqrt(disc)) / (2 * qa), v2 = (-qb - Math.sqrt(disc)) / (2 * qa);
+    const ok = (x) => x >= -0.001 && x <= 1.001;
+    v = ok(v1) && !ok(v2) ? v1 : ok(v2) && !ok(v1) ? v2 : Math.abs(v1 - 0.5) <= Math.abs(v2 - 0.5) ? v1 : v2;
+  }
+  const dx = e[0] + v * g[0], dy = e[1] + v * g[1];
+  const u = Math.abs(dx) >= Math.abs(dy) ? (h[0] - v * f[0]) / dx : (h[1] - v * f[1]) / dy;
+  const eps = 0.001; // a click right on the edge isn't lost to rounding
+  return { u, v, inside: u >= -eps && u <= 1 + eps && v >= -eps && v <= 1 + eps };
 }
 
 /** Annotation space = accessibility points. */
@@ -511,21 +580,27 @@ export function onPointerDown(e) {
   rt.overlay.focus();
   if (ui.mode === 'annotate') return annotateDown(e);
   if (!ui.running) return;
+  const { inside, ...point } = inputPoint(e);
+  if (!inside) return; // the 3D book's body or the backdrop
   rt.touching = true;
   rt.overlay.setPointerCapture(e.pointerId);
-  send({ type: 'touch1-down', ...inputPoint(e) });
+  send({ type: 'touch1-down', ...point });
 }
 
 export function onPointerMove(e) {
   if (ui.mode === 'annotate') return annotateMove(e);
-  if (rt.touching) send({ type: 'touch1-move', ...inputPoint(e) });
+  if (rt.touching) {
+    const { inside, ...point } = inputPoint(e);
+    send({ type: 'touch1-move', ...point });
+  }
 }
 
 export function onPointerUp(e) {
   if (ui.mode === 'annotate') return annotateUp(e);
   if (!rt.touching) return;
   rt.touching = false;
-  send({ type: 'touch1-up', ...inputPoint(e) });
+  const { inside, ...point } = inputPoint(e);
+  send({ type: 'touch1-up', ...point });
 }
 
 export function onWheel(e) {
@@ -793,8 +868,10 @@ export async function setMode(mode) {
   if (mode === ui.mode) return;
   // Nothing to freeze yet: no live frame from a running device.
   if (mode === 'annotate' && (!rt.frame || !ui.chrome)) return;
+  const was3D = is3D();
   ui.mode = mode;
   closeComposer();
+  syncView(); // annotating shows the screen flat
 
   if (mode === 'annotate') {
     // Design Mode's annotations show in the inspector: its tab, and the
@@ -811,11 +888,17 @@ export async function setMode(mode) {
     // Freeze a copy: video frames belong to the decoder and must be closed soon.
     const source = rt.frame;
     rt.frame = null;
-    const bitmap = await createImageBitmap(source);
+    // A 3D frame is the book, not the screen: freeze the screen itself.
+    const bitmap = was3D ? await requestStill() : await createImageBitmap(source);
     source.close?.();
+    if (!bitmap) {
+      ui.mode = 'interact';
+      syncView();
+      return flashStatus("Couldn't freeze the screen");
+    }
     // A stream below full resolution blurs small things together (a ring of
     // dots, a word and its icon), so ask for the screen at full size too.
-    const still = bitmap.width < devicePixels().width ? requestStill() : Promise.resolve(null);
+    const still = !was3D && bitmap.width < devicePixels().width ? requestStill() : Promise.resolve(null);
     if (ui.mode !== 'annotate') return bitmap.close(); // left annotate mode meanwhile
     const f = (rt.frozen = {
       bitmap,
@@ -1317,6 +1400,65 @@ export function setPose(degrees) {
   send({ type: 'pose', degrees });
 }
 
+// ---------- 3D ----------
+
+/** Device Hub draws iPhone Duo in 3D; annotating needs the screen as it is, flat. */
+export const wants3D = () => isFoldable() && ui.running && ui.prefer3d && ui.mode === 'interact';
+
+/** The 3D book is up: the host loaded the model and said where its screen lands. */
+export const is3D = () => wants3D() && !!ui.scene && !!ui.box3d;
+
+/** Switches between the 3D book and the flat screen in its chrome. */
+export function toggle3D() {
+  ui.prefer3d = !ui.prefer3d;
+  storage.set('view-3d', ui.prefer3d ? 'on' : 'off');
+  syncView();
+  tick().then(updateScale);
+}
+
+let sentView = '';
+
+/**
+ * Tells the host which view to stream: the book rendered at the stage's
+ * size (up to 2× for a Retina screen) on the stage's color, as frames
+ * have no transparency, or the flat screen. Sent again when any of that
+ * changes.
+ */
+export function syncView() {
+  let msg = { type: 'view', mode: 'flat' };
+  if (wants3D() && rt.stage) {
+    const pad = getComputedStyle(rt.stage);
+    const box = {
+      width: Math.max(160, Math.floor(rt.stage.clientWidth - parseFloat(pad.paddingLeft) - parseFloat(pad.paddingRight))),
+      height: Math.max(160, Math.floor(rt.stage.clientHeight - parseFloat(pad.paddingTop) - parseFloat(pad.paddingBottom))),
+    };
+    if (box.width !== ui.box3d?.width || box.height !== ui.box3d?.height) ui.box3d = box;
+    const k = Math.min(window.devicePixelRatio || 1, 2);
+    msg = { type: 'view', mode: '3d', width: Math.round(box.width * k), height: Math.round(box.height * k), background: stageColor() };
+  }
+  const key = JSON.stringify(msg);
+  if (key === sentView || rt.ws?.readyState !== WebSocket.OPEN) return;
+  sentView = key;
+  rt.ws.send(key);
+}
+
+/** The color behind the stage, as `#rrggbb`: whatever CSS gives, through a 1-pixel canvas. */
+function stageColor() {
+  let color = 'rgb(255, 255, 255)';
+  for (let el = rt.stage; el; el = el.parentElement) {
+    const c = getComputedStyle(el).backgroundColor;
+    if (c && c !== 'transparent' && !/^rgba\(.*,\s*0\)$/.test(c)) {
+      color = c;
+      break;
+    }
+  }
+  const ctx = new OffscreenCanvas(1, 1).getContext('2d');
+  ctx.fillStyle = color;
+  ctx.fillRect(0, 0, 1, 1);
+  const [r, g, b] = ctx.getImageData(0, 0, 1, 1).data;
+  return `#${[r, g, b].map((x) => x.toString(16).padStart(2, '0')).join('')}`;
+}
+
 let slideFrame = 0;
 
 /**
@@ -1556,6 +1698,7 @@ function currentScale() {
 
 export function updateScale() {
   ui.scale = currentScale();
+  syncView();
   // Zoom and window size move the auto resolution; settle once they stop.
   clearTimeout(settleTimer);
   settleTimer = setTimeout(settleStream, 400);

@@ -28,7 +28,7 @@ public final class ScreenCapture: @unchecked Sendable {
     private let queue = DispatchQueue(label: "sim-agentation.screen", qos: .userInteractive)
     private var descriptors: [NSObject] = []
     private var callbacks: [ObjectIdentifier: NSUUID] = [:]
-    private var onFrame: ((IOSurface) -> Void)?
+    private var onFrame: ((IOSurface, IOSurface?) -> Void)?
     private var idleTimer: DispatchSourceTimer?
     private var captureQueued = false
     private var io: NSObject?
@@ -54,7 +54,9 @@ public final class ScreenCapture: @unchecked Sendable {
 
     deinit { stop() }
 
-    public func start(onFrame: @escaping (IOSurface) -> Void) throws {
+    /// `onFrame` gets the screen's surface and, for a foldable (see
+    /// `preferPlane`), the other panel's.
+    public func start(onFrame: @escaping (IOSurface, IOSurface?) -> Void) throws {
         guard let device = Simulators.shared.object(for: udid) else { throw SimulatorError.notFound(udid) }
         guard let io = callObject(device, "io") else { throw ScreenError.ioUnavailable }
         self.io = io
@@ -176,7 +178,7 @@ public final class ScreenCapture: @unchecked Sendable {
         }
         guard let best else { return }
         if let alternate { checkLit(best.surface, against: alternate) }
-        onFrame?(best.surface)
+        onFrame?(best.surface, alternate)
     }
 
     /// The hinge can say one panel while SpringBoard lit the other (it

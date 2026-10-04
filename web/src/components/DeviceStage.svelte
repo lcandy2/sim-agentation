@@ -1,7 +1,7 @@
 <script>
   import { onMount, untrack } from 'svelte';
   import {
-    ui, MARGIN, ROTATION, attachStage, onStageResize, startDevice, pressHome, reclaimInput, saveScreenshot, toggleRecording, rotate, isFoldable, POSES, currentPose, setPose, slideHinge, hingeAngle,
+    ui, MARGIN, ROTATION, attachStage, onStageResize, startDevice, pressHome, reclaimInput, saveScreenshot, toggleRecording, rotate, isFoldable, POSES, currentPose, setPose, slideHinge, hingeAngle, is3D, toggle3D, pressButton,
     onPointerDown, onPointerMove, onPointerUp, onWheel, onScreenKey,
   } from '../lib/app.svelte.js';
   import { icon } from '../lib/icons.js';
@@ -104,20 +104,52 @@
     untrack(() => { angle += ((((target - angle) % 360) + 540) % 360) - 180; });
   });
   const outer = $derived(chrome ? { w: chrome.size.width + MARGIN * 2, h: chrome.size.height + MARGIN * 2 } : { w: 0, h: 0 });
+
+  // iPhone Duo in 3D, as Device Hub draws it: the host renders the book at
+  // the stage's size, so the screen is the whole frame, unturned and
+  // unmasked, and the keys are glyphs beside it where the host says.
+  const in3D = $derived(is3D());
+  const box = $derived(ui.box3d ?? { width: 0, height: 0 });
+  const KEYS = {
+    'volume-down': ['Volume Down', '<path d="M2.5 6.5h2.8L9 3.5v11L5.3 11.5H2.5z"/><path d="M11.5 9h4"/>'],
+    'volume-up': ['Volume Up', '<path d="M2.5 6.5h2.8L9 3.5v11L5.3 11.5H2.5z"/><path d="M11.5 9h4M13.5 7v4"/>'],
+    action: ['Camera Control', '<path d="M2.5 6.5h3l1.5-2h4l1.5 2h3v8h-13z"/><circle cx="9" cy="10.2" r="2.4"/>'],
+    power: ['Sleep/Wake', '<rect x="4" y="8" width="10" height="7.5" rx="1.5"/><path d="M6 8V5.8a3 3 0 0 1 6 0V8"/>'],
+  };
+  const glyph = (paths) => `<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths}</svg>`;
 </script>
 
 <section class="stage" bind:this={stage}>
   <div class="device-wrap" bind:this={wrap} hidden={!!ui.message || !chrome}>
-    <div class="rotor" bind:this={rotor} style:width={px(sideways ? outer.h : outer.w)} style:height={px(sideways ? outer.w : outer.h)}>
+    <div
+      class="rotor"
+      bind:this={rotor}
+      style:width={in3D ? `${box.width}px` : px(sideways ? outer.h : outer.w)}
+      style:height={in3D ? `${box.height}px` : px(sideways ? outer.w : outer.h)}
+    >
       <div
         class="bezel"
         class:annotating={ui.mode === 'annotate'}
-        style:width={chrome && px(chrome.size.width)}
-        style:height={chrome && px(chrome.size.height)}
-        style:transform="translate(-50%, -50%) rotate({angle}deg)"
-        style:--unrotate="{-angle}deg"
+        class:in3d={in3D}
+        style:width={in3D ? `${box.width}px` : chrome && px(chrome.size.width)}
+        style:height={in3D ? `${box.height}px` : chrome && px(chrome.size.height)}
+        style:transform={in3D ? 'translate(-50%, -50%)' : `translate(-50%, -50%) rotate(${angle}deg)`}
+        style:--unrotate="{in3D ? 0 : -angle}deg"
       >
-        {#if chrome}
+        {#if in3D}
+          <div class="hw-keys">
+            {#each ui.scene.buttons as key (key.id)}
+              <button
+                class="hw-key"
+                title={KEYS[key.id]?.[0] ?? key.id}
+                aria-label={KEYS[key.id]?.[0] ?? key.id}
+                style:left="{key.control[0] * box.width}px"
+                style:top="{key.control[1] * box.height}px"
+                onclick={() => pressButton(key.id)}
+              >{@html glyph(KEYS[key.id]?.[1] ?? '')}</button>
+            {/each}
+          </div>
+        {:else if chrome}
           <div id="side-buttons">
             {#each chrome.buttons as button (button.name)}
               <SideButton {button} frame={buttonFrame(button, chrome.size)} />
@@ -144,13 +176,14 @@
           class="device"
           class:preview={!ui.running}
           class:annotating={ui.mode === 'annotate'}
-          style:left={chrome && px(chrome.screen.x)}
-          style:top={chrome && px(chrome.screen.y)}
-          style:width={chrome && px(chrome.screen.width)}
-          style:height={chrome && px(chrome.screen.height)}
-          style:mask-image={mask}
-          style:-webkit-mask-image={mask}
-          style:border-radius={unmaskedCorner}
+          class:in3d={in3D}
+          style:left={in3D ? '0px' : chrome && px(chrome.screen.x)}
+          style:top={in3D ? '0px' : chrome && px(chrome.screen.y)}
+          style:width={in3D ? `${box.width}px` : chrome && px(chrome.screen.width)}
+          style:height={in3D ? `${box.height}px` : chrome && px(chrome.screen.height)}
+          style:mask-image={in3D ? '' : mask}
+          style:-webkit-mask-image={in3D ? '' : mask}
+          style:border-radius={in3D ? null : unmaskedCorner}
         >
           <canvas id="screen" bind:this={canvas}></canvas>
           <!-- The runtime draws hover, selection and markers into this layer. It
@@ -174,10 +207,10 @@
         <div
           class="float-layer"
           bind:this={float}
-          style:left={chrome && px(chrome.screen.x)}
-          style:top={chrome && px(chrome.screen.y)}
-          style:width={chrome && px(chrome.screen.width)}
-          style:height={chrome && px(chrome.screen.height)}
+          style:left={in3D ? '0px' : chrome && px(chrome.screen.x)}
+          style:top={in3D ? '0px' : chrome && px(chrome.screen.y)}
+          style:width={in3D ? `${box.width}px` : chrome && px(chrome.screen.width)}
+          style:height={in3D ? `${box.height}px` : chrome && px(chrome.screen.height)}
         ></div>
       </div>
     </div>
@@ -228,6 +261,14 @@
               onclick={() => setPose(pose.degrees)}
             >{@html icon(`pose-${pose.name}`)}</button>
           {/each}
+          <button
+            class="icon-btn"
+            class:on={ui.prefer3d}
+            title={ui.prefer3d ? 'Show Flat' : 'Show in 3D'}
+            aria-pressed={ui.prefer3d}
+            data-icon="view-3d"
+            onclick={toggle3D}
+          >{@html icon('view-3d')}</button>
           <input
             class="hinge-slider"
             type="range"

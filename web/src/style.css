@@ -298,6 +298,42 @@ img { -webkit-user-drag: none; }
 /* iPhone Duo's pose picker, as Device Hub's: the pose it's in tinted, no fill. */
 .pill .icon-btn.pose.on { background: none; color: var(--accent); }
 .hinge-slider { width: 96px; margin: 0 8px 0 6px; accent-color: var(--accent); }
+/* The 3D book is the whole frame: no screen backing until frames come, and
+   its edges fade out, as a codec's color range leaves the backdrop a shade
+   off the page's (255 comes back 253). */
+.device.in3d {
+  background: none;
+  --fade: linear-gradient(to right, transparent, #000 24px, #000 calc(100% - 24px), transparent);
+  -webkit-mask-image: var(--fade), linear-gradient(to bottom, transparent, #000 24px, #000 calc(100% - 24px), transparent);
+  -webkit-mask-composite: source-in;
+  mask-image: var(--fade), linear-gradient(to bottom, transparent, #000 24px, #000 calc(100% - 24px), transparent);
+  mask-composite: intersect;
+}
+/* Device Hub's keys beside the 3D book: bare glyphs, shown while the
+   pointer is on the stage, lit under it. */
+.hw-keys { position: absolute; inset: 0; z-index: 5; pointer-events: none; }
+.hw-key {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--secondary);
+  opacity: 0;
+  pointer-events: auto;
+  cursor: pointer;
+  transition: opacity 160ms ease, color 120ms ease;
+}
+.hw-key svg { width: 18px; height: 18px; }
+.stage:hover .hw-key { opacity: 1; }
+.hw-key:hover { color: var(--accent); }
+.hw-key:active { transform: translate(-50%, -50%) scale(0.92); }
 .pill.segmented .icon-btn { width: 32px; }
 .pill.segmented > * + * { margin-left: 3px; }
 

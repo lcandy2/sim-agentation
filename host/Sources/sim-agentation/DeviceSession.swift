@@ -62,6 +62,15 @@ final class DeviceSession: @unchecked Sendable {
     private lazy var input = HIDInput(udid: udid)
     /// iPhone Duo and its like: the stream follows the panel the hinge lights.
     private let foldable: Foldable?
+    // A foldable drawn in 3D (see `DuoScene`), lock held: the scene, kept
+    // while the page shows the flat screen; whether frames go through it;
+    // the other panel's latest surface; and the last render, reused while
+    // nothing it shows has changed (the idle pump asks 60 times a second).
+    private var scene: DuoScene?
+    private var view3D = false
+    private var lastOther: IOSurface?
+    private var poseVersion = 0
+    private var lastRender: (key: [UInt64], surface: IOSurface)?
 
     // How the stream keeps up, reported once a second for the page's Auto
     // (see `report`).
@@ -135,10 +144,13 @@ final class DeviceSession: @unchecked Sendable {
         lock.lock(); statsTimer = stats; lock.unlock()
         foldable?.start(
             onLit: { [weak self] lit in self?.bind(lit) },
-            onAngle: { [weak self] degrees in self?.socket.send(json: ["type": "hinge", "degrees": degrees]) }
+            onAngle: { [weak self] degrees in
+                self?.socket.send(json: ["type": "hinge", "degrees": degrees])
+                self?.poseScene()
+            }
         )
         do {
-            try capture.start { [weak self] surface in self?.frame(surface) }
+            try capture.start { [weak self] surface, other in self?.frame(surface, other: other) }
         } catch {
             socket.send(json: ["type": "error", "error": "\(error)"])
             socket.close()
@@ -176,15 +188,91 @@ final class DeviceSession: @unchecked Sendable {
         lock.lock(); pendingKeyframe = true; pendingSeed = true; lock.unlock()
         socket.send(json: ["type": "panel", "panel": lit.panel.name, "orientation": lit.orientation])
         capture.requestFrame()
+        poseScene()
+    }
+
+    /// The page's view of a foldable: Device Hub's 3D book, `width` ×
+    /// `height` pixels on `background`, or the flat screen in its chrome
+    /// (annotating needs the screen as it is). The model loads once, in
+    /// about a second, then stays for the stream.
+    private func setView(_ msg: [String: Any]) {
+        guard foldable != nil else { return }
+        guard msg["mode"] as? String == "3d" else {
+            lock.lock(); view3D = false; lastRender = nil; pendingKeyframe = true; pendingSeed = true; lock.unlock()
+            capture.requestFrame()
+            return
+        }
+        // Even sizes for the H.264/HEVC 4:2:0 encoders; at most 1600 on the
+        // long side, as baguette streams it, scaled rather than clamped so
+        // the camera frames what the page shows.
+        var width = max(16.0, (msg["width"] as? NSNumber)?.doubleValue ?? 960)
+        var height = max(16.0, (msg["height"] as? NSNumber)?.doubleValue ?? 960)
+        let fit = min(1, 1600 / max(width, height))
+        width *= fit
+        height *= fit
+        let size = (width: Int(width / 2) * 2, height: Int(height / 2) * 2)
+        let background = Self.color(msg["background"] as? String)
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            MainActor.assumeIsolated {
+                do {
+                    let current = self.lock.withLock { self.scene }
+                    let scene = try current ?? DuoScene(width: size.width, height: size.height, background: background)
+                    try scene.resize(width: size.width, height: size.height)
+                    scene.setBackground(background)
+                    self.lock.lock()
+                    self.scene = scene
+                    self.view3D = true
+                    self.lastRender = nil
+                    self.pendingKeyframe = true
+                    self.pendingSeed = true
+                    self.lock.unlock()
+                    self.socket.send(json: ["type": "view_result", "ok": true, "mode": "3d", "width": size.width, "height": size.height])
+                    self.poseScene()
+                } catch {
+                    self.socket.send(json: ["type": "view_result", "ok": false, "mode": "3d", "error": "\(error)"])
+                }
+            }
+        }
+    }
+
+    /// Poses the 3D book as the device is now, tells the page where its
+    /// screen and keys landed, and draws it again.
+    private func poseScene() {
+        guard let foldable, let scene = lock.withLock({ view3D ? self.scene : nil }) else { return }
+        let state = foldable.state
+        DispatchQueue.main.async { [weak self] in
+            MainActor.assumeIsolated {
+                scene.pose(degrees: state.degrees ?? (state.unfoldedLit ? 130 : 0), unfoldedLit: state.unfoldedLit, turn: state.device)
+                var message = scene.layout
+                message["type"] = "scene"
+                message["width"] = scene.size.width
+                message["height"] = scene.size.height
+                self?.socket.send(json: message)
+            }
+            guard let self else { return }
+            self.lock.withLock { self.poseVersion += 1 }
+            self.capture.requestFrame()
+        }
+    }
+
+    /// `#rrggbb`, else white.
+    private static func color(_ hex: String?) -> CGColor {
+        guard let hex, hex.count == 7, hex.hasPrefix("#"), let value = UInt32(hex.dropFirst(), radix: 16) else {
+            return CGColor(red: 1, green: 1, blue: 1, alpha: 1)
+        }
+        let part = { (shift: UInt32) in CGFloat((value >> shift) & 0xFF) / 255 }
+        return CGColor(red: part(16), green: part(8), blue: part(0), alpha: 1)
     }
 
     // MARK: - frames
 
-    /// Called on the capture queue.
-    private func frame(_ surface: IOSurface) {
+    /// Called on the capture queue; `other` is a foldable's other panel.
+    private func frame(_ surface: IOSurface, other: IOSurface?) {
         lock.lock()
         latest = surface
         lastSurface = surface
+        lastOther = other
         if video != nil { armIdlePump() }
         lock.unlock()
         pump()
@@ -259,6 +347,10 @@ final class DeviceSession: @unchecked Sendable {
         encodeStart = now
         let scale = options.scale
         let seed = pendingSeed
+        let scene = view3D ? self.scene : nil
+        let other = lastOther
+        let poseVersion = self.poseVersion
+        let unfoldedWidth = foldable?.unfoldedWidth ?? 0
         let keyframe = pendingKeyframe
         pendingSeed = false
         pendingKeyframe = false
@@ -267,7 +359,16 @@ final class DeviceSession: @unchecked Sendable {
         encodeQueue.async { [weak self] in
             defer { IOSurfaceDecrementUseCount(surface) }
             guard let self else { return }
-            guard let pixels = self.scaler.scale(surface, by: scale) else { return self.sent(nil) }
+            var source = surface, scale = scale
+            if let scene {
+                // The book in 3D: each panel on its screen, rendered at the
+                // page's size, which is the size to send.
+                let render = self.render3D(scene, surface, other, unfoldedWidth: unfoldedWidth, poseVersion: poseVersion)
+                guard let render else { return self.sent(nil) }
+                source = render
+                scale = 1
+            }
+            guard let pixels = self.scaler.scale(source, by: scale) else { return self.sent(nil) }
             guard let video = self.video else {
                 let bytes = self.jpeg.encode(pixels)
                 if let bytes { self.socket.send(binary: bytes) }
@@ -275,6 +376,24 @@ final class DeviceSession: @unchecked Sendable {
             }
             if seed, let bytes = self.jpeg.encode(pixels) { self.socket.send(binary: Self.tagged(.seed, bytes)) }
             if !video.encode(pixels, forceKeyframe: keyframe) { self.encoded(nil) }
+        }
+    }
+
+    /// The 3D frame for these panels' surfaces, rendered on the main queue,
+    /// or the last one again when neither surface nor the pose changed.
+    private func render3D(_ scene: DuoScene, _ surface: IOSurface, _ other: IOSurface?, unfoldedWidth: Int, poseVersion: Int) -> IOSurface? {
+        let ids = [surface, other].map { s in s.map { UInt64(IOSurfaceGetID($0)) << 32 | UInt64(IOSurfaceGetSeed($0)) } ?? 0 }
+        let key = ids + [UInt64(poseVersion)]
+        if let last = lock.withLock({ lastRender }), last.key == key { return last.surface }
+        let unfoldedFirst = IOSurfaceGetWidth(surface) == unfoldedWidth
+        let (unfolded, cover) = unfoldedFirst ? (surface, other) : (other, surface)
+        do {
+            let rendered = try onMain { try scene.render(unfolded: unfolded, cover: cover) }
+            lock.withLock { lastRender = (key, rendered) }
+            return rendered
+        } catch {
+            FileHandle.standardError.write(Data("sim-agentation: 3D frame skipped: \(error)\n".utf8))
+            return nil
         }
     }
 
@@ -383,12 +502,17 @@ final class DeviceSession: @unchecked Sendable {
                 guard msg["sync"] as? Bool != true, foldable.known else { return }
                 // Through the guest, as Device Hub's rotate button turns it:
                 // the Purple event that turns a phone does nothing here.
-                guest("orientation_result", ["orientation": name]) { try foldable.turn(to: name) }
+                guest("orientation_result", ["orientation": name]) { [weak self] in
+                    try foldable.turn(to: name)
+                    self?.poseScene()
+                }
                 return
             }
             guard let orientation = DeviceOrientation(wireName: name) else { return }
             let ok = Orientation.set(orientation, udid: udid)
             socket.send(json: ["type": "orientation_result", "ok": ok, "orientation": name])
+        case "view":
+            setView(msg)
         case "pose":
             // Device Hub's pose picker: the hinge to `degrees`.
             guard let foldable, let degrees = (msg["degrees"] as? NSNumber)?.doubleValue, degrees.isFinite else { return }

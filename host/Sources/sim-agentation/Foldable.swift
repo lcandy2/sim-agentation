@@ -213,6 +213,16 @@ final class Foldable: @unchecked Sendable {
         }
     }
 
+    /// What the 3D scene poses from (see `DuoScene`): the hinge as last
+    /// heard, whether the unfolded panel is the lit one, and the device's
+    /// own turn.
+    var state: (degrees: Double?, unfoldedLit: Bool, device: Int) {
+        lock.withLock { (degrees, lit?.panel == unfolded, device ?? 0) }
+    }
+
+    /// The unfolded panel's framebuffer width, which tells its frames apart.
+    var unfoldedWidth: Int { unfolded.width }
+
     /// Whether the lit panel is known yet (and so how it's mounted).
     var known: Bool { lock.withLock { lit != nil } }
 
