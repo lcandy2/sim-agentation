@@ -129,7 +129,6 @@
   >
     <div class="composer-target">{ui.draft.label}</div>
     <textarea class="field" rows="3" placeholder="What should change?" bind:this={text} bind:value={comment} onkeydown={keydown}></textarea>
-    <div class="composer-row"></div>
   </form>
   {#if place}
     <!-- The outline's shadow, only outside it, drawn after the glass so the
@@ -147,13 +146,14 @@
       <path filter="url(#composer-shadow)" transform="translate({SHADOW_PAD} {SHADOW_PAD})" d={place.outline} />
     </svg>
   {/if}
-  <!-- Over the form's last row rather than in it: the form's outline clips
-       what's inside, and a pulled button reaches past it. -->
+  <!-- In the text field's bottom right corner, but over the form rather
+       than in it: the form's outline clips what's inside, and a pulled button
+       reaches past it. -->
   <button
     type="submit"
     form="composer-form"
     class="glass-btn prominent composer-send"
-    style:right={place?.pointer.side === 'right' ? '22.5px' : '12px'}
+    style:right={place?.pointer.side === 'right' ? '26.5px' : '16px'}
     title="Add (⌘↩)"
     aria-label="Add"
     disabled={!comment.trim()}

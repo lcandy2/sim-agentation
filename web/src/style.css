@@ -995,11 +995,13 @@ kbd {
   pointer-events: none;
 }
 .composer-target { font-size: 13px; line-height: 16px; font-weight: 700; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.composer .field { height: auto; padding: 4px 8px; line-height: 16px; resize: none; }
-/* The send button's row; the button sits over it (components/Composer.svelte),
-   12 in from the bottom and the side away from the pointer. */
-.composer-row { height: 32px; margin-top: 4px; }
-.glass-btn.composer-send { position: absolute; bottom: 12px; }
+/* The note's field, its corners concentric with the composer's (28 - 12),
+   room on the right for the send button in its corner. */
+.composer .field { height: auto; padding: 8px 36px 8px 12px; border-radius: 16px; line-height: 16px; resize: none; }
+/* The send button, 4 in from the field's bottom right corner, concentric
+   with it (12 + 4), placed over the form (components/Composer.svelte). */
+.glass-btn.composer-send { position: absolute; bottom: 16px; width: 24px; height: 24px; }
+.glass-btn.composer-send svg { width: 15px; height: 15px; }
 .glass-btn.composer-send:disabled { opacity: calc(var(--pop) * 0.4); }
 
 /* ---------- narrow windows ---------- */
