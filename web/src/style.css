@@ -152,6 +152,12 @@ html, body {
 }
 button, input, textarea, select { font: inherit; color: inherit; }
 button { cursor: default; }
+/* As in a Mac app, the interface itself isn't text to select (labels,
+   placeholders, pictures, buttons); what's typed and what's worth copying
+   is: fields, the annotations' notes and replies, the device's info. */
+body { -webkit-user-select: none; user-select: none; }
+input, textarea, .item-comment, .item-reply, .info dd { -webkit-user-select: text; user-select: text; }
+img { -webkit-user-drag: none; }
 [hidden] { display: none !important; }
 [data-icon] { display: inline-grid; place-items: center; }
 [data-icon] svg { width: 18px; height: 18px; }
