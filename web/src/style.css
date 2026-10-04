@@ -449,6 +449,8 @@ kbd {
    a selected row does, so their edges meet its blue. */
 .sidebar-top { height: 36px; flex: none; margin: 0 -7px; display: flex; align-items: center; gap: 6px; }
 /* The product name where macOS puts a window's title, then + and filter. */
+/* The app icon's tile has its own margin (53 of 1254), so 28 px draws it at about 26. */
+.brand-icon { flex: none; width: 28px; height: 28px; margin: 0 -2px 0 -3px; }
 .brand { flex: 1; min-width: 0; font-size: 17px; line-height: 22px; font-weight: 700; color: var(--sidebar-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 @media (max-width: 1100px) { .brand { font-size: 15px; } } /* the narrower sidebar still fits it whole */
 
