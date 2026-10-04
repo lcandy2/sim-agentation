@@ -570,6 +570,9 @@ kbd {
 .device-row .kind { font-size: 11px; line-height: 14px; color: var(--sidebar-secondary); }
 .device-row .version { font-size: 11px; color: var(--sidebar-secondary); font-variant-numeric: tabular-nums; }
 .device-row.selected { background: var(--selection); color: var(--on-selection); }
+/* Selected rows next to each other make one block, rounded at its ends. */
+.device-row.join-above { border-top-left-radius: 0; border-top-right-radius: 0; }
+.device-row.join-below { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
 /* Busy, a row's second line says with what, after a small spinner; being
    removed, it fades; the one being created stands in until it's listed. */
 /* macOS's progress indicator (lib/icons.js), stepping a spoke at a time. */

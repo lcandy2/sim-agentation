@@ -39,6 +39,10 @@
   // As a Mac list: a click selects one device and shows it; ⌘-click adds or
   // takes away one, ⇧-click selects the range from the last clicked (⌘⇧ adds
   // it), neither changing the device shown. ⌘⌫ removes what's selected.
+  // Selected rows next to each other read as one block, as in a Mac list:
+  // each says which neighbours are selected too.
+  const isSelected = (s) => (s ? (ui.picked.length ? ui.picked.includes(s.udid) : s.udid === ui.udid) : false);
+
   let anchor = null;
   function pick(sim, e) {
     const order = list.map((s) => s.udid);
@@ -100,8 +104,8 @@
   <!-- Right-clicked outside a row (rows have their own), the list's menu. -->
   <nav class="devices" aria-label="Simulators" oncontextmenu={listMenu} onkeydown={listKeys}>
     <h3>{filter.heading}</h3>
-    {#each list as sim (sim.udid)}
-      <DeviceRow {sim} version={version(sim.runtime)} {pick} />
+    {#each list as sim, i (sim.udid)}
+      <DeviceRow {sim} version={version(sim.runtime)} {pick} joinAbove={isSelected(sim) && isSelected(list[i - 1])} joinBelow={isSelected(sim) && isSelected(list[i + 1])} />
     {:else}
       {#if !ui.creating}<p class="none">No simulators match.</p>{/if}
     {/each}

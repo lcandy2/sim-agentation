@@ -5,7 +5,8 @@
   import ContextMenu from './ContextMenu.svelte';
 
   // pick: the list's click (⌘ and ⇧ select several, components/Sidebar.svelte).
-  let { sim, version, pick = (s) => selectDevice(s) } = $props();
+  // joinAbove, joinBelow: the rows next to it are selected too (one block).
+  let { sim, version, pick = (s) => selectDevice(s), joinAbove = false, joinBelow = false } = $props();
 
   // The device picture inside a 32 px circle, as in Device Hub: lit when
   // the simulator runs, grayed out when it's shut down.
@@ -85,6 +86,8 @@
   class="device-row"
   class:booted={sim.state === 'Booted'}
   class:selected
+  class:join-above={joinAbove}
+  class:join-below={joinBelow}
   class:context-target={ui.contextFor.includes(sim.udid)}
   class:removing={busy === 'Removing…'}
   aria-busy={!!busy}
