@@ -85,6 +85,19 @@ export function project(maps, u, v) {
   return { x, y };
 }
 
+/**
+ * The angle (degrees, clockwise) at which a line from a framebuffer point
+ * runs on the stage, going (du, dv) in the framebuffer: how the screen's
+ * text leans there, for a label laid flat beside it.
+ */
+export function angleAt(maps, u, v, du, dv) {
+  const at = project(maps, u, v);
+  if (!at) return 0;
+  const ahead = project(maps, u + du, v + dv);
+  const [from, to] = ahead ? [at, ahead] : [project(maps, u - du, v - dv), at];
+  return from ? (Math.atan2(to.y - from.y, to.x - from.x) * 180) / Math.PI : 0;
+}
+
 /** How squarely a piece faces the camera, 1 head-on (the host's cosine). */
 export const facing = ({ piece }) => piece.facing ?? 1;
 

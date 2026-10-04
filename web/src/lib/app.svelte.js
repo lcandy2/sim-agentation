@@ -10,7 +10,7 @@ import { matchesFrontApp, sdkContainers, sourceFor, viewContext } from './sdk.js
 import { createDecoder, decodeCapabilities, decodesSmoothly, formatLabel, pickFormat } from './stream.js';
 import { HIDDEN_FPS, createAuto, decide, newFormat, observe, probeFor, probed, restart } from './auto.js';
 import { isTurned, sdkToPortrait, treeToPortrait, uprightDegrees } from './rotation.js';
-import { pieceMaps, locate, stageBox, project, facing } from './screen3d.js';
+import { pieceMaps, locate, stageBox, project, facing, angleAt } from './screen3d.js';
 
 export const storage = {
   get(k) {
@@ -442,6 +442,7 @@ function onText(msg) {
     onPanel(msg);
   } else if (msg.type === 'hinge') {
     ui.hinge = msg.degrees;
+    refreezeSoon();
   } else if (msg.type === 'scene') {
     ui.scene = { pieces: msg.pieces, buttons: msg.buttons, width: msg.width, height: msg.height };
     if (typeof msg.degrees === 'number') ui.hinge = msg.degrees; // the pose the book is drawn in
@@ -453,6 +454,7 @@ function onText(msg) {
   } else if (msg.type === 'pose_result') {
     ui.posing = false;
     if (!msg.ok) setStatus(msg.error);
+    refreezeSoon();
   } else if (msg.type === 'stats') {
     onStats(msg);
   } else if (msg.type === 'probe_result') {
@@ -569,17 +571,24 @@ const floatLayer = () => (is3D() && rt.layers3D?.floats) || rt.float;
 export function attachScreen3D({ boxes, floats, mirrors, flat }) {
   boxes.append(...rt.overlay.querySelectorAll('.hl, .sel'));
   floats.append(...rt.float.children);
-  // Boxes are copied onto every piece; labels and markers stand flat on
-  // the page where their anchor lands, so they read whatever the angle.
+  // Boxes are copied onto every piece; labels and markers stand on the
+  // page where their anchor lands, unwarped so they read at any angle, but
+  // turned as the screen's text runs there, so they lean with the screen.
   const sync = () => {
     for (const to of mirrors) if (to) to.innerHTML = boxes.innerHTML;
     const maps = activeMaps3D();
+    // The interface's rightward in the framebuffer (the page turns it by ROTATION).
+    const turn = ((ROTATION[ui.orientation] ?? 0) * Math.PI) / 180;
+    const { width, height } = rt.frozen?.points ?? ui.chrome.screen;
+    const [du, dv] = [(Math.cos(turn) / width) * 20, (-Math.sin(turn) / height) * 20];
     flat.replaceChildren(...[...floats.children].flatMap((el) => {
-      const at = project(maps, parseFloat(el.style.left) / 100, parseFloat(el.style.top) / 100);
+      const [u, v] = [parseFloat(el.style.left) / 100, parseFloat(el.style.top) / 100];
+      const at = project(maps, u, v);
       if (!at) return [];
       const copy = el.cloneNode(true);
       copy.style.left = `${at.x}px`;
       copy.style.top = `${at.y}px`;
+      copy.style.setProperty('--unrotate', `${angleAt(maps, u, v, du, dv)}deg`);
       return [copy];
     }));
   };
@@ -1545,6 +1554,25 @@ async function onPanel({ panel, orientation, degrees }) {
   ui.orientation = orientation in ROTATION ? orientation : 'portrait';
   await tick();
   updateScale();
+  refreezeSoon();
+}
+
+let refreezeTimer = 0;
+
+/**
+ * Folding a foldable in Design Mode changes what's on its screen, and can
+ * light the other one: once the hinge has stopped and SpringBoard has laid
+ * the screen out again (a second or so), the screen is frozen afresh, still,
+ * tree and all. A note being written is left alone.
+ */
+function refreezeSoon() {
+  if (ui.mode !== 'annotate' || !isFoldable()) return;
+  clearTimeout(refreezeTimer);
+  refreezeTimer = setTimeout(async () => {
+    if (ui.mode !== 'annotate' || ui.draft) return;
+    await setMode('interact');
+    await setMode('annotate');
+  }, 1200);
 }
 
 export async function loadDevices() {
