@@ -73,44 +73,41 @@
     if (value) submitComposer(value);
   }
 
-  // Liquid Glass lights from within where it's touched (style.css), and
-  // held, the button can be pulled: it follows the pointer a little, with
-  // much resistance (never past 4 px), drawn out toward it and thinner
-  // across like a drop (up to 1.15 by 1/1.15), and snaps back when
-  // let go (style.css's spring). A pull isn't a click.
+  // Pressed and dragged as macOS 27's glass buttons answer a mouse (measured
+  // on one, real events, 60 fps): pressed it darkens (8%) while the pointer
+  // is over it and clears once it's off; it leans toward the pointer only
+  // as the traffic lights do, up to 4% of its size, and settles back in
+  // 100 ms when let go. Let go off it, it isn't a click.
   let pull = null;
   let pulled = false;
-  function glow(e) {
-    const r = e.currentTarget.getBoundingClientRect();
-    e.currentTarget.style.setProperty('--glow-x', `${e.clientX - r.left}px`);
-    e.currentTarget.style.setProperty('--glow-y', `${e.clientY - r.top}px`);
-  }
   function grab(e) {
     if (e.button !== 0) return;
-    pull = { x: e.clientX, y: e.clientY, moved: false };
+    const r = e.currentTarget.getBoundingClientRect();
+    pull = { x: e.clientX, y: e.clientY, cx: r.left + r.width / 2, cy: r.top + r.height / 2, size: r.width, over: true };
     e.currentTarget.setPointerCapture(e.pointerId);
+    e.currentTarget.classList.add('pressed');
   }
   function drag(e) {
-    glow(e);
     if (!pull) return;
+    const el = e.currentTarget;
+    pull.over = Math.hypot(e.clientX - pull.cx, e.clientY - pull.cy) <= pull.size / 2;
+    el.classList.toggle('pressed', pull.over);
     const dx = e.clientX - pull.x;
     const dy = e.clientY - pull.y;
     const d = Math.hypot(dx, dy);
-    if (!pull.moved && d < 4) return;
-    pull.moved = true;
-    const k = (4 * (1 - Math.exp(-d / 120))) / d;
-    const stretch = 1 + 0.15 * (1 - Math.exp(-d / 120));
-    const angle = Math.atan2(dy, dx);
-    const el = e.currentTarget;
+    if (!d) return;
+    const k = (0.04 * pull.size * (1 - Math.exp(-d / 60))) / d;
     el.style.transition = 'none';
-    el.style.transform = `translate(${dx * k}px, ${dy * k}px) rotate(${angle}rad) scale(${1.15 * stretch}, ${1.15 / stretch}) rotate(${-angle}rad)`;
+    el.style.transform = `translate(${dx * k}px, ${dy * k}px)`;
   }
   function letGo(e) {
     if (!pull) return;
-    pulled = pull.moved;
+    pulled = !pull.over;
     pull = null;
-    e.currentTarget.style.transition = '';
-    e.currentTarget.style.transform = '';
+    const el = e.currentTarget;
+    el.classList.remove('pressed');
+    el.style.transition = '';
+    el.style.transform = '';
     setTimeout(() => (pulled = false)); // after the click that follows
   }
   function press(e) {

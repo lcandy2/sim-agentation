@@ -452,27 +452,12 @@ img { -webkit-user-drag: none; }
   color: #fff;
   box-shadow: 0 8px 12px rgba(0, 0, 0, 0.02), 1.25px 0 0 -0.75px rgba(0, 0, 0, 0.098), -1.25px 0 0 -0.75px rgba(0, 0, 0, 0.098);
   isolation: isolate; /* its light goes over its face, under its symbol */
-  touch-action: none; /* a finger pulls it too (components/Composer.svelte) */
-  transition: transform 280ms cubic-bezier(0.25, 1.35, 0.5, 1); /* a stiff spring, overshooting 4% */
+  touch-action: none; /* a finger presses and leans it too (components/Composer.svelte) */
+  transition: transform 100ms ease-out; /* settling back after a lean */
 }
-/* As Liquid Glass does on interaction: pressed, it lifts (springing) and
-   lights from within where it's touched; hovered, it glows a little. */
-.glass-btn::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  border-radius: inherit;
-  background: radial-gradient(circle at var(--glow-x, 50%) var(--glow-y, 50%), rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0) 70%);
-  mix-blend-mode: plus-lighter;
-  opacity: 0;
-  transition: opacity 200ms ease;
-  pointer-events: none;
-}
-.glass-btn:hover:not(:disabled)::before { opacity: 0.35; }
-.glass-btn:active:not(:disabled) { transform: scale(1.15); }
-.glass-btn:active:not(:disabled)::before { opacity: 1; }
-@media (prefers-reduced-motion: reduce) { .glass-btn { transition: none; } .glass-btn:active:not(:disabled) { transform: none; } }
+/* Pressed with the pointer over it, macOS 27's glass button darkens 8%. */
+.glass-btn.pressed { filter: brightness(0.92); }
+@media (prefers-reduced-motion: reduce) { .glass-btn { transition: none; } }
 .glass-btn svg { width: 18px; height: 18px; stroke-width: 2.2; }
 .glass-btn.glass-on { background: var(--glass-face) center / 100% 100% no-repeat; }
 .glass-btn.glass-on::after {
