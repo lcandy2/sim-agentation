@@ -290,6 +290,8 @@ img { -webkit-user-drag: none; }
 .pill .icon-btn { width: 28px; height: 28px; border-radius: 100px; color: var(--control-label); opacity: 1; }
 .pill .icon-btn svg { width: 20px; height: 20px; }
 .pill .icon-btn.on { background: var(--control-on); }
+/* Disabled, its symbol goes the disabled label's gray, as a menu's does. */
+.pill .icon-btn:disabled { color: var(--menu-disabled); background: none; }
 .pill.segmented { gap: 0; }
 .pill.segmented .icon-btn { width: 32px; }
 .pill.segmented > * + * { margin-left: 3px; }
