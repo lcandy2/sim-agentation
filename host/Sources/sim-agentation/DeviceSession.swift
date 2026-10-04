@@ -44,6 +44,9 @@ final class DeviceSession: @unchecked Sendable {
     private let video: VideoEncoder?
     private let encodeQueue = DispatchQueue(label: "sim-agentation.encode", qos: .userInteractive)
     private let inputQueue = DispatchQueue(label: "sim-agentation.input", qos: .userInteractive)
+    /// A foldable's hinge, turns and keys, played in the guest one at a
+    /// time (a fold takes 0.8 s) without holding up touches.
+    private let guestQueue = DispatchQueue(label: "sim-agentation.guest", qos: .userInitiated)
     private let lock = NSLock()
     private var options: StreamOptions
     private var encoding = false
@@ -130,7 +133,10 @@ final class DeviceSession: @unchecked Sendable {
         stats.setEventHandler { [weak self] in self?.report() }
         stats.resume()
         lock.lock(); statsTimer = stats; lock.unlock()
-        foldable?.start { [weak self] lit in self?.bind(lit) }
+        foldable?.start(
+            onLit: { [weak self] lit in self?.bind(lit) },
+            onAngle: { [weak self] degrees in self?.socket.send(json: ["type": "hinge", "degrees": degrees]) }
+        )
         do {
             try capture.start { [weak self] surface in self?.frame(surface) }
         } catch {
@@ -144,8 +150,28 @@ final class DeviceSession: @unchecked Sendable {
     /// The hinge lit another panel: frames come from it, touches go to its
     /// own digitizer, and the page draws its chrome, turned as the guest
     /// turned it. The new size starts with a keyframe.
+    /// Plays `body` in the guest (see `GuestControl`) and answers `type`,
+    /// with the error when it failed, which the page shows.
+    private func guest(_ type: String, _ fields: [String: Any], _ body: @escaping @Sendable () throws -> Void) {
+        nonisolated(unsafe) let fields = fields // strings and numbers, only read below
+        guestQueue.async { [weak self] in
+            var reply = fields
+            reply["type"] = type
+            do {
+                try body()
+                reply["ok"] = true
+            } catch {
+                reply["ok"] = false
+                reply["error"] = "\(error)"
+            }
+            self?.socket.send(json: reply)
+        }
+    }
+
     private func bind(_ lit: Foldable.Lit) {
-        capture.preferPlane(width: lit.panel.width, height: lit.panel.height)
+        capture.preferPlane(width: lit.panel.width, height: lit.panel.height, other: (lit.other.width, lit.other.height)) { [weak self] in
+            self?.foldable?.swap()
+        }
         inputQueue.async { [weak self] in self?.input.targetPanel(screenId: lit.panel.screenId) }
         lock.lock(); pendingKeyframe = true; pendingSeed = true; lock.unlock()
         socket.send(json: ["type": "panel", "panel": lit.panel.name, "orientation": lit.orientation])
@@ -348,13 +374,26 @@ final class DeviceSession: @unchecked Sendable {
             let slackMs = min(300, max(40, (msg["slackMs"] as? NSNumber)?.intValue ?? 60))
             probe(bps: min(bps, 100_000_000), ms: min(1000, max(100, (msg["ms"] as? NSNumber)?.intValue ?? 400)), slackMs: slackMs)
         case "orientation":
-            // A foldable turns through the guest, as Device Hub's rotate
-            // button does, not the Purple event; until then, the hinge's
-            // own turn (see `bind`) is the one the page shows.
-            guard foldable == nil else { return }
-            guard let name = msg["orientation"] as? String, let orientation = DeviceOrientation(wireName: name) else { return }
+            guard let name = msg["orientation"] as? String else { return }
+            if let foldable {
+                // Through the guest, as Device Hub's rotate button turns it:
+                // the Purple event that turns a phone does nothing here.
+                guest("orientation_result", ["orientation": name]) { try foldable.turn(to: name) }
+                return
+            }
+            guard let orientation = DeviceOrientation(wireName: name) else { return }
             let ok = Orientation.set(orientation, udid: udid)
             socket.send(json: ["type": "orientation_result", "ok": ok, "orientation": name])
+        case "pose":
+            // Device Hub's pose picker: the hinge to `degrees`.
+            guard let foldable, let degrees = (msg["degrees"] as? NSNumber)?.doubleValue, degrees.isFinite else { return }
+            guest("pose_result", ["degrees": degrees]) { try foldable.fold(to: degrees) }
+        case "hinge":
+            // Device Hub's hinge slider: straight there, the latest of a drag.
+            guard let foldable, let degrees = (msg["degrees"] as? NSNumber)?.doubleValue, degrees.isFinite else { return }
+            foldable.slide(to: degrees, on: guestQueue) { [weak self] error in
+                self?.socket.send(json: ["type": "hinge_result", "ok": false, "error": "\(error)"])
+            }
         case "describe_ui":
             describe(msg)
         default:
@@ -486,8 +525,12 @@ final class DeviceSession: @unchecked Sendable {
         case "scroll":
             input.scroll(dx: num("deltaX") ?? 0, dy: num("deltaY") ?? 0)
         case "button":
-            if let name = msg["button"] as? String, let button = HardwareButton(rawValue: name) {
-                input.press(button, hold: num("duration") ?? 0)
+            guard let name = msg["button"] as? String, let button = HardwareButton(rawValue: name) else { return }
+            let hold = num("duration") ?? 0
+            if let foldable, Foldable.key(for: button) != nil {
+                guest("button_result", ["button": name]) { _ = try foldable.press(button, hold: hold) }
+            } else {
+                input.press(button, hold: hold)
             }
         case "key":
             let mods = (msg["modifiers"] as? [String] ?? []).compactMap { Keyboard.modifiers[$0] }

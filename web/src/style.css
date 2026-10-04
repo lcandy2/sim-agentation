@@ -293,6 +293,9 @@ img { -webkit-user-drag: none; }
 /* Disabled, its symbol goes the disabled label's gray, as a menu's does. */
 .pill .icon-btn:disabled { color: var(--menu-disabled); background: none; }
 .pill.segmented { gap: 0; }
+/* iPhone Duo's pose picker, as Device Hub's: the pose it's in tinted, no fill. */
+.pill .icon-btn.pose.on { background: none; color: var(--accent); }
+.hinge-slider { width: 96px; margin: 0 8px 0 6px; accent-color: var(--accent); }
 .pill.segmented .icon-btn { width: 32px; }
 .pill.segmented > * + * { margin-left: 3px; }
 

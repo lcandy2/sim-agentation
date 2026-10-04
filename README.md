@@ -6,7 +6,7 @@ Your app needs no SDK. Everything comes from the simulator's accessibility tree,
 
 ## Requirements
 
-- macOS on Apple Silicon, Xcode 26
+- macOS on Apple Silicon, Xcode 26 (27.1 for iPhone Duo)
 - Node and [pnpm](https://pnpm.io), to build the UI
 
 ## Run
@@ -29,6 +29,8 @@ The page is laid out like Xcode's Device Hub. On the left, the simulators, with 
 The stream picks its codec automatically: H.265, else H.264, else JPEG, taking the first this browser decodes in hardware, and moving on if the host can't encode it or nothing decodes within a few seconds. Both video codecs are encoded by VideoToolbox in hardware with no frame reordering and decoded by WebCodecs in hardware: about 60 fps (the simulator's own rate) at 3–8 Mbit/s while scrolling, against about 85 Mbit/s for JPEG. On Auto, resolution, bitrate and frame rate follow too ([`auto.js`](web/src/lib/auto.js)): full resolution at what the codec needs, unless the window is small, the browser or the Mac can't keep up, or the connection can't carry it. Once a second the host reports how far behind the viewer is and the page how late that report arrived, which also catches a backlog in a tunnel or proxy; when either grows, the bitrate drops to what got through, then half resolution, then 30 fps, and a picture already far behind streams at a trickle until it catches up. While anything is held back, the host pads the stream briefly to see whether the connection has room again, so a connection that recovers is used again within seconds. A hidden tab gets 5 fps. The inspector's settings tab shows what's running and why, and lets you pin a codec, turn on 4:2:2 chroma for H.265 (sharper colored text, about twice the bitrate, no low-latency rate control), halve the resolution or set the bitrate. The pipeline follows [baguette](https://github.com/tddworks/baguette)'s.
 
 Rotating turns the device on the page and sends iOS the orientation change, as Simulator.app does; annotating works turned too, and the screenshots go to the agent upright.
+
+iPhone Duo, Xcode 27.1's foldable, works too. The stream, touches, chrome and rotation follow whichever of its two panels is lit, and under the device sit Device Hub's pose picker (closed, open, flat) and a hinge slider. The hinge is read with `devicectl`, and the lit panel is checked against the screen itself, since SpringBoard doesn't always hand over at the same angle. Folding, turning and the hardware keys go through a small helper that runs inside the simulator and sends the HID events Device Hub sends. The host builds it from `host/Guest/HingeControl` the first time it's needed.
 
 Click **Copy** in the annotations tab to put every pending annotation on the clipboard as Markdown, so you can paste it into any agent without MCP.
 
@@ -104,4 +106,4 @@ When the app in front has the SDK, the status reads **Frozen · SDK**. Parents t
 
 ## Credits
 
-The simulator code in `host/Sources/SimBridge` is adapted from [baguette](https://github.com/tddworks/baguette) by tddworks, under the Apache License 2.0 (`host/Sources/SimBridge/LICENSE-baguette`). Recovering collapsed accessibility children (`CollapsedChildrenRecovery.swift`) is adapted from [sim-use](https://github.com/lycorp-jp/sim-use) by LY Corporation, under the Apache License 2.0 (`host/Sources/SimBridge/LICENSE-sim-use`), and restarting a stale accessibility bridge follows [idb](https://github.com/facebook/idb). Each adapted file notes what changed.
+The simulator code in `host/Sources/SimBridge` is adapted from [baguette](https://github.com/tddworks/baguette) by tddworks, under the Apache License 2.0 (`host/Sources/SimBridge/LICENSE-baguette`), and so is the iPhone Duo support (`Foldable.swift` and `Guest.swift` in `host/Sources/sim-agentation`, and the guest helper in `host/Guest/HingeControl`). Recovering collapsed accessibility children (`CollapsedChildrenRecovery.swift`) is adapted from [sim-use](https://github.com/lycorp-jp/sim-use) by LY Corporation, under the Apache License 2.0 (`host/Sources/SimBridge/LICENSE-sim-use`), and restarting a stale accessibility bridge follows [idb](https://github.com/facebook/idb). Each adapted file notes what changed.

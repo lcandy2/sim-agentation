@@ -57,6 +57,9 @@ export const ui = $state({
   creating: null,  // { name, runtime } while a new simulator is being created, for its row
   reclaiming: false,
   recording: false,
+  hinge: null,        // a foldable's hinge, in degrees, as the host last read it
+  hingeDrag: null,    // the hinge slider's angle while it's dragged (see slideHinge)
+  posing: false,      // a pose is being played (see setPose)
   annotations: [],
   draft: null,        // { label, box } while the composer is open: the selection's box, viewport px
   stream: {
@@ -421,6 +424,11 @@ function onText(msg) {
     rt.pendingTree = null;
   } else if (msg.type === 'panel') {
     onPanel(msg);
+  } else if (msg.type === 'hinge') {
+    ui.hinge = msg.degrees;
+  } else if (msg.type === 'pose_result') {
+    ui.posing = false;
+    if (!msg.ok) setStatus(msg.error);
   } else if (msg.type === 'stats') {
     onStats(msg);
   } else if (msg.type === 'probe_result') {
@@ -772,7 +780,6 @@ export function rotate() {
 /** Turns the device a quarter: 1 clockwise (Rotate Right), -1 the other way. */
 export async function rotateBy(step) {
   if (!ui.running) return;
-  if (isFoldable()) return flashStatus('Turn iPhone Duo in Device Hub for now');
   await setMode('interact');
   ui.orientation = TURN_ORDER[(TURN_ORDER.indexOf(ui.orientation) + step + TURN_ORDER.length) % TURN_ORDER.length];
   send({ type: 'orientation', orientation: ui.orientation });
@@ -1280,6 +1287,52 @@ export function chromeOf(udid, panel = null) {
 /** A device with more than one integrated panel, iPhone Duo: the stream follows the one the hinge lights. */
 export const isFoldable = () => (ui.chrome?.panels?.length ?? 0) > 1;
 
+/** A foldable shut, its cover lit. */
+export const isFolded = () => ui.chrome?.panel === 'primary';
+
+/** Device Hub's pose picker: shut, open (130°, SpringBoard goes landscape) and flat. */
+export const POSES = [
+  { name: 'closed', degrees: 0, label: 'Closed' },
+  { name: 'open', degrees: 130, label: 'Open' },
+  { name: 'flat', degrees: 180, label: 'Flat' },
+];
+
+/** The hinge as the page shows it: the slider's while dragged, else the host's reading, else the lit panel's pose. */
+export const hingeAngle = () => ui.hingeDrag ?? ui.hinge ?? (isFolded() ? 0 : 130);
+
+/** The pose nearest the hinge, the one the picker lights. */
+export function currentPose() {
+  const degrees = hingeAngle();
+  return POSES.reduce((a, b) => (Math.abs(b.degrees - degrees) < Math.abs(a.degrees - degrees) ? b : a));
+}
+
+/**
+ * Sweeps the hinge to a pose over Device Hub's 0.8 s, in the guest; the
+ * host reads the hinge back as it goes (`hinge`), and says which panel
+ * SpringBoard lit (`panel`) once it hands over.
+ */
+export function setPose(degrees) {
+  if (!ui.running || !isFoldable() || ui.posing) return;
+  ui.posing = true;
+  send({ type: 'pose', degrees });
+}
+
+let slideFrame = 0;
+
+/**
+ * Device Hub's hinge slider: the hinge goes straight to the thumb, at most
+ * once a frame (the host plays the latest and drops what a drag passed).
+ * `null` lets go, and the slider follows the hinge again.
+ */
+export function slideHinge(degrees) {
+  ui.hingeDrag = degrees;
+  if (degrees == null || slideFrame) return;
+  slideFrame = requestAnimationFrame(() => {
+    slideFrame = 0;
+    if (ui.hingeDrag != null) send({ type: 'hinge', degrees: ui.hingeDrag });
+  });
+}
+
 /**
  * The hinge lit another of a foldable's panels (see the host's Foldable):
  * the stage draws its chrome, turned the way the guest turned it, which the
@@ -1334,6 +1387,9 @@ export async function selectDevice(sim) {
   updateScale();
   ui.shown++;
   ui.inputShadowed = false;
+  ui.hinge = null;
+  ui.hingeDrag = null;
+  ui.posing = false;
   if (ui.running) {
     connect(sim.udid);
     checkInput();

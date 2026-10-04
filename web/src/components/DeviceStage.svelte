@@ -1,7 +1,7 @@
 <script>
   import { onMount, untrack } from 'svelte';
   import {
-    ui, MARGIN, ROTATION, attachStage, onStageResize, startDevice, pressHome, reclaimInput, saveScreenshot, toggleRecording, rotate, isFoldable,
+    ui, MARGIN, ROTATION, attachStage, onStageResize, startDevice, pressHome, reclaimInput, saveScreenshot, toggleRecording, rotate, isFoldable, POSES, currentPose, setPose, slideHinge, hingeAngle,
     onPointerDown, onPointerMove, onPointerUp, onWheel, onScreenKey,
   } from '../lib/app.svelte.js';
   import { icon } from '../lib/icons.js';
@@ -215,8 +215,35 @@
           onclick={toggleRecording}
         >{@html icon(ui.recording ? 'record-stop' : 'record')}</button>
       </div>
+      {#if isFoldable()}
+        <!-- Device Hub's pose picker and hinge slider; the pose nearest the hinge is lit. -->
+        <div class="pill pose-picker" role="group" aria-label="Pose">
+          {#each POSES as pose (pose.name)}
+            <button
+              class="icon-btn pose"
+              class:on={currentPose().name === pose.name}
+              title={pose.label}
+              aria-pressed={currentPose().name === pose.name}
+              data-icon="pose-{pose.name}"
+              onclick={() => setPose(pose.degrees)}
+            >{@html icon(`pose-${pose.name}`)}</button>
+          {/each}
+          <input
+            class="hinge-slider"
+            type="range"
+            min="0"
+            max="180"
+            step="1"
+            aria-label="Hinge"
+            title="Hinge {Math.round(hingeAngle())}°"
+            value={hingeAngle()}
+            oninput={(e) => slideHinge(Number(e.currentTarget.value))}
+            onchange={() => slideHinge(null)}
+          >
+        </div>
+      {/if}
       <div class="pill" role="group" aria-label="Rotate">
-        <button class="icon-btn" title={isFoldable() ? 'Turn iPhone Duo in Device Hub for now' : 'Rotate'} data-icon="rotate" disabled={isFoldable()} onclick={rotate}>{@html icon('rotate')}</button>
+        <button class="icon-btn" title="Rotate" data-icon="rotate" onclick={rotate}>{@html icon('rotate')}</button>
       </div>
     </div>
   </footer>

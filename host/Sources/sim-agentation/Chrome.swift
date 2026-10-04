@@ -99,6 +99,10 @@ final class ChromeService: @unchecked Sendable {
         /// In pixels, as the framebuffer has it (portrait).
         let width: Int
         let height: Int
+        /// How the panel is mounted: quarter turns clockwise that stand its
+        /// framebuffer the way the device stands. iPhone Duo's unfolded
+        /// panel is 1 (`nativeRotation` 270: landscape held upright).
+        let mount: Int
     }
 
     /// The device's integrated screens, `primary` first. iPhone Duo has two
@@ -109,11 +113,14 @@ final class ChromeService: @unchecked Sendable {
         let caps = try? await plist(Path.join(bundle, "Contents/Resources/capabilities.plist"))
         return Self.integratedDisplays(caps).compactMap { d -> Panel? in
             guard let name = d["deviceName"]?.stringValue else { return nil }
+            let degrees = JS.number(d["nativeRotation"])
+            let rotation = degrees.isFinite ? Int(degrees) : 0
             return Panel(
                 name: name, screenId: UInt32(JS.number(d["screenID"])),
-                width: Int(JS.number(d["width"])), height: Int(JS.number(d["height"]))
+                width: Int(JS.number(d["width"])), height: Int(JS.number(d["height"])),
+                mount: ((360 - rotation % 360) % 360) / 90
             )
-        }.sorted { a, _ in a.name == "primary" }
+        }.sorted { $0.name == "primary" && $1.name != "primary" }
     }
 
     private static func integratedDisplays(_ caps: JSON?) -> [JSON] {

@@ -50,6 +50,10 @@ const paths = {
   more: '<circle cx="5.5" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="18.5" cy="12" r="1.4" fill="currentColor" stroke="none"/>',
   record: '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.6" fill="currentColor" stroke="none"/>',
   'record-stop': '<circle cx="12" cy="12" r="8"/><rect x="9" y="9" width="6" height="6" rx="1.2" fill="currentColor" stroke="none"/>',
+  // iPhone Duo's poses, as Device Hub's picker draws them: shut, open (bent), flat.
+  'pose-closed': '<rect x="7" y="3" width="10" height="18" rx="2.2" fill="currentColor" fill-opacity=".15"/><path d="M9.6 17.6h1.8"/>',
+  'pose-open': '<path d="M5 5.5q3.5 0 7 1.8 3.5-1.8 7-1.8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2q-3.5 0-7-1.8-3.5 1.8-7 1.8a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2z" fill="currentColor" fill-opacity=".15"/>',
+  'pose-flat': '<rect x="3" y="5.5" width="18" height="13" rx="2.2" fill="currentColor" fill-opacity=".15"/><path d="M5.6 15.6h1.8"/>',
   rotate: '<rect x="7" y="8" width="10" height="10" rx="2"/><path d="M14 3.5h1.5a4 4 0 0 1 4 4V9"/><path d="m17.5 7.2 2 2 2-2"/><path d="M10 22.5H8.5a4 4 0 0 1-4-4V17"/><path d="m6.5 18.8-2-2-2 2"/>',
   // The … menu's Device and Features submenus.
   'rotate-left': '<rect x="7" y="8" width="10" height="10" rx="2"/><path d="M10 3.5H8.5a4 4 0 0 0-4 4V9"/><path d="m6.5 7.2-2 2-2-2"/><path d="M14 22.5h1.5a4 4 0 0 0 4-4V17"/><path d="m17.5 18.8 2-2 2 2"/>',
