@@ -13,8 +13,9 @@ import RealityKit
 // DeviceCameraFraming, DeviceStudioLighting and MetalRenderTargetRing, and
 // its iphone-duo definition (https://github.com/tddworks/baguette, Apache
 // License 2.0); changes: the Duo alone (no variants, cover glass, gyro or
-// phone models), the lit panel and the device's turn from `Foldable`, and
-// the render size changing in place.
+// phone models), the lit panel and the device's turn from `Foldable`, the
+// render size changing in place, and the camera framing the book as it's
+// posed (closer as it shuts, farther as it opens) rather than the flat book.
 
 /// The model, as baguette's `Models3D/iphone-duo/definition.json` names it.
 private enum Duo {
@@ -148,16 +149,18 @@ struct FoldPose {
 /// on the world z axis looking down -z, a fixed vertical field of view.
 struct Camera {
     static let fieldOfView = 32.0
-    static let padding = 1.15
+    /// How much of the frame the posed book (and the keys beside it) fills
+    /// at 100%, on its tighter side.
+    static let fill = 0.9
     var distance: Double
     var aspect: Double
 
-    /// Fits a subject in the viewport with 15% to spare, depth added so a
-    /// leaf standing up toward the camera stays in frame.
-    static func fit(width: Double, height: Double, depth: Double, aspect: Double) -> Camera {
-        let required = max(max(height, 0.1), max(width, 0.1) / aspect)
-        let fitted = (required * padding / 2) / tan(fieldOfView * .pi / 360)
-        return Camera(distance: max(depth, 0.1) * 1.5 + fitted, aspect: aspect)
+    /// The distance at which every point, in camera space, is in frame
+    /// with `fill` to spare: a point at x, y and depth z is in frame once
+    /// distance − z ≥ |x| / tan(half width) and |y| / tan(half height).
+    static func distance(fitting points: [Vector3], aspect: Double) -> Double {
+        let tanV = tan(fieldOfView * .pi / 360), tanH = tanV * aspect
+        return points.map { $0.z + max(abs($0.x) / (tanH * fill), abs($0.y) / (tanV * fill)) }.max() ?? 1
     }
 
     /// (0, 0) top-left of the frame, (1, 1) bottom-right.
@@ -261,7 +264,6 @@ final class DuoScene {
     private let inner: ScreenCorners
     private let coverCorners: ScreenCorners
     private let body: Vector3
-    private let depth: Double
     private let anchors: [(id: String, at: Vector3)]
     private let device: any MTLDevice
     private let queue: any MTLCommandQueue
@@ -317,9 +319,6 @@ final class DuoScene {
         inner = corners(screen)
         coverCorners = corners(cover)
         body = Vector3(x: Double(extents.x), y: Double(extents.y), z: Double(extents.z))
-        // A leaf stands up toward the camera as the book shuts, so it's
-        // framed as deep as a leaf is wide.
-        depth = max(Double(extents.z), Double(extents.x) / 2)
         anchors = Duo.buttons.compactMap { button in
             Self.jointRestPosition(named: button.joint, of: screenEntity, relativeTo: wrapperRef).map { (button.id, $0) }
         }
@@ -345,11 +344,42 @@ final class DuoScene {
         pose(degrees: 0, unfoldedLit: false, turn: 0)
     }
 
-    /// 1 frames the whole book; 2 is the camera halfway in.
+    /// 1 frames the book as it's posed; 2 is the camera halfway in.
     func setZoom(_ zoom: Double) {
         self.zoom = max(0.25, min(8, zoom))
         camera.distance = framedDistance / self.zoom
         cameraEntity.position = [0, 0, Float(camera.distance)]
+    }
+
+    /// Frames the book as it's posed now, the keys beside it included: a
+    /// shut book is half as wide as an open one, so the camera comes in as
+    /// it shuts and backs off as it opens, and turns with the device.
+    private func frame() {
+        let pose = FoldPose.at(degrees: degrees)
+        let raise = 180 - max(0, min(180, degrees))
+        let offset = FoldPose.centring(inner: inner, degrees: degrees)
+        // The body's box split at the hinge, the left half raised by the clip.
+        let (hx, hy, hz) = (body.x / 2, body.y / 2, body.z / 2)
+        var points: [Vector3] = []
+        for x in [-hx, 0, hx] {
+            for y in [-hy, hy] {
+                for z in [-hz, hz] {
+                    let p = Vector3(x: x, y: y, z: z)
+                    points.append(x < 0 ? p.rotatedY(raise) : p)
+                }
+            }
+        }
+        // The keys' glyphs sit beside the body (see `Projection.buttons`).
+        let margin = max(body.x, body.y) * 0.06
+        for anchor in anchors {
+            let p = anchor.at
+            let onSide = abs(p.x) / max(hx, 1e-9) >= abs(p.y) / max(hy, 1e-9)
+            let control = p + (onSide ? Vector3(x: p.x < 0 ? -margin : margin, y: 0, z: 0) : Vector3(x: 0, y: p.y < 0 ? -margin : margin, z: 0))
+            points.append(p.x < 0 ? control.rotatedY(raise) : control)
+        }
+        let placed = points.map { rotation.apply($0.rotatedY(pose.yawDegrees) + offset) }
+        framedDistance = Camera.distance(fitting: placed, aspect: camera.aspect)
+        setZoom(zoom)
     }
 
     /// The color behind the book (frames have no transparency).
@@ -361,9 +391,8 @@ final class DuoScene {
     func resize(width: Int, height: Int) throws {
         guard (width, height) != size else { return }
         size = (width, height)
-        camera = Camera.fit(width: body.x, height: body.y, depth: depth, aspect: Double(width) / Double(height))
-        framedDistance = camera.distance
-        setZoom(zoom)
+        camera.aspect = Double(width) / Double(height)
+        frame()
         let bytesPerRow = ((width * 4 + 63) / 64) * 64
         let descriptor = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: .bgra8Unorm_srgb, width: width, height: height, mipmapped: false)
         descriptor.storageMode = .shared
@@ -406,6 +435,7 @@ final class DuoScene {
         let shift = FoldPose.centring(inner: inner, degrees: degrees)
         rest.position = [Float(shift.x), Float(shift.y), Float(shift.z)]
         wrapper.orientation = Self.orientation(rotation)
+        frame()
     }
 
     /// Measured by baguette against Device Hub: a step of the device's
