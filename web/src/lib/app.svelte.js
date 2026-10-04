@@ -880,6 +880,18 @@ function nextColor() {
   return (PICK_COLORS.find(([name]) => !taken.has(name)) ?? PICK_COLORS[rt.picks.length % PICK_COLORS.length])[0];
 }
 let pickIds = 0;
+// A chip's symbol says what it is, from its role (or the kind the pixels or
+// the SDK found, the label's first word): an image, a field, a button,
+// text, else a view; an area dragged out is a dashed box.
+function pickType({ kind, label, role }) {
+  if (kind === 'area' && label === 'Area') return 'area';
+  const word = (role ?? label).replace(/^AX/, '').split(/[\s"·]/)[0].toLowerCase();
+  if (/image|icon|photo|picture/.test(word)) return 'kind-image';
+  if (/field|textview|search|secure/.test(word)) return 'kind-field';
+  if (/button|link|switch|toggle|menuitem|tab|checkbox|radio|slider|stepper|segment|picker/.test(word)) return 'kind-button';
+  if (/text|label|heading/.test(word)) return 'kind-text';
+  return 'kind-view';
+}
 // A chip's name: the element's label, short ("Maps"), or "Area".
 const shortName = (label) => {
   const name = label.match(/"([^"]+)"/)?.[1] ?? label;
@@ -948,7 +960,7 @@ function annotateUp(e) {
   const el = selectionBox(color);
   placeBox(el, rect);
   rt.overlay.append(el);
-  rt.picks.push({ id: ++pickIds, kind: target?.node ? 'element' : 'area', rect, point: target?.node ? p : undefined, label: target?.label ?? 'Area', color, el });
+  rt.picks.push({ id: ++pickIds, kind: target?.node ? 'element' : 'area', rect, point: target?.node ? p : undefined, label: target?.label ?? 'Area', role: target?.node?.role, color, el });
   openComposer();
 }
 
@@ -1080,7 +1092,7 @@ function openComposer() {
   ui.draft = {
     label: picks.length === 1 ? first.label : `${first.label} and ${picks.length - 1} more`,
     // The composer shows them as chips, each in its color.
-    picks: picks.map(({ id, kind, label, color }) => ({ id, kind, label, short: shortName(label), color })),
+    picks: picks.map((k) => ({ id: k.id, label: k.label, short: shortName(k.label), type: pickType(k), color: k.color })),
     box: {
       left: Math.min(...boxes.map((b) => b.left)),
       right: Math.max(...boxes.map((b) => b.right)),

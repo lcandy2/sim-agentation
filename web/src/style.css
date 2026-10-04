@@ -1023,8 +1023,12 @@ kbd {
 .chip { pointer-events: auto; display: inline-flex; align-items: center; gap: 3px; height: 16px; padding: 0; border: 0; background: none; color: var(--pick); font-size: 13px; font-weight: 500; line-height: 16px; white-space: nowrap; }
 .chip svg { width: 14px; height: 14px; }
 .chip-x { display: none; }
-.chip:hover .chip-icon { display: none; }
-.chip:hover .chip-x { display: inline-grid; }
+.chip:hover .chip-icon,
+.chip.armed .chip-icon { display: none; }
+.chip:hover .chip-x,
+.chip.armed .chip-x { display: inline-grid; }
+/* Marked by a Backspace, the next one takes it (components/Composer.svelte). */
+.chip.armed { border-radius: 4px; background: color-mix(in srgb, var(--pick) 16%, transparent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--pick) 16%, transparent); }
 .chip-icon, .chip-x { place-items: center; }
 .chip-icon { display: inline-grid; }
 /* The send button, 4 in from the field's bottom right corner, concentric

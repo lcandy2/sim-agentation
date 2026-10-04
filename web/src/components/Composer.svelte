@@ -117,7 +117,21 @@
     if (pulled) e.preventDefault();
   }
 
+  // Backspace at the note's very start takes the last chip away as a macOS
+  // token field does: the first marks it (its x showing), the second takes
+  // it. Anything else unmarks it.
+  let armed = $state(null);
   function keydown(e) {
+    if (e.key === 'Backspace' && text.selectionStart === 0 && text.selectionEnd === 0 && ui.draft.picks.length) {
+      e.preventDefault();
+      const last = ui.draft.picks.at(-1);
+      if (armed === last.id) {
+        armed = null;
+        removePick(last.id);
+      } else armed = last.id;
+      return;
+    }
+    armed = null;
     if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) form.requestSubmit();
     if (e.key === 'Escape') {
       e.stopPropagation();
@@ -146,8 +160,8 @@
     <div class="field note">
       <div class="note-chips" bind:this={chips}>
         {#each ui.draft.picks as pick (pick.id)}
-          <button type="button" class="chip" style:--pick="var(--pick-{pick.color})" title="{pick.label}, click to take away" aria-label="Take away {pick.label}" onclick={() => removePick(pick.id)}>
-            <span class="chip-icon">{@html icon(pick.kind === 'area' ? 'area' : 'pick')}</span><span class="chip-x">{@html icon('xmark')}</span>{pick.short}
+          <button type="button" class="chip" class:armed={armed === pick.id} style:--pick="var(--pick-{pick.color})" title="{pick.label}, click to take away" aria-label="Take away {pick.label}" onclick={() => removePick(pick.id)}>
+            <span class="chip-icon">{@html icon(pick.type)}</span><span class="chip-x">{@html icon('xmark')}</span>{pick.short}
           </button>
         {/each}
       </div>
@@ -160,6 +174,7 @@
         bind:this={text}
         bind:value={comment}
         onkeydown={keydown}
+        onpointerdown={() => (armed = null)}
       ></textarea>
     </div>
   </form>
