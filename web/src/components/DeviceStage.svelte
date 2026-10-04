@@ -75,7 +75,21 @@
   const SLICES = ['topLeft', 'top', 'topRight', 'left', null, 'right', 'bottomLeft', 'bottom', 'bottomRight'];
   const chrome = $derived(ui.chrome);
   const px = (n) => `${n * ui.scale}px`;
-  const mask = $derived(chrome?.mask ? `url("${chrome.mask}")` : '');
+  // The screen's mask once it has loaded: a mask that fails to load hides
+  // all it masks (the screen gone, the bezel's black showing), so until
+  // then, or if it never does, the screen is a rect rounded as the device.
+  let maskLoaded = $state(null);
+  $effect(() => {
+    const url = chrome?.mask;
+    if (!url) return;
+    let current = true;
+    const img = new Image();
+    img.onload = () => current && (maskLoaded = url);
+    img.src = url;
+    return () => (current = false);
+  });
+  const mask = $derived(chrome?.mask && maskLoaded === chrome.mask ? `url("${chrome.mask}")` : '');
+  const unmaskedCorner = $derived(chrome && !mask ? px(Math.max(0, (chrome.cornerRadius ?? 0) - chrome.screen.x)) : null);
 
   // The device turns on screen as iOS turns its interface; the framebuffer,
   // touches and the accessibility tree stay portrait inside it. The rotor is
@@ -136,6 +150,7 @@
           style:height={chrome && px(chrome.screen.height)}
           style:mask-image={mask}
           style:-webkit-mask-image={mask}
+          style:border-radius={unmaskedCorner}
         >
           <canvas id="screen" bind:this={canvas}></canvas>
           <!-- The runtime draws hover, selection and markers into this layer. It

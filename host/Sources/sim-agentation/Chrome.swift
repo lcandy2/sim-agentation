@@ -1,6 +1,7 @@
 import CoreGraphics
 import Foundation
 import ImageIO
+import SimBridge
 
 // Device chrome (the bezel and hardware buttons) the way Xcode's Device Hub
 // and Simulator find it: simulator → device type → profile.plist's
@@ -71,19 +72,14 @@ final class ChromeService: @unchecked Sendable {
     }
 
     private func deviceTypeIds() async throws -> [String: String] {
-        // Devices come and go; refresh the list every 30 s.
+        // From the CoreSimulator list the page shows (simctl, under whichever
+        // Xcode is selected, can see another set and miss a listed device, its
+        // mask then not found); devices come and go, so read again every 30 s.
         let task: Task<[String: String], Error> = lock.withLock {
             if let cached = deviceTypeOf, Date().timeIntervalSince(cached.at) <= 30 { return cached.map }
             let task = Task {
                 try await blocking {
-                    let list = try JSON.parse(try run(["xcrun", "simctl", "list", "devices", "-j"]))
-                    var map: [String: String] = [:]
-                    for (_, devices) in list["devices"]?.objectValue?.entries ?? [] {
-                        for d in devices.arrayValue ?? [] {
-                            if let udid = d["udid"]?.stringValue, let type = d["deviceTypeIdentifier"]?.stringValue { map[udid] = type }
-                        }
-                    }
-                    return map
+                    Dictionary(Simulators.shared.all().map { ($0.udid, $0.deviceType) }, uniquingKeysWith: { first, _ in first })
                 }
             }
             deviceTypeOf = (Date(), task)
