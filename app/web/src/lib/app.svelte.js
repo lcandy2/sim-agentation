@@ -107,6 +107,7 @@ const rt = {
   hover: null,       // { point, targets: [{ rect, label, node? }], level }
   drag: null,
   draft: null,       // { kind, rect, point?, label, parts? }: what the composer will save
+  editing: null,     // the mark (see submitComposer) whose annotation the composer has open again
   picks: [],         // what's selected, each { id, kind, rect, point?, label, color, el }
   failed: new Set(), // formats Auto gave up on this session
   auto: createAuto(), // what Auto has learned about the connection and decoder (see auto.js)
@@ -976,7 +977,7 @@ async function freeze() {
     sdkAvailable: null,
     // The stream may be scaled down, so points come from the device, not the frame.
     points: { width: ui.chrome.screen.width, height: ui.chrome.screen.height },
-    marks: [],
+    marks: [],       // { id, rect, picks, comment, el }: what was annotated on this still, numbered
   });
   if (!is3D()) paint(bitmap);
   ui.frozen = true;
@@ -1307,6 +1308,8 @@ function openComposer() {
       };
   const boxes = picks.map((k) => (is3D() ? stageRect(k.rect) : null) ?? k.el.getBoundingClientRect());
   ui.draft = {
+    // Reopened from its marker: the note it has, to rewrite.
+    editing: rt.editing && { id: rt.editing.id, comment: rt.editing.comment },
     label: picks.length === 1 ? first.label : `${first.label} and ${picks.length - 1} more`,
     // The composer shows them as chips, each in its color.
     picks: picks.map((k) => ({ id: k.id, label: k.label, short: shortName(k.label), type: pickType(k), color: k.color })),
@@ -1341,6 +1344,7 @@ const union = (rects) => {
 
 export function closeComposer() {
   rt.draft = null;
+  rt.editing = null;
   ui.draft = null;
   clearPicks();
   clearLayer('.sel');
@@ -1351,11 +1355,44 @@ export function cancelComposer() {
   rt.overlay?.focus();
 }
 
+/**
+ * A marker clicked: its annotation's selection comes back and the composer
+ * opens on it with the note, to rewrite (or to move to another selection).
+ */
+export function editMark(i) {
+  const mark = rt.frozen?.marks[i];
+  if (!mark?.id) return;
+  if (ui.draft) closeComposer();
+  clearLayer('.hl, .hl-label');
+  rt.hover = null;
+  rt.picks = mark.picks.map((k) => {
+    const el = selectionBox(k.color);
+    placeBox(el, k.rect);
+    boxLayer().append(el);
+    return { ...k, id: ++pickIds, el };
+  });
+  rt.editing = mark;
+  openComposer();
+}
+
+const samePicks = (a, b) => a.length === b.length && a.every((k, i) => sameRect(k.rect, b[i].rect));
+
 export async function submitComposer(comment) {
   const draft = rt.draft;
   if (!comment || !draft) return;
+  const editing = rt.editing;
+  const picks = rt.picks.map(({ id, el, ...k }) => k);
   closeComposer();
   const f = rt.frozen;
+  // Reopened and only its note rewritten: the annotation keeps its
+  // screenshots, replies and number.
+  if (editing && samePicks(editing.picks, picks)) {
+    if (comment === editing.comment) return;
+    const res = await fetch(`/api/annotations/${editing.id}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ comment }) }).catch(() => null);
+    if (!res?.ok) return setStatus((await res?.json().catch(() => null))?.error || "Couldn't save the note");
+    editing.comment = comment;
+    return refresh();
+  }
   const img = f.bitmap;
   const scale = img.width / f.points.width;
   const r = draft.rect;
@@ -1402,14 +1439,24 @@ export async function submitComposer(comment) {
   };
   const res = await fetch('/api/annotations', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
   if (!res.ok) return setStatus((await res.json().catch(() => null))?.error || 'Save failed');
+  const saved = await res.json().catch(() => null);
+  // Reopened and moved to another selection: the new annotation takes the
+  // old one's place, and its marker and number.
+  if (editing) await fetch(`/api/annotations/${editing.id}`, { method: 'DELETE' }).catch(() => null);
   refresh();
   if (rt.frozen !== f) return; // resumed while saving: no marker on the live screen
 
-  f.marks.push(r);
-  const marker = Object.assign(document.createElement('div'), { className: 'marker', textContent: f.marks.length });
-  marker.style.left = `${(r.x / f.points.width) * 100}%`;
-  marker.style.top = `${(r.y / f.points.height) * 100}%`;
-  floatLayer().append(marker);
+  let mark = editing;
+  if (!mark) {
+    mark = { el: Object.assign(document.createElement('div'), { className: 'marker', title: 'Edit' }) };
+    f.marks.push(mark);
+    mark.el.dataset.mark = f.marks.length - 1; // a click opens it again (DeviceStage), the 3D book's copies too
+    mark.el.textContent = f.marks.length;
+    floatLayer().append(mark.el);
+  }
+  Object.assign(mark, { id: saved?.id, rect: r, picks, comment });
+  mark.el.style.left = `${(r.x / f.points.width) * 100}%`;
+  mark.el.style.top = `${(r.y / f.points.height) * 100}%`;
 }
 
 /** The canvas turned a quarter, for landscape screenshots. */

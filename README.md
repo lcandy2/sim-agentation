@@ -60,7 +60,7 @@ In **Interact** mode you use the app: click and drag to touch, scroll with the w
 1. Press ⇧⌘D. The screen freezes and the accessibility tree loads.
 2. Hover to see elements. ↑ selects the parent, ↓ goes back.
 3. Click an element, or drag a box over any area. Hold Shift to add to the selection.
-4. Write what should change and press ⌘↩. The annotation shows up in the inspector, numbered on the screen.
+4. Write what should change and press Return (⇧Return for a new line). The annotation shows up in the inspector, numbered on the screen. Click its number to open it again and change the note, or pick something else for it.
 5. Press Esc to drop the selection, and again to go back to the live screen.
 
 Rotated devices work too, and the screenshots go to the agent upright. Click **Copy** in the annotations tab to put every pending annotation on the clipboard as Markdown, for an agent without MCP.
@@ -72,7 +72,7 @@ Rotated devices work too, and the screenshots go to the agent upright. Click **C
 | ⇧⌘D | Design Mode, in and out |
 | `A`, `I` | Design Mode, Interact |
 | ↑ ↓ | The parent element, and back (Design Mode) |
-| ⌘↩ | Add the note |
+| ↩ | Add the note (⇧↩: a new line) |
 | Esc | Drop the selection, then leave Design Mode |
 | `S` | Compare the SDK's view tree with the pixel fallback |
 | ⌘S, ⌘R, ⌃⌘C | Save, record or copy the screen |

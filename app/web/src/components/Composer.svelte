@@ -1,12 +1,23 @@
 <script>
-  import { tick } from 'svelte';
+  import { tick, untrack } from 'svelte';
   import { ui, submitComposer, cancelComposer, removePick } from '../lib/app.svelte.js';
   import { POINTER, outlinePath, pointerScale, pointerCorner } from '../lib/glass.js';
   import { icon } from '../lib/icons.js';
 
   let form = $state(null);
   let text = $state(null);
-  let comment = $state('');
+  // Reopened from its marker, the note it has; another reopened in its place
+  // brings its own.
+  let comment = $state(ui.draft.editing?.comment ?? '');
+  let editingId = ui.draft.editing?.id ?? null;
+  $effect(() => {
+    const id = ui.draft.editing?.id ?? null;
+    untrack(() => {
+      if (id === editingId) return;
+      editingId = id;
+      comment = ui.draft.editing?.comment ?? '';
+    });
+  });
   let place = $state(null);
 
   // macOS's popover: beside the selection, centered on it where the window
@@ -155,7 +166,12 @@
       return;
     }
     armed = null;
-    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) form.requestSubmit();
+    // Return adds the note, ⇧Return breaks the line; Return choosing an input
+    // method's candidate (Pinyin and the like) is the input method's.
+    if (e.key === 'Enter' && !e.shiftKey && !e.isComposing && e.keyCode !== 229) {
+      e.preventDefault();
+      form.requestSubmit();
+    }
     // An empty note has no line to break, and Chrome would draw the caret on
     // the next line at the chips' indent.
     else if (e.key === 'Enter' && !comment) e.preventDefault();
@@ -229,9 +245,9 @@
   <button
     type="submit"
     form="composer-form"
-    class="glass-btn prominent composer-send"
+    class="glass-btn prominent design composer-send"
     style:right={place?.side === 'right' ? '22.5px' : '12px'}
-    title="Add (⌘↩)"
+    title="Add (↩)"
     aria-label="Add"
     disabled={!comment.trim()}
     onpointerdown={grab}

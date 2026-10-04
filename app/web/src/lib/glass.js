@@ -69,12 +69,28 @@ export const MATERIALS = {
   // at 0.5, not 10 at 0.16: it matches), without Figma's burn at the top,
   // which macOS doesn't show.
   prominent: {
-    selector: '.glass-btn.prominent',
+    selector: '.glass-btn.prominent:not(.design)',
     solid: true, // it sits in the composer's glass, and its fill hides what's behind anyway
     glass: { frost: 6, refraction: 0.7, depth: 30, dispersion: 0.2, lightAngle: 0, lightIntensity: 0.25 },
     fills: [
       { blend: 'normal', gray: 1, opacity: 0.94 },
       { blend: 'burn', color: [0, 0.5333, 1], opacity: 1 },
+    ],
+    inner: [
+      { blend: 'dodge', gray: 0.5, y: -40, blur: 3, spread: -40 },
+      { blend: 'dodge', gray: 0.5, y: 40, blur: 3, spread: -40 },
+    ],
+    glares: [],
+  },
+  // The same in Design Mode's indigo (--design, #6155f5) for what Design
+  // Mode adds: the composer's send button.
+  design: {
+    selector: '.glass-btn.prominent.design',
+    solid: true,
+    glass: { frost: 6, refraction: 0.7, depth: 30, dispersion: 0.2, lightAngle: 0, lightIntensity: 0.25 },
+    fills: [
+      { blend: 'normal', gray: 1, opacity: 0.94 },
+      { blend: 'burn', color: [0.3804, 0.3333, 0.9608], opacity: 1 },
     ],
     inner: [
       { blend: 'dodge', gray: 0.5, y: -40, blur: 3, spread: -40 },

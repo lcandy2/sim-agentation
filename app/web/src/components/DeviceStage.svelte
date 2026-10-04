@@ -2,7 +2,7 @@
   import { onMount, untrack } from 'svelte';
   import {
     ui, MARGIN, ROTATION, attachStage, onStageResize, startDevice, pressHome, reclaimInput, saveScreenshot, toggleRecording, rotate, isFoldable, POSES, currentPose, setPose, slideHinge, hingeAngle, is3D, toggle3D, pressButton, maps3D, attachScreen3D, syncScreen3D, ACTIVE_FACING,
-    onPointerDown, onPointerMove, onPointerUp, onWheel, onScreenKey,
+    onPointerDown, onPointerMove, onPointerUp, onWheel, onScreenKey, editMark,
   } from '../lib/app.svelte.js';
   import { icon } from '../lib/icons.js';
   import { layerSize, layerStyle, facing } from '../lib/screen3d.js';
@@ -155,7 +155,10 @@
   const glyph = (paths) => `<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths}</svg>`;
 </script>
 
-<section class="stage" bind:this={stage}>
+<!-- A Design Mode marker clicked (on the flat screen or the 3D book's
+     copy) opens its annotation again. -->
+<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+<section class="stage" bind:this={stage} onclick={(e) => { const m = e.target.closest?.('.marker[data-mark]'); if (m) editMark(+m.dataset.mark); }}>
   <div class="device-wrap" bind:this={wrap} hidden={!!ui.message || !chrome} style:visibility={ui.settling ? 'hidden' : null}>
     <div
       class="rotor"

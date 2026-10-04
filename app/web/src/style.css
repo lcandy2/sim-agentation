@@ -516,6 +516,8 @@ img { -webkit-user-drag: none; }
   touch-action: none; /* a finger presses and leans it too (components/Composer.svelte) */
   transition: transform 100ms ease-out; /* settling back after a lean */
 }
+/* Design Mode's own (the composer's send button): its indigo. */
+.glass-btn.design { background: var(--design); }
 /* Pressed with the pointer over it, macOS 27's glass button darkens 8%. */
 .glass-btn.pressed { filter: brightness(0.92); }
 @media (prefers-reduced-motion: reduce) { .glass-btn { transition: none; } }
@@ -874,6 +876,8 @@ kbd {
   display: grid;
   place-items: center;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+  pointer-events: auto; /* clicked, its annotation opens again in the composer */
+  cursor: pointer;
 }
 
 /* ---------- inspector ---------- */

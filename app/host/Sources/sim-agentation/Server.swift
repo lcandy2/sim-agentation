@@ -634,6 +634,11 @@ final class AppServer: @unchecked Sendable {
             }
             patch.append(("status", status))
         }
+        // The page's composer, reopened on an annotation, rewrites its note.
+        if let comment = b["comment"] {
+            guard let text = comment.stringValue, !JS.trim(text).isEmpty else { throw BadRequest("comment must be a non-empty string") }
+            patch.append(("comment", .string(JS.trim(text))))
+        }
         if let resolution = b["resolution"] {
             guard resolution.isNull || resolution.stringValue != nil else { throw BadRequest("resolution must be a string or null") }
             patch.append(("resolution", resolution))
