@@ -39,16 +39,13 @@ export const MATERIALS = {
       { angle: Math.PI, range: 31.8, hardness: 0.197, factor: 0.279, convergence: 0.46, opposite: 0.322 },
     ],
   },
-  // Popovers (the composer) and the menus too: white at 70% under #bfbfbf
-  // at 10% (Lighten and Darken, which over this light a glass come to plain
-  // mixes), bright 1 pt rims inside top and bottom (Linear and Color Dodge,
-  // here both added), the Glass effect at frost 26, depth 40, light 0.15.
-  // Figma's Menu material (#d9d9d9 at 55% Luminosity under #d9d9d9 at 40%)
-  // went gray and took on the color over dark content beside the bright
-  // popover; one material keeps them alike. Its light stands in with glares
-  // fitted to Figma's Menu, the nearest measured.
+  // Popovers (the composer): white at 70% under #bfbfbf at 10% (Lighten
+  // and Darken, which over this light a glass come to plain mixes), bright
+  // 1 pt rims inside top and bottom (Linear and Color Dodge, here both
+  // added), the Glass effect at frost 26, depth 40, light 0.15. Its light
+  // stands in with the menu's fitted glares, the nearest measured.
   popover: {
-    selector: '.composer, .popover',
+    selector: '.composer',
     glass: { frost: 26, refraction: 0.7, depth: 40, dispersion: 0.2, lightAngle: 0, lightIntensity: 0.15 },
     fills: [
       { blend: 'normal', gray: 1, opacity: 0.7 },
@@ -80,6 +77,27 @@ export const MATERIALS = {
     glares: [
       { angle: 0, range: 32.4, hardness: 0.054, factor: 0.721, convergence: 0.282, opposite: 0.957 },
       { angle: Math.PI, range: 31.8, hardness: 0.197, factor: 0.279, convergence: 0.46, opposite: 0.322 },
+    ],
+  },
+  // Menus: Figma's Menu (#d9d9d9 at 55% Luminosity under #d9d9d9 at 40%),
+  // its grays raised to #f6f6f6 so it comes out as bright as the popover
+  // over anything (0.27 of what's behind plus 0.705, both), while it still
+  // takes on the color behind it (60% of it; the popover keeps 27%).
+  menu: {
+    selector: '.popover',
+    glass: { frost: 25, refraction: 0.7, depth: 40, dispersion: 0.4, lightAngle: 0, lightIntensity: 0.2 },
+    fills: [
+      { blend: 'luminosity', gray: 0.966, opacity: 0.55 },
+      { blend: 'normal', gray: 0.966, opacity: 0.4 },
+    ],
+    inner: [
+      { blend: 'dodge', gray: 0.15, y: 0, blur: 0, spread: 0.5 },
+      { blend: 'dodge', gray: 0.05, y: -40, blur: 10, spread: -40 },
+      { blend: 'dodge', gray: 0.051, y: 40, blur: 10, spread: -40 },
+    ],
+    glares: [
+      { angle: 0, range: 18.4, hardness: 0, factor: 0.24, convergence: 0.236, opposite: 0.793 },
+      { angle: Math.PI, range: 25.3, hardness: 0.107, factor: 0.092, convergence: 0.348, opposite: 0.541 },
     ],
   },
 };
