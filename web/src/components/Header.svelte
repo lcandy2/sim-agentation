@@ -16,12 +16,14 @@
   const menu = $derived.by(() => {
     const off = !ui.running;
     return [
-      // Device Hub's device actions, each on its own, as there.
-      [ui.running ? { label: 'Shut Down', icon: 'power', run: shutdownDevice } : { label: 'Start', icon: 'power', run: startDevice }],
-      [{ label: 'Restart', icon: 'restart', run: restartDevice, disabled: off }],
-      [{ label: 'Rename…', icon: 'rename', run: () => (ui.sheet = 'rename') }],
-      [{ label: 'Reset Content and Settings…', icon: 'erase', run: () => (ui.sheet = 'erase') }],
-      [{ label: 'Remove…', icon: 'trash', run: () => (ui.sheet = 'remove') }],
+      // Device Hub's device actions, together.
+      [
+        ui.running ? { label: 'Shut Down', icon: 'power', run: shutdownDevice } : { label: 'Start', icon: 'power', run: startDevice },
+        { label: 'Restart', icon: 'restart', run: restartDevice, disabled: off },
+        { label: 'Rename…', icon: 'rename', run: () => (ui.sheet = 'rename') },
+        { label: 'Reset Content and Settings…', icon: 'erase', run: () => (ui.sheet = 'erase') },
+        { label: 'Remove…', icon: 'trash', run: () => (ui.sheet = 'remove') },
+      ],
       [
         { label: 'Copy Pending Annotations', icon: 'copy', run: copyPending },
         { label: 'Remove Resolved Annotations', icon: 'clear-done', run: clearDone },
