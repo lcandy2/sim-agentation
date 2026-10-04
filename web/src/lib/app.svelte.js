@@ -10,7 +10,7 @@ import { matchesFrontApp, sdkContainers, sourceFor, viewContext } from './sdk.js
 import { createDecoder, decodeCapabilities, decodesSmoothly, formatLabel, pickFormat } from './stream.js';
 import { HIDDEN_FPS, createAuto, decide, newFormat, observe, probeFor, probed, restart } from './auto.js';
 import { isTurned, sdkToPortrait, treeToPortrait, uprightDegrees } from './rotation.js';
-import { pieceMaps, locate, stageBox } from './screen3d.js';
+import { pieceMaps, locate, stageBox, project, facing } from './screen3d.js';
 
 export const storage = {
   get(k) {
@@ -187,6 +187,8 @@ function connect(udid) {
   });
 
   ws.onopen = () => {
+    // A new stream says where the hinge is; what the last one said may be stale.
+    ui.hinge = null;
     ui.scene = null;
     sentView = '';
     syncView();
@@ -442,6 +444,7 @@ function onText(msg) {
     ui.hinge = msg.degrees;
   } else if (msg.type === 'scene') {
     ui.scene = { pieces: msg.pieces, buttons: msg.buttons, width: msg.width, height: msg.height };
+    if (typeof msg.degrees === 'number') ui.hinge = msg.degrees; // the pose the book is drawn in
   } else if (msg.type === 'view_result') {
     if (!msg.ok) {
       ui.scene = null;
@@ -524,16 +527,22 @@ export function maps3D() {
 }
 
 
-/** Annotation space = accessibility points. */
+/** Annotation space = accessibility points; `outside` off the screen (in
+ *  3D, off it or on a part turned too far from the camera to work on). */
 function axPoint(e) {
   const { width, height } = rt.frozen.points;
   if (is3D()) {
-    const hit = locate(maps3D(), e.offsetX, e.offsetY);
-    return { x: hit.u * width, y: hit.v * height };
+    const hit = locate(activeMaps3D(), e.offsetX, e.offsetY);
+    return { x: hit.u * width, y: hit.v * height, outside: !hit.inside };
   }
   const { fx, fy } = fraction(e);
-  return { x: fx * width, y: fy * height };
+  return { x: fx * width, y: fy * height, outside: false };
 }
+
+/** A part of the 3D book's screen turned more than 60° from the camera is
+ *  too foreshortened to annotate: Design Mode leaves it be. */
+export const ACTIVE_FACING = 0.5;
+export const activeMaps3D = () => maps3D().filter((m) => ui.mode !== 'annotate' || facing(m) >= ACTIVE_FACING);
 
 function placeBox(el, rect) {
   const { width, height } = rt.frozen.points;
@@ -557,21 +566,38 @@ const floatLayer = () => (is3D() && rt.layers3D?.floats) || rt.float;
  * The 3D book's layers for Design Mode, the first piece's and copies for
  * the others: what's drawn moves onto them, and back when they go.
  */
-export function attachScreen3D({ boxes, floats, mirrors }) {
-  rt.layers3D = { boxes, floats };
+export function attachScreen3D({ boxes, floats, mirrors, flat }) {
   boxes.append(...rt.overlay.querySelectorAll('.hl, .sel'));
   floats.append(...rt.float.children);
-  const copy = () => mirrors.forEach(([to, from]) => to && (to.innerHTML = from.innerHTML));
-  const observer = new MutationObserver(copy);
+  // Boxes are copied onto every piece; labels and markers stand flat on
+  // the page where their anchor lands, so they read whatever the angle.
+  const sync = () => {
+    for (const to of mirrors) if (to) to.innerHTML = boxes.innerHTML;
+    const maps = activeMaps3D();
+    flat.replaceChildren(...[...floats.children].flatMap((el) => {
+      const at = project(maps, parseFloat(el.style.left) / 100, parseFloat(el.style.top) / 100);
+      if (!at) return [];
+      const copy = el.cloneNode(true);
+      copy.style.left = `${at.x}px`;
+      copy.style.top = `${at.y}px`;
+      return [copy];
+    }));
+  };
+  rt.layers3D = { boxes, floats, sync };
+  const observer = new MutationObserver(sync);
   for (const layer of [boxes, floats]) observer.observe(layer, { subtree: true, childList: true, attributes: true, characterData: true });
-  copy();
+  sync();
   return () => {
     observer.disconnect();
     rt.layers3D = null;
+    flat.replaceChildren();
     rt.overlay?.append(...boxes.children);
     rt.float?.append(...floats.children);
   };
 }
+
+/** The 3D book moved: lay Design Mode's labels and markers on it again. */
+export const syncScreen3D = () => rt.layers3D?.sync?.();
 
 // ---------- pointer and keyboard on the screen ----------
 
@@ -938,9 +964,10 @@ export async function setMode(mode) {
     // A turned interface reports turned coordinates; bring them into the
     // framebuffer's, where the overlay, pixels and touches live.
     const screen = ui.chrome.screen;
-    // iPhone Duo's unfolded panel lays a landscape interface in a portrait root.
-    const foldable = isFoldable() && ui.orientation.startsWith('landscape');
-    f.turned = isTurned(tree, foldable) ? ui.orientation : null;
+    // iPhone Duo's root says nothing to go by (see rotation.js); its panels
+    // are drawn upright as the page turns them, home screen included.
+    const foldable = isFoldable();
+    f.turned = (foldable ? ui.orientation.startsWith('landscape') : isTurned(tree, screen)) ? ui.orientation : null;
     f.tree = treeToPortrait(tree, ui.orientation, screen, foldable);
     if (f.tree?.frame?.width) f.points = { width: f.tree.frame.width, height: f.tree.frame.height };
     f.sdkAvailable = matchesFrontApp(sdk, tree) ? sdkToPortrait(sdk, ui.orientation, screen) : null;
@@ -1023,13 +1050,20 @@ function selectionBox(color) {
 // kept, moves beside whatever is selected.
 function annotateDown(e) {
   if (!rt.frozen) return;
+  const start = axPoint(e);
+  if (start.outside) return; // the 3D book's body, or a part turned away
   rt.overlay.setPointerCapture(e.pointerId);
-  rt.drag = { start: axPoint(e), moved: false, add: e.shiftKey, box: null, color: null };
+  rt.drag = { start, moved: false, add: e.shiftKey, box: null, color: null };
 }
 
 function annotateMove(e) {
   if (!rt.frozen) return;
   const p = axPoint(e);
+  if (p.outside && !rt.drag) {
+    clearLayer('.hl, .hl-label');
+    rt.hover = null;
+    return;
+  }
   if (rt.drag) {
     const dx = p.x - rt.drag.start.x;
     const dy = p.y - rt.drag.start.y;
@@ -1074,7 +1108,7 @@ function annotateUp(e) {
   const el = selectionBox(color);
   placeBox(el, rect);
   boxLayer().append(el);
-  rt.picks.push({ id: ++pickIds, kind: target?.node ? 'element' : 'area', rect, point: target?.node ? p : undefined, label: target?.label ?? 'Area', role: target?.node?.role, color, el });
+  rt.picks.push({ id: ++pickIds, kind: target?.node ? 'element' : 'area', rect, point: target?.node ? { x: p.x, y: p.y } : undefined, label: target?.label ?? 'Area', role: target?.node?.role, color, el });
   openComposer();
 }
 
@@ -1502,8 +1536,9 @@ export function slideHinge(degrees) {
  * open pose does by itself (landscape). The turn is the page's alone: a
  * foldable turns through the guest, not the event `rotate` sends.
  */
-async function onPanel({ panel, orientation }) {
+async function onPanel({ panel, orientation, degrees }) {
   const udid = ui.udid;
+  if (typeof degrees === 'number') ui.hinge = degrees;
   const chrome = await chromeOf(udid, panel === 'primary' ? null : panel);
   if (!chrome || ui.udid !== udid) return;
   ui.chrome = chrome;

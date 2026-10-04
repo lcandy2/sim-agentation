@@ -10,10 +10,13 @@
 // - landscape-left (3, counterclockwise): its top runs along the right edge.
 // - The SDK reports window coordinates, i.e. the interface's own points.
 //
-// Measured on iOS 27.1 (iPhone Duo's unfolded panel, Settings): the root
-// frame keeps the panel's portrait size, 669 × 951, while everything in it
-// is in the landscape interface's own points, unscaled (About at x 515,
-// 351 wide).
+// Measured on iOS 27.1, iPhone Duo's unfolded panel (669 × 951 points),
+// whose root says nothing to go by:
+// - Settings: a root of the panel's portrait size, 669 × 951, around the
+//   landscape interface in its own points, unscaled (About at x 515, 351
+//   wide).
+// - SpringBoard: a root of the cover's size, 466 × 678, around the panel's
+//   portrait points (Batteries at y 720).
 
 /** Interface point → framebuffer point. */
 function toPortrait(orientation, screen) {
@@ -46,32 +49,35 @@ function mapFrames(value, point) {
  * it stands for; null when the points are portrait already (an app or home
  * screen that doesn't rotate).
  */
-function landscapeRoot(tree, foldable) {
+function landscapeRoot(tree, screen, foldable) {
   const root = tree?.frame;
   if (!isRect(root)) return null;
   if (root.width > root.height) return root;
   if (!foldable) return null;
-  // The Duo's: past the portrait root's width, below the root's own size
-  // (the app keeps it too), is the landscape interface.
-  let right = 0;
+  // The Duo's root can't be trusted (see above), so its elements vote: one
+  // that fits only the landscape interface, or only the portrait panel.
+  const { width: W, height: H } = screen;
+  const fits = (f, w, h) => f.x >= -1 && f.y >= -1 && f.x + f.width <= w + 1 && f.y + f.height <= h + 1;
+  let votes = 0;
   (function walk(node) {
     const f = node?.frame;
-    if (isRect(f) && !(f.width === root.width && f.height === root.height)) right = Math.max(right, f.x + f.width);
+    if (isRect(f)) votes += (fits(f, H, W) ? 1 : 0) - (fits(f, W, H) ? 1 : 0);
     node?.children?.forEach(walk);
   })(tree);
-  return right > root.width * 1.05 ? { x: 0, y: 0, width: root.height, height: root.width } : null;
+  return votes > 0 ? { x: 0, y: 0, width: H, height: W } : null;
 }
 
 /** Whether the tree describes a turned (landscape) interface; `foldable`
- *  for iPhone Duo's way of saying so. */
-export const isTurned = (tree, foldable = false) => !!landscapeRoot(tree, foldable);
+ *  for iPhone Duo's ways of saying so. */
+export const isTurned = (tree, screen, foldable = false) => !!landscapeRoot(tree, screen, foldable);
 
 /** The accessibility tree in framebuffer points. A portrait root (an app
- *  or home screen that doesn't rotate) is already there. */
+ *  or home screen that doesn't rotate) is already there; a foldable's is
+ *  the panel's size, whatever its root says. */
 export function treeToPortrait(tree, orientation, screen, foldable = false) {
   const rotate = toPortrait(orientation, screen);
-  const root = rotate && landscapeRoot(tree, foldable);
-  if (!rotate || !root) return tree;
+  const root = rotate && landscapeRoot(tree, screen, foldable);
+  if (!rotate || !root) return foldable && tree?.frame ? { ...tree, frame: { ...tree.frame, x: 0, y: 0, width: screen.width, height: screen.height } } : tree;
   const k = root.width / screen.height; // the letterbox scale
   const point = (x, y) => rotate((x - root.x) / k, (y - root.y) / k);
   const mapped = mapFrames(tree, point);

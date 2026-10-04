@@ -280,6 +280,21 @@ final class DuoScene {
     private var degrees = 0.0
     private var unfoldedLit = false
     private var turn = 0
+    /// The screens skinned at the framebuffer points the page needs: the
+    /// unfolded one's edges at each strip boundary across the crease, the
+    /// cover's corners. Nil if the model isn't skinned as expected.
+    private var innerSkin: SkinnedScreen?
+    private var coverSkin: SkinnedScreen?
+    private var innerSpots: [(v: Double, top: SkinnedScreen.Spot, bottom: SkinnedScreen.Spot)] = []
+    private var coverSpots: [SkinnedScreen.Spot] = []
+    /// Where the page is told the screen and the keys are, after the next
+    /// render has posed the joints.
+    private var layoutDirty = true
+    var onLayout: (@MainActor ([String: Any]) -> Void)?
+
+    /// Strips across the unfolded screen, finer where it bends (its middle):
+    /// each is near enough flat for one homography.
+    private static let strips: [Double] = [0, 0.1, 0.2, 0.3, 0.38, 0.43, 0.46, 0.48, 0.5, 0.52, 0.54, 0.57, 0.62, 0.7, 0.8, 0.9, 1]
 
     /// Loads the model from Xcode and sets the stage for `width` × `height`.
     init(width: Int, height: Int, background: CGColor) throws {
@@ -322,6 +337,16 @@ final class DuoScene {
         anchors = Duo.buttons.compactMap { button in
             Self.jointRestPosition(named: button.joint, of: screenEntity, relativeTo: wrapperRef).map { (button.id, $0) }
         }
+        // Flat, the unfolded screen faces the camera (+z) and the cover away.
+        innerSkin = SkinnedScreen(entity: screenEntity, materialIndex: screen.materialIndex, face: [0, 0, 1])
+        coverSkin = SkinnedScreen(entity: coverEntity, materialIndex: cover.materialIndex, face: [0, 0, -1])
+        if let innerSkin {
+            // The unfolded framebuffer's v runs across the crease.
+            innerSpots = Self.strips.map { v in (v, innerSkin.spot(x: 0, y: v), innerSkin.spot(x: 1, y: v)) }
+        }
+        if let coverSkin {
+            coverSpots = [(0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0)].map { coverSkin.spot(x: $0.0, y: $0.1) }
+        }
 
         cameraEntity = PerspectiveCamera()
         cameraEntity.camera.fieldOfViewInDegrees = Float(Camera.fieldOfView)
@@ -346,6 +371,7 @@ final class DuoScene {
 
     /// 1 frames the book as it's posed; 2 is the camera halfway in.
     func setZoom(_ zoom: Double) {
+        layoutDirty = true
         self.zoom = max(0.25, min(8, zoom))
         camera.distance = framedDistance / self.zoom
         cameraEntity.position = [0, 0, Float(camera.distance)]
@@ -395,6 +421,7 @@ final class DuoScene {
     func resize(width: Int, height: Int) throws {
         guard (width, height) != size else { return }
         size = (width, height)
+        layoutDirty = true
         camera.aspect = Double(width) / Double(height)
         frame()
         let bytesPerRow = ((width * 4 + 63) / 64) * 64
@@ -429,6 +456,7 @@ final class DuoScene {
     /// whole turned back and shifted to centre the bend) and stands it the
     /// way the device is turned: one quarter turn clockwise per step.
     func pose(degrees: Double, unfoldedLit: Bool, turn: Int) {
+        layoutDirty = true
         self.degrees = degrees
         self.unfoldedLit = unfoldedLit
         self.turn = ((turn % 4) + 4) % 4
@@ -446,13 +474,40 @@ final class DuoScene {
     /// turn is the body turned a quarter clockwise, a negative roll.
     private var rotation: Rotation { Rotation(z: [0, -90, 180, 90][turn]) }
 
-    /// Where the lit screen and the keys land, for the page.
+    /// Where the lit screen and the keys land, for the page: the screen
+    /// from the skinned mesh as the last render posed it (else baguette's
+    /// sharp fold), each piece with how squarely it faces the camera.
     var layout: [String: Any] {
         let projection = Projection(degrees: degrees, rotation: rotation, offset: FoldPose.centring(inner: inner, degrees: degrees), camera: camera)
         return [
-            "pieces": projection.pieces(inner: inner, cover: coverCorners, unfoldedLit: unfoldedLit),
+            "pieces": skinnedPieces() ?? projection.pieces(inner: inner, cover: coverCorners, unfoldedLit: unfoldedLit),
             "buttons": projection.buttons(anchors, body: body, margin: max(body.x, body.y) * 0.06),
+            "width": size.width,
+            "height": size.height,
+            "degrees": degrees,
         ]
+    }
+
+    private func skinnedPieces() -> [[String: Any]]? {
+        let eye = SIMD3<Float>(0, 0, Float(camera.distance))
+        func piece(_ points: [(point: SIMD3<Float>, normal: SIMD3<Float>)], u: [Double], v: [Double]) -> [String: Any] {
+            let center = points.map(\.point).reduce(.zero, +) / Float(points.count)
+            let normal = normalize(points.map(\.normal).reduce(.zero, +))
+            let corners = points.map { camera.project(Vector3(x: Double($0.point.x), y: Double($0.point.y), z: Double($0.point.z))) }
+            return ["corners": corners, "u": u, "v": v, "facing": Double(dot(normal, normalize(eye - center)))]
+        }
+        if unfoldedLit {
+            guard let skin = innerSkin, innerSpots.count > 1 else { return nil }
+            let joints = skin.skin()
+            let edges = innerSpots.map { (v: $0.v, top: skin.world($0.top, joints), bottom: skin.world($0.bottom, joints)) }
+            return zip(edges, edges.dropFirst()).map { a, b in
+                // Corners in the framebuffer's order: (0, v₀), (1, v₀), (1, v₁), (0, v₁).
+                piece([a.top, a.bottom, b.bottom, b.top], u: [0, 1], v: [a.v, b.v])
+            }
+        }
+        guard let skin = coverSkin, coverSpots.count == 4 else { return nil }
+        let joints = skin.skin()
+        return [piece(coverSpots.map { skin.world($0, joints) }, u: [0, 1], v: [0, 1])]
     }
 
     /// Each panel's latest frame on its screen (a dark panel's is black),
@@ -475,6 +530,11 @@ final class DuoScene {
         // Publishes the GPU's write to whoever reads the surface next.
         IOSurfaceLock(target.surface, [], nil)
         IOSurfaceUnlock(target.surface, [], nil)
+        // The joints are posed now: tell the page where the screen went.
+        if layoutDirty {
+            layoutDirty = false
+            onLayout?(layout)
+        }
         return target.surface
     }
 

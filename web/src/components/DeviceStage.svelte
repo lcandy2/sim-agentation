@@ -1,11 +1,11 @@
 <script>
   import { onMount, untrack } from 'svelte';
   import {
-    ui, MARGIN, ROTATION, attachStage, onStageResize, startDevice, pressHome, reclaimInput, saveScreenshot, toggleRecording, rotate, isFoldable, POSES, currentPose, setPose, slideHinge, hingeAngle, is3D, toggle3D, pressButton, maps3D, attachScreen3D,
+    ui, MARGIN, ROTATION, attachStage, onStageResize, startDevice, pressHome, reclaimInput, saveScreenshot, toggleRecording, rotate, isFoldable, POSES, currentPose, setPose, slideHinge, hingeAngle, is3D, toggle3D, pressButton, maps3D, attachScreen3D, syncScreen3D, ACTIVE_FACING,
     onPointerDown, onPointerMove, onPointerUp, onWheel, onScreenKey,
   } from '../lib/app.svelte.js';
   import { icon } from '../lib/icons.js';
-  import { layerSize, layerStyle } from '../lib/screen3d.js';
+  import { layerSize, layerStyle, facing } from '../lib/screen3d.js';
   import SideButton from './SideButton.svelte';
 
   // The canvas and overlay stay mounted for the page's lifetime: the stream
@@ -118,15 +118,22 @@
     power: ['Sleep/Wake', '<rect x="4" y="8" width="10" height="7.5" rx="1.5"/><path d="M6 8V5.8a3 3 0 0 1 6 0V8"/>'],
   };
   // Design Mode on the 3D book: a layer of framebuffer coordinates laid
-  // onto each piece of the screen, the first piece's drawn on and the
-  // others' copies of it, each cut along the hinge.
+  // onto each piece of the screen (strips across the crease), the first
+  // piece's drawn on and the others' copies of it, each cut at its edges;
+  // labels and markers stand flat on the page. Annotating, a piece turned
+  // too far from the camera is left out.
   const pieces3D = $derived(in3D && ui.scene && ui.box3d ? maps3D() : []);
   const layer3D = $derived(pieces3D.length ? layerSize(pieces3D) : { width: 1, height: 1 });
-  const layers3D = $derived(pieces3D.map((piece) => layerStyle(piece, layer3D)));
-  let boxes3D = $state(), floats3D = $state(), mirrorBoxes3D = $state(), mirrorFloats3D = $state();
+  const layers3D = $derived(pieces3D.map((piece) => ({ ...layerStyle(piece, layer3D), off: ui.mode === 'annotate' && facing(piece) < ACTIVE_FACING })));
+  let boxes3D = $state(), floats3D = $state(), flat3D = $state();
+  let mirrors3D = $state([]);
   $effect(() => {
-    if (!boxes3D || !floats3D) return;
-    return attachScreen3D({ boxes: boxes3D, floats: floats3D, mirrors: [[mirrorBoxes3D, boxes3D], [mirrorFloats3D, floats3D]] });
+    if (!boxes3D || !floats3D || !flat3D) return;
+    return attachScreen3D({ boxes: boxes3D, floats: floats3D, flat: flat3D, mirrors: mirrors3D.slice(1, layers3D.length) });
+  });
+  $effect(() => {
+    layers3D;
+    syncScreen3D();
   });
 
   // A key's glyph stays on the stage, however close the book comes.
@@ -156,6 +163,7 @@
             {#each layers3D as layer, i (i)}
               <div
                 class="piece3d"
+                class:off={layer.off}
                 style:width="{layer3D.width}px"
                 style:height="{layer3D.height}px"
                 style:transform={layer.transform}
@@ -163,14 +171,14 @@
               >
                 {#if i === 0}
                   <div class="piece-layer" bind:this={boxes3D}></div>
-                  <div class="piece-layer" bind:this={floats3D}></div>
-                {:else if i === 1}
-                  <div class="piece-layer" bind:this={mirrorBoxes3D}></div>
-                  <div class="piece-layer" bind:this={mirrorFloats3D}></div>
+                  <div class="piece-layer floats" bind:this={floats3D}></div>
+                {:else}
+                  <div class="piece-layer" bind:this={mirrors3D[i]}></div>
                 {/if}
               </div>
             {/each}
           </div>
+          <div class="flat3d" bind:this={flat3D}></div>
           <div class="hw-keys">
             {#each ui.scene.buttons as key (key.id)}
               <button

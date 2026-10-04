@@ -314,6 +314,11 @@ img { -webkit-user-drag: none; }
 .screen3d { position: absolute; inset: 0; z-index: 3; pointer-events: none; }
 .piece3d { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
 .piece-layer { position: absolute; inset: 0; }
+/* A piece turned away while annotating keeps its boxes but doesn't show them. */
+.piece3d.off { visibility: hidden; }
+/* Labels and markers are drawn flat (.flat3d), where their anchors land. */
+.piece-layer.floats { visibility: hidden; }
+.flat3d { position: absolute; inset: 0; z-index: 4; pointer-events: none; --unrotate: 0deg; }
 
 /* Device Hub's keys beside the 3D book: bare glyphs, shown while the
    pointer is on the stage, lit under it. */

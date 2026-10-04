@@ -76,6 +76,18 @@ export function locate(maps, x, y) {
   return fallback ?? { u: 0, v: 0, inside: false };
 }
 
+/** Where a framebuffer point (normalized) is on the stage, through the piece showing it; null off them. */
+export function project(maps, u, v) {
+  const eps = 1e-6;
+  const map = maps.find(({ piece }) => u >= piece.u[0] - eps && u <= piece.u[1] + eps && v >= piece.v[0] - eps && v <= piece.v[1] + eps);
+  if (!map) return null;
+  const [x, y] = apply(map.toStage, [u, v]);
+  return { x, y };
+}
+
+/** How squarely a piece faces the camera, 1 head-on (the host's cosine). */
+export const facing = ({ piece }) => piece.facing ?? 1;
+
 /**
  * The CSS that lays a layer of framebuffer coordinates, `size` px, onto
  * one piece: its `matrix3d` (with `transform-origin: 0 0`), and a clip

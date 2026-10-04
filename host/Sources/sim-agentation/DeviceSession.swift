@@ -191,7 +191,9 @@ final class DeviceSession: @unchecked Sendable {
         }
         inputQueue.async { [weak self] in self?.input.targetPanel(screenId: lit.panel.screenId) }
         lock.lock(); pendingKeyframe = true; pendingSeed = true; lock.unlock()
-        socket.send(json: ["type": "panel", "panel": lit.panel.name, "orientation": lit.orientation])
+        var panel: [String: Any] = ["type": "panel", "panel": lit.panel.name, "orientation": lit.orientation]
+        if let degrees = foldable?.state.degrees { panel["degrees"] = degrees }
+        socket.send(json: panel)
         capture.requestFrame()
         poseScene()
     }
@@ -226,6 +228,12 @@ final class DeviceSession: @unchecked Sendable {
                 do {
                     let (current, showing) = self.lock.withLock { (self.scene, self.view3D) }
                     let scene = try current ?? DuoScene(width: size.width, height: size.height, background: background)
+                    // Its `degrees` is the pose drawn, which the page's picker and slider show.
+                    scene.onLayout = { [weak self] layout in
+                        var message = layout
+                        message["type"] = "scene"
+                        self?.socket.send(json: message)
+                    }
                     // A new picture, or a new size, starts with a keyframe;
                     // a zoom or a color only draws the book again.
                     let fresh = !showing || scene.size != size
@@ -255,19 +263,18 @@ final class DeviceSession: @unchecked Sendable {
         }
     }
 
-    /// Poses the 3D book as the device is now, tells the page where its
-    /// screen and keys landed, and draws it again.
+    /// Poses the 3D book as the device is now and draws it again; once the
+    /// render has posed the joints, the scene says where the screen and
+    /// keys landed (`onLayout`).
     private func poseScene() {
         guard let foldable, let scene = lock.withLock({ view3D ? self.scene : nil }) else { return }
         let state = foldable.state
+        // A silent hinge (devicectl can stop reporting after SpringBoard
+        // restarts) is taken for the lit panel's pose.
+        let degrees = state.degrees ?? (state.unfoldedLit ? 130 : 0)
         DispatchQueue.main.async { [weak self] in
             MainActor.assumeIsolated {
-                scene.pose(degrees: state.degrees ?? (state.unfoldedLit ? 130 : 0), unfoldedLit: state.unfoldedLit, turn: state.device)
-                var message = scene.layout
-                message["type"] = "scene"
-                message["width"] = scene.size.width
-                message["height"] = scene.size.height
-                self?.socket.send(json: message)
+                scene.pose(degrees: degrees, unfoldedLit: state.unfoldedLit, turn: state.device)
             }
             guard let self else { return }
             self.lock.withLock { self.poseVersion += 1 }
