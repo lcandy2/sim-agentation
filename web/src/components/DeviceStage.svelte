@@ -25,11 +25,11 @@
     return () => observer.disconnect();
   });
 
-  // Device Hub brings a device in small and grows it to size: a device that
-  // appears grows in from 85%, with its name and Start when it's shut down,
-  // and Start grows the picture from its preview size to its running size.
-  // Zooming and resizing don't animate. Going back within REPLAY_AFTER to a
-  // running device that has just been shown doesn't play it again.
+  // Device Hub brings a running device in small and grows it to size: one
+  // that appears grows in from 85%, and Start grows the picture from its
+  // preview size to its running size. A device that isn't running just
+  // appears, as does going back within REPLAY_AFTER to a running device
+  // that has just been shown. Zooming and resizing don't animate.
   const REPLAY_AFTER = 3000; // ms
   let wrap = $state(null);
   let rotor = $state(null);
@@ -50,7 +50,7 @@
         rotor.animate([{ transform: `scale(${prev.scale / ui.scale})` }, { transform: 'none' }], easing);
         return;
       }
-      if (ui.running && performance.now() - (leftAt.get(ui.udid) ?? -Infinity) < REPLAY_AFTER) return;
+      if (!ui.running || performance.now() - (leftAt.get(ui.udid) ?? -Infinity) < REPLAY_AFTER) return;
       wrap.getAnimations().forEach((a) => a.cancel());
       wrap.animate([{ transform: 'scale(0.85)', opacity: 0 }, { transform: 'none', opacity: 1 }], easing);
     });
