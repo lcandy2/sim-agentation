@@ -1011,10 +1011,22 @@ kbd {
   background: var(--glass-light) center / 100% 100% no-repeat;
   pointer-events: none;
 }
-.composer-target { font-size: 13px; line-height: 16px; font-weight: 700; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* The note's field, its corners concentric with the composer's (28 - 12),
-   room on the right for the send button in its corner. */
-.composer .field { height: auto; padding: 8px 36px 8px 12px; border-radius: 16px; line-height: 16px; resize: none; }
+   room on the right for the send button in its corner: the selections'
+   chips first, the note going on after them (components/Composer.svelte). */
+.composer .field.note { position: relative; height: auto; padding: 0; border-radius: 16px; }
+.composer .field.note:focus-within { box-shadow: 0 0 0 1px var(--sheet-field-border), 0 0 0 3.5px var(--sheet-focus), inset 0 0 0 1px var(--sheet-focus); }
+.note-chips { position: absolute; top: 8px; left: 12px; right: 36px; display: flex; flex-wrap: wrap; column-gap: 8px; pointer-events: none; }
+.note-text { display: block; width: 100%; padding: 8px 36px 8px 12px; border: 0; border-radius: inherit; background: none; outline: none; color: var(--text); font-size: 13px; font-weight: 500; line-height: 16px; resize: none; caret-color: var(--accent); }
+/* A selection's chip, as Cursor's: its symbol and short name in its color;
+   hovered, the symbol is an x that takes the selection away. */
+.chip { pointer-events: auto; display: inline-flex; align-items: center; gap: 3px; height: 16px; padding: 0; border: 0; background: none; color: var(--pick); font-size: 13px; font-weight: 500; line-height: 16px; white-space: nowrap; }
+.chip svg { width: 14px; height: 14px; }
+.chip-x { display: none; }
+.chip:hover .chip-icon { display: none; }
+.chip:hover .chip-x { display: inline-grid; }
+.chip-icon, .chip-x { place-items: center; }
+.chip-icon { display: inline-grid; }
 /* The send button, 4 in from the field's bottom right corner, concentric
    with it (12 + 4), placed over the form (components/Composer.svelte). */
 .glass-btn.composer-send { position: absolute; bottom: 16px; width: 24px; height: 24px; }

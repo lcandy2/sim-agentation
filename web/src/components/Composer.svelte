@@ -1,6 +1,6 @@
 <script>
   import { tick } from 'svelte';
-  import { ui, submitComposer, cancelComposer } from '../lib/app.svelte.js';
+  import { ui, submitComposer, cancelComposer, removePick } from '../lib/app.svelte.js';
   import { POINTER, outlinePath } from '../lib/glass.js';
   import { icon } from '../lib/icons.js';
 
@@ -51,6 +51,22 @@
   const popIn = () => ({ duration: still() ? 0 : OPEN.duration * 1000, css: (t) => pose(spring(OPEN, t * OPEN.duration)) });
   const popOut = () => ({ duration: still() ? 0 : CLOSE.duration * 1000, css: (t) => pose(1 - spring(CLOSE, (1 - t) * CLOSE.duration)) });
 
+  // The selections as chips at the start of the note, each in its color;
+  // hovered, a chip's symbol turns to an x that takes that selection away.
+  // The note goes on after the last chip, on its line if there's room
+  // (its first line indented to there), else on the next.
+  let chips = $state(null);
+  let start = $state({ top: 0, indent: 0 });
+  $effect(() => {
+    ui.draft.picks;
+    tick().then(() => {
+      const last = chips?.lastElementChild;
+      if (!last) return (start = { top: 0, indent: 0 });
+      const right = last.offsetLeft + last.offsetWidth + 6;
+      start = chips.clientWidth - right < 64 ? { top: last.offsetTop + last.offsetHeight, indent: 0 } : { top: last.offsetTop, indent: right };
+    });
+  });
+
   function submit(e) {
     e.preventDefault();
     const value = comment.trim();
@@ -59,8 +75,8 @@
 
   // Liquid Glass lights from within where it's touched (style.css), and
   // held, the button can be pulled: it follows the pointer a little, with
-  // more give the farther (never past 14 px), drawn out toward it and
-  // thinner across like a drop (up to 1.3 by 1/1.3), and snaps back when
+  // more give the farther (never past 8 px), drawn out toward it and
+  // thinner across like a drop (up to 1.2 by 1/1.2), and snaps back when
   // let go (style.css's spring). A pull isn't a click.
   let pull = null;
   let pulled = false;
@@ -82,8 +98,8 @@
     const d = Math.hypot(dx, dy);
     if (!pull.moved && d < 4) return;
     pull.moved = true;
-    const k = (14 * (1 - Math.exp(-d / 70))) / d;
-    const stretch = 1 + 0.3 * (1 - Math.exp(-d / 80));
+    const k = (8 * (1 - Math.exp(-d / 90))) / d;
+    const stretch = 1 + 0.2 * (1 - Math.exp(-d / 100));
     const angle = Math.atan2(dy, dx);
     const el = e.currentTarget;
     el.style.transition = 'none';
@@ -127,8 +143,25 @@
     style:clip-path={place ? `path('${place.outline}')` : null}
     onsubmit={submit}
   >
-    <div class="composer-target">{ui.draft.label}</div>
-    <textarea class="field" rows="3" placeholder="What should change?" bind:this={text} bind:value={comment} onkeydown={keydown}></textarea>
+    <div class="field note">
+      <div class="note-chips" bind:this={chips}>
+        {#each ui.draft.picks as pick (pick.id)}
+          <button type="button" class="chip" style:--pick="var(--pick-{pick.color})" title="{pick.label}, click to take away" aria-label="Take away {pick.label}" onclick={() => removePick(pick.id)}>
+            <span class="chip-icon">{@html icon(pick.kind === 'area' ? 'area' : 'pick')}</span><span class="chip-x">{@html icon('xmark')}</span>{pick.short}
+          </button>
+        {/each}
+      </div>
+      <textarea
+        class="note-text"
+        rows="3"
+        placeholder="What should change?"
+        style:padding-top="{8 + start.top}px"
+        style:text-indent="{start.indent}px"
+        bind:this={text}
+        bind:value={comment}
+        onkeydown={keydown}
+      ></textarea>
+    </div>
   </form>
   {#if place}
     <!-- The outline's shadow, only outside it, drawn after the glass so the

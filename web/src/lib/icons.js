@@ -4,6 +4,10 @@
 const paths = {
   search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
   'arrow-up': '<path d="M12 19.5V5M5.5 11.5 12 5l6.5 6.5"/>',
+  // A selection's chip in the composer: an element (a pointer in its box), an area, and the x that takes it away.
+  pick: '<path d="M10 19H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h11a2 2 0 0 1 2 2v4" stroke-dasharray="2.4 2.6"/><path d="m12.5 12.5 7.5 2.6-3.2 1.2-1.3 3.2z"/>',
+  area: '<rect x="4" y="5" width="16" height="14" rx="2" stroke-dasharray="2.4 2.6"/>',
+  xmark: '<path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/>',
   sidebar: '<rect x="3" y="4" width="18" height="16" rx="3"/><path d="M9 4v16"/>',
   inspector: '<rect x="3" y="4" width="18" height="16" rx="3"/><path d="M15 4v16"/>',
   phone: '<rect x="6.5" y="2.5" width="11" height="19" rx="2.5"/><path d="M10.5 5h3"/>',

@@ -91,7 +91,7 @@ const rt = {
   hover: null,       // { point, targets: [{ rect, label, node? }], level }
   drag: null,
   draft: null,       // { kind, rect, point?, label, parts? }: what the composer will save
-  picks: [],         // what's selected, each { kind, rect, point?, label, color, el }
+  picks: [],         // what's selected, each { id, kind, rect, point?, label, color, el }
   failed: new Set(), // formats Auto gave up on this session
   auto: createAuto(), // what Auto has learned about the connection and decoder (see auto.js)
   seen: { received: 0, decoded: 0, bytes: 0, at: 0 }, // the page's counts at the host's last report
@@ -879,6 +879,12 @@ function nextColor() {
   const taken = new Set(rt.picks.map((k) => k.color));
   return (PICK_COLORS.find(([name]) => !taken.has(name)) ?? PICK_COLORS[rt.picks.length % PICK_COLORS.length])[0];
 }
+let pickIds = 0;
+// A chip's name: the element's label, short ("Maps"), or "Area".
+const shortName = (label) => {
+  const name = label.match(/"([^"]+)"/)?.[1] ?? label;
+  return name.length > 18 ? `${name.slice(0, 17)}…` : name;
+};
 function selectionBox(color) {
   const el = Object.assign(document.createElement('div'), { className: 'sel' });
   el.style.setProperty('--pick', `var(--pick-${color})`);
@@ -926,7 +932,7 @@ function annotateUp(e) {
   const { moved, start, add, box, color: dragged } = rt.drag;
   rt.drag = null;
   if (moved) {
-    rt.picks.push({ kind: 'area', rect: normalize(start, p), label: 'Area', color: dragged, el: box });
+    rt.picks.push({ id: ++pickIds, kind: 'area', rect: normalize(start, p), label: 'Area', color: dragged, el: box });
     return openComposer();
   }
   const target = rt.hover?.targets[rt.hover.level] ?? targetsAt(p)[0];
@@ -942,7 +948,7 @@ function annotateUp(e) {
   const el = selectionBox(color);
   placeBox(el, rect);
   rt.overlay.append(el);
-  rt.picks.push({ kind: target?.node ? 'element' : 'area', rect, point: target?.node ? p : undefined, label: target?.label ?? 'Area', color, el });
+  rt.picks.push({ id: ++pickIds, kind: target?.node ? 'element' : 'area', rect, point: target?.node ? p : undefined, label: target?.label ?? 'Area', color, el });
   openComposer();
 }
 
@@ -1073,6 +1079,8 @@ function openComposer() {
   const boxes = picks.map((k) => k.el.getBoundingClientRect());
   ui.draft = {
     label: picks.length === 1 ? first.label : `${first.label} and ${picks.length - 1} more`,
+    // The composer shows them as chips, each in its color.
+    picks: picks.map(({ id, kind, label, color }) => ({ id, kind, label, short: shortName(label), color })),
     box: {
       left: Math.min(...boxes.map((b) => b.left)),
       right: Math.max(...boxes.map((b) => b.right)),
@@ -1080,6 +1088,15 @@ function openComposer() {
       bottom: Math.max(...boxes.map((b) => b.bottom)),
     },
   };
+}
+
+/** Takes one selection away (its chip's x); the composer goes with the last. */
+export function removePick(id) {
+  const i = rt.picks.findIndex((k) => k.id === id);
+  if (i < 0) return;
+  rt.picks.splice(i, 1)[0].el?.remove();
+  if (rt.picks.length) openComposer();
+  else cancelComposer();
 }
 
 function clearPicks() {
