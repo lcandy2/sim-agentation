@@ -86,7 +86,7 @@
       <button type="button" class="alert-btn" onclick={dismiss}>Cancel</button>
       <button
         type="submit"
-        class="alert-btn {kind === 'rename' ? 'default' : 'destructive'}"
+        class="alert-btn default"
         disabled={busy || (kind === 'rename' && (!newName.trim() || newName.trim() === name))}
       >{copy.action}</button>
     </div>

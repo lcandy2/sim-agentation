@@ -175,6 +175,9 @@ button { cursor: default; }
    placeholders, pictures, buttons); what's typed and what's worth copying
    is: fields, the annotations' notes and replies, the device's info. */
 body { -webkit-user-select: none; user-select: none; }
+/* Dialogs sit in the top layer, where a modal one's text takes a select-all
+   regardless of the page: so they say so themselves. */
+dialog { -webkit-user-select: none; user-select: none; }
 input, textarea, .item-comment, .item-reply, .info dd { -webkit-user-select: text; user-select: text; }
 img { -webkit-user-drag: none; }
 [hidden] { display: none !important; }
@@ -427,11 +430,11 @@ img { -webkit-user-drag: none; }
 .alert-fields { display: grid; gap: 8px; padding: 0 6px; }
 .alert-text { display: grid; gap: 10px; padding: 0 6px 2px; color: rgba(0, 0, 0, 0.85); }
 .alert-text h2 { margin: 0; font-size: 13px; line-height: 16px; font-weight: 700; }
-.alert-text p { margin: 0; font-size: 11px; line-height: 14px; }
+.alert-text p { margin: 0; font-size: 13px; line-height: 16px; } /* the title's size, regular (as macOS 27's alerts) */
 .alert-buttons { display: flex; gap: 8px; }
-.alert-btn { flex: 1; height: 32px; padding: 0 8px; border: 0; border-radius: 100px; background: #e6e6e6; color: rgba(0, 0, 0, 0.85); font-size: 13px; line-height: 16px; font-weight: 500; }
+/* Filled, as macOS 27's alerts have them (Xcode's Remove, measured): #dcdcdd, the default in the accent. */
+.alert-btn { flex: 1; height: 32px; padding: 0 8px; border: 0; border-radius: 100px; background: #dcdcdd; color: rgba(0, 0, 0, 0.85); font-size: 13px; line-height: 16px; font-weight: 500; }
 .alert-btn.default { background: var(--accent); color: #fff; }
-.alert-btn.destructive { background: rgba(245, 47, 50, 0.23); color: #f52f32; } /* Figma: red at 23%, red label */
 .alert-btn:disabled { opacity: 0.5; }
 .alert-btn:focus-visible { outline: none; box-shadow: 0 0 0 3.5px var(--sheet-focus); }
 /* Liquid Glass's prominent button, round: the tint with a thin brighter
