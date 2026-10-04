@@ -106,10 +106,24 @@ final class Store: @unchecked Sendable {
     }
 
     /// Like Object.assign(a, patch, { updatedAt }), then the reply appended.
-    func update(_ id: String, patch: [(String, JSON)], reply: JSON?) throws -> JSONObject? {
+    /// Another agent session already took the annotation on (see `update`).
+    struct Taken: Error, CustomStringConvertible {
+        let description = "another agent session is already working on this annotation; leave it to that one"
+    }
+
+    /// `by` names the agent session acknowledging it: an annotation pushed to
+    /// several sessions (each Claude Code session runs its own MCP server) is
+    /// taken on by the first, and the others hear `Taken`.
+    func update(_ id: String, patch: [(String, JSON)], reply: JSON?, by: String? = nil) throws -> JSONObject? {
         try locked {
             guard let i = index(of: id) else { return nil }
             var a = annotations[i]
+            if let by, patch.contains(where: { $0.0 == "status" && JS.same($0.1.stringValue, "acknowledged") }) {
+                if JS.same(a["status"]?.stringValue, "acknowledged"), let holder = a["acknowledgedBy"]?.stringValue, !JS.same(holder, by) {
+                    throw Taken()
+                }
+                a["acknowledgedBy"] = .string(by)
+            }
             for (key, value) in patch { a[key] = value }
             a["updatedAt"] = .string(Self.timestamp())
             if let reply { a["replies"] = .array((a["replies"]?.arrayValue ?? []) + [reply]) }

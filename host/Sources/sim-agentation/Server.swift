@@ -223,6 +223,18 @@ final class AppServer: @unchecked Sendable {
                 }
                 return .respond(Self.json(.array(store.list(status: "pending").map(JSON.object))))
             }
+            // For the MCP server's push: the pending annotations once anything
+            // changes after `since` (a version from an earlier answer), or at
+            // once without it.
+            if path == "/api/changes" {
+                if let since = req.queryValue("since").flatMap({ Int($0) }) {
+                    let requested = req.queryValue("timeout").map(JS.number) ?? 0
+                    let timeout = min(requested > 0 ? requested : 60, 110) // seconds
+                    await store.waitForChange(since: since, until: ContinuousClock.now + .milliseconds(Int64((timeout * 1000).rounded(.down))))
+                }
+                let (pending, version) = store.pending()
+                return .respond(Self.json(JSONObject(["version": .number(Double(version)), "pending": .array(pending.map(JSON.object))])))
+            }
             if part(0) == "api" && part(1) == "annotations", let id = part(2) {
                 guard let a = store.get(id) else { return .respond(Self.json(JSONObject(["error": .string("not found")]), status: 404)) }
                 let fullId = a["id"]?.stringValue ?? id
@@ -233,8 +245,9 @@ final class AppServer: @unchecked Sendable {
                 }
                 if req.method == "DELETE" { return .respond(Self.json(JSONObject(["ok": .bool(try store.remove(fullId))]))) }
                 if req.method == "PATCH" {
-                    let (patch, reply) = try Self.parsePatch(try Self.parseBody(req.body))
-                    let updated = try store.update(fullId, patch: patch, reply: reply)
+                    let body = try Self.parseBody(req.body)
+                    let (patch, reply) = try Self.parsePatch(body)
+                    let updated = try store.update(fullId, patch: patch, reply: reply, by: body["by"]?.stringValue)
                     return .respond(Self.json(updated.map(JSON.object) ?? .null))
                 }
             }
@@ -246,7 +259,7 @@ final class AppServer: @unchecked Sendable {
             return .respond(Self.notFound)
         } catch {
             let bad = error is BadRequest || error is BodySyntaxError
-            return .respond(Self.json(JSONObject(["error": .string(Self.message(error))]), status: bad ? 400 : 500))
+            return .respond(Self.json(JSONObject(["error": .string(Self.message(error))]), status: error is Store.Taken ? 409 : bad ? 400 : 500))
         }
     }
 

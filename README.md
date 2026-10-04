@@ -40,6 +40,17 @@ claude mcp add sim-agentation -- /path/to/Sim-Agentation/host/.build/debug/sim-a
 
 The MCP server starts the web server if it isn't running.
 
+### Sent straight into Claude Code
+
+Start (or resume) the conversation with the server as a channel, and every annotation you send lands in it at once, an idle session included, with no `sim_watch` loop:
+
+```sh
+claude --dangerously-load-development-channels server:sim-agentation
+claude --resume <session> --dangerously-load-development-channels server:sim-agentation
+```
+
+Channels are a Claude Code research preview: until one is on Anthropic's allowlist it needs this flag (and a confirmation at startup), and it needs a claude.ai login or Console API key. Without the flag the pushes are dropped and the tools work as before. If several sessions get the same annotation, the first to acknowledge it takes it on; the others are told to leave it.
+
 Tools:
 
 | Tool | What it does |
@@ -47,7 +58,7 @@ Tools:
 | `sim_get_pending` | Pending annotations, with element info and screenshot paths |
 | `sim_get_all` | All annotations, including finished ones |
 | `sim_watch` | Waits until you add an annotation, then returns the pending list |
-| `sim_acknowledge` | Marks one as in progress |
+| `sim_acknowledge` | Marks one as in progress, for this session alone |
 | `sim_resolve` | Marks one as fixed, with a summary |
 | `sim_dismiss` | Declines one, with the reason |
 | `sim_reply` | Posts a message on one |

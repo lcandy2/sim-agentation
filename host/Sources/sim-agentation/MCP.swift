@@ -9,6 +9,10 @@ final class MCPServer: @unchecked Sendable {
     private let session: URLSession
     private let probeSession: URLSession
     private let outputLock = NSLock()
+    /// This agent session, as it acknowledges annotations (see Store.update).
+    private let sessionTag = String(UUID().uuidString.prefix(8)).lowercased()
+    private let pushLock = NSLock()
+    private var pushing = false
 
     // Newest first. This server only uses tools, which work the same in all of them.
     static let protocolVersions = ["2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05"]
@@ -101,16 +105,27 @@ final class MCPServer: @unchecked Sendable {
             case "initialize":
                 let requested = params?["protocolVersion"]?.stringValue
                 let version = requested.flatMap { r in Self.protocolVersions.first { JS.same($0, r) } } ?? Self.protocolVersions[0]
-                return result(.object(JSONObject([
+                // Claude Code takes pushed messages (its channels): what the user
+                // sends arrives in the conversation without the agent asking.
+                let claude = params?["clientInfo"]?["name"]?.stringValue?.lowercased().contains("claude") ?? false
+                var capabilities = JSONObject(["tools": .object(JSONObject())])
+                if claude { capabilities["experimental"] = .object(JSONObject(["claude/channel": .object(JSONObject())])) }
+                result(.object(JSONObject([
                     // Echo the client's version when we support it, otherwise offer our newest.
                     "protocolVersion": .string(version),
-                    "capabilities": .object(JSONObject(["tools": .object(JSONObject())])),
+                    "capabilities": .object(capabilities),
                     "serverInfo": .object(JSONObject(["name": .string("sim-agentation"), "version": .string("0.1.0")])),
                     "instructions": .string(
                         "The user annotates a running iOS simulator in the browser (http://localhost:\(port)). "
                             + "Fetch annotations with sim_get_pending, Read the screenshot paths to see the UI, find the SwiftUI/UIKit code, fix it, then sim_resolve."
+                            + (claude
+                                ? " With channels on, each annotation the user sends also arrives on its own as a <channel source=\"sim-agentation\" annotation_id=\"…\"> event: "
+                                    + "call sim_acknowledge with that id before starting, and if it says another session has it, leave it."
+                                : "")
                     ),
                 ])))
+                if claude { startPushing() }
+                return
             case "ping":
                 return result(.object(JSONObject()))
             case "tools/list":
@@ -152,6 +167,54 @@ final class MCPServer: @unchecked Sendable {
 
     private static func textContent(_ text: String) -> JSON {
         .array([.object(JSONObject(["type": .string("text"), "text": .string(text)]))])
+    }
+
+    // MARK: - push
+
+    /// Claude Code with channels on: each annotation the user sends is pushed
+    /// into the conversation as a channel event, so even an idle session
+    /// starts on it. A session without channels drops the event, and Claude
+    /// Code can't tell this server which kind it is, so nothing is claimed
+    /// here: the annotation stays pending, for sim_watch or another session,
+    /// until one acknowledges it (only one can). Annotations pending when the
+    /// session starts are pushed too. Doesn't start the host: when it's not
+    /// running, this waits for it.
+    private func startPushing() {
+        pushLock.lock()
+        defer { pushLock.unlock() }
+        guard !pushing else { return }
+        pushing = true
+        Task.detached { await self.pushLoop() }
+    }
+
+    private func pushLoop() async {
+        var version: Int?
+        var pushed = Set<String>()
+        while true {
+            let path = version.map { "/api/changes?since=\($0)&timeout=100" } ?? "/api/changes"
+            guard let body = try? await request(path), let v = body["version"]?.numberValue else {
+                version = nil
+                try? await Task.sleep(for: .seconds(3))
+                continue
+            }
+            version = Int(v)
+            for item in body["pending"]?.arrayValue ?? [] {
+                guard let a = item.objectValue, let id = a["id"]?.stringValue, !pushed.contains(id) else { continue }
+                pushed.insert(id)
+                send(JSONObject([
+                    "jsonrpc": .string("2.0"),
+                    "method": .string("notifications/claude/channel"),
+                    "params": .object(JSONObject([
+                        "content": .string(
+                            "The user sent this from the iOS simulator. First call sim_acknowledge with id \(id); if it says another session has it, leave it. "
+                                + "Then Read the screenshots to see the UI, find the SwiftUI or UIKit code, fix it, and sim_resolve with a one-line summary "
+                                + "(or sim_reply to ask the user something).\n\n" + Format.toMarkdown(a)
+                        ),
+                        "meta": .object(JSONObject(["annotation_id": .string(id)])),
+                    ])),
+                ]))
+            }
+        }
     }
 
     // MARK: - tools
@@ -218,7 +281,8 @@ final class MCPServer: @unchecked Sendable {
             let timeout = JS.string(a["timeout_seconds"].flatMap { $0.isNull ? nil : $0 } ?? .number(100))
             return render(try await request("/api/wait?timeout=\(timeout)"), empty: "Nothing new yet; call sim_watch again to keep waiting.")
         case "sim_acknowledge":
-            try await patch(id, JSONObject(["status": .string("acknowledged")]))
+            // As this session: if another one already took it on, this throws and says so.
+            try await patch(id, JSONObject(["status": .string("acknowledged"), "by": .string(sessionTag)]))
             return "Acknowledged \(id)."
         case "sim_resolve":
             try await patch(id, JSONObject(["status": .string("resolved"), "resolution": a["summary"]]))
