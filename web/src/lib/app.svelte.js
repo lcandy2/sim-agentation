@@ -857,14 +857,16 @@ export function toggleSdk() {
   rt.overlay?.focus();
 }
 
+// With the composer open, hovering and selecting go on: a new selection
+// takes the current one's place, and the composer, its note kept, moves to it.
 function annotateDown(e) {
-  if (!rt.frozen || rt.draft) return;
+  if (!rt.frozen) return;
   rt.overlay.setPointerCapture(e.pointerId);
   rt.drag = { start: axPoint(e), moved: false };
 }
 
 function annotateMove(e) {
-  if (!rt.frozen || rt.draft) return;
+  if (!rt.frozen) return;
   const p = axPoint(e);
   if (rt.drag) {
     const dx = p.x - rt.drag.start.x;
@@ -896,7 +898,7 @@ function annotateUp(e) {
   }
   const target = rt.hover?.targets[rt.hover.level] ?? targetsAt(p)[0];
   const rect = target ? { ...target.rect } : { x: p.x - 22, y: p.y - 22, width: 44, height: 44 };
-  clearLayer('.hl, .hl-label');
+  clearLayer('.hl, .hl-label, .sel');
   const sel = Object.assign(document.createElement('div'), { className: 'sel' });
   placeBox(sel, rect);
   rt.overlay.append(sel);
@@ -980,7 +982,7 @@ const sameRect = (a, b) => a.x === b.x && a.y === b.y && a.width === b.width && 
 
 function changeLevel(delta) {
   const hover = rt.hover;
-  if (!hover?.targets.length || rt.draft) return false;
+  if (!hover?.targets.length) return false;
   const level = Math.min(Math.max(hover.level + delta, 0), hover.targets.length - 1);
   if (level === hover.level) return true;
   hover.level = level;
