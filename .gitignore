@@ -4,5 +4,5 @@ node_modules
 .swiftpm/
 xcuserdata/
 DerivedData/
-web/dist/
-web/.dev-server.json
+app/web/dist/
+app/web/.dev-server.json

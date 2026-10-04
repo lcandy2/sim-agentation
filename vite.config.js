@@ -31,7 +31,7 @@ const toHost = { target: HOST, changeOrigin: true, configure: asHost };
 // page loads the source from DEV_PORT only when the two agree
 // (web/src/main.js), so nothing else listening there can slip code in.
 function devServerNote() {
-  const file = new URL('./web/.dev-server.json', import.meta.url);
+  const file = new URL('./app/web/.dev-server.json', import.meta.url);
   const token = randomBytes(24).toString('hex');
   return {
     name: 'sim-agentation-dev-server-note',
@@ -51,7 +51,7 @@ function devServerNote() {
 }
 
 export default defineConfig({
-  root: 'web',
+  root: 'app/web',
   plugins: [svelte(), devServerNote()],
   server: {
     port: DEV_PORT,

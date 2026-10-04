@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="web/public/icon.svg" alt="" height="80">
+<img src="app/web/public/icon.svg" alt="" height="80">
 
 # SimAgentation
 
@@ -40,8 +40,8 @@ You need macOS on Apple Silicon with Xcode 26 (27.1 for iPhone Duo), and Node wi
 
 ```sh
 pnpm install
-pnpm build    # the UI into web/dist, then the Swift binary
-pnpm start    # host/.build/debug/sim-agentation serve --open
+pnpm build    # the UI into app/web/dist, then the Swift binary
+pnpm start    # app/host/.build/debug/sim-agentation serve --open
 ```
 
 The page opens on http://localhost:38470. Pick a simulator on the left; one that isn't running shows a **Start** button, and nothing boots until you press it.
@@ -87,7 +87,7 @@ The rest of Simulator.app's shortcuts (shake, appearance, text size, Face ID) wo
 
 The stream picks its codec on its own: H.265, else H.264, else JPEG, taking the first this browser decodes in hardware, and moving on if the host can't encode it or nothing decodes within a few seconds. Video runs at about 60 fps, the simulator's own rate, at 3–8 Mbit/s while scrolling, against about 85 Mbit/s for JPEG.
 
-On Auto, resolution, bitrate and frame rate follow too ([`auto.js`](web/src/lib/auto.js)). Once a second the host reports how far behind the viewer is, and the page how late that report arrived, which also catches a backlog in a tunnel or proxy. When either grows, the bitrate drops to what got through, then the resolution halves, then the frame rate drops to 30 fps. While anything is held back, the host pads the stream briefly to test for room, so a connection that recovers is used again within seconds. A hidden tab gets 5 fps. The info tab shows what's running and why, and lets you pin a codec, turn on 4:2:2 chroma for H.265, halve the resolution or set the bitrate.
+On Auto, resolution, bitrate and frame rate follow too ([`auto.js`](app/web/src/lib/auto.js)). Once a second the host reports how far behind the viewer is, and the page how late that report arrived, which also catches a backlog in a tunnel or proxy. When either grows, the bitrate drops to what got through, then the resolution halves, then the frame rate drops to 30 fps. While anything is held back, the host pads the stream briefly to test for room, so a connection that recovers is used again within seconds. A hidden tab gets 5 fps. The info tab shows what's running and why, and lets you pin a codec, turn on 4:2:2 chroma for H.265, halve the resolution or set the bitrate.
 
 ### iPhone Duo
 
@@ -97,7 +97,7 @@ Xcode 27.1's foldable is drawn as Device Hub draws it: Apple's own model from Xc
 
 Touches land on whichever half of the bent screen they hit. In Design Mode, boxes and labels lie on the screen in perspective, cut along the hinge, and a half turned more than 60° away from you is left out. Fold it while annotating and the screen goes live, then freezes again once the hinge settles. The screenshots that go to the agent are of the screen itself, flat and upright.
 
-Folding and turning go through a small helper that runs inside the simulator and sends the HID events Device Hub sends, and so do the hardware keys. The host builds it from [`host/Guest/HingeControl`](host/Guest/HingeControl) the first time it's needed.
+Folding and turning go through a small helper that runs inside the simulator and sends the HID events Device Hub sends, and so do the hardware keys. The host builds it from [`app/host/Guest/HingeControl`](app/host/Guest/HingeControl) the first time it's needed.
 
 ## Connect an agent
 
@@ -106,7 +106,7 @@ The MCP server runs over stdio, and starts the web server if it isn't running.
 ### Claude Code
 
 ```sh
-claude mcp add sim-agentation -- /path/to/Sim-Agentation/host/.build/debug/sim-agentation mcp
+claude mcp add sim-agentation -- /path/to/Sim-Agentation/app/host/.build/debug/sim-agentation mcp
 ```
 
 To have each annotation land in a conversation as you send it, start or resume it with the server as a channel. An idle session takes them too, with no `sim_watch` loop:
@@ -124,7 +124,7 @@ If several sessions get the same annotation, the first to acknowledge it takes i
 ### Codex and other clients
 
 ```sh
-codex mcp add sim-agentation -- /path/to/Sim-Agentation/host/.build/debug/sim-agentation mcp
+codex mcp add sim-agentation -- /path/to/Sim-Agentation/app/host/.build/debug/sim-agentation mcp
 ```
 
 Any client that runs a stdio MCP server takes the same command.
@@ -187,26 +187,26 @@ When the app in front has the SDK, parents come from the real view and layer tre
 |---|---|
 | `SIM_AGENTATION_PORT` | `38470` |
 | `SIM_AGENTATION_HOME` | `sim-agentation` in the temporary directory: annotations and their screenshots, kept through a restart of the host but not of the Mac |
-| `SIM_AGENTATION_WEB` | the repo's `web/` directory (the UI) |
+| `SIM_AGENTATION_WEB` | the repo's `app/web/` directory (the UI) |
 | `SIM_AGENTATION_SDK_URL` | `http://127.0.0.1:38471` |
 
 Rendered device chrome is cached in `~/Library/Caches/sim-agentation`.
 
 ## How it's built
 
-One Swift binary, built from `host/`, runs everything. It serves the page and its API from `web/dist`, speaks MCP, and drives the simulator through a native bridge that streams the screen, sends input and reads the accessibility tree.
+One Swift binary, built from `app/host/`, runs everything. It serves the page and its API from `app/web/dist`, speaks MCP, and drives the simulator through a native bridge that streams the screen, sends input and reads the accessibility tree.
 
 | Path | What's there |
 |---|---|
-| [`host/Sources/sim-agentation`](host/Sources/sim-agentation) | The server, the MCP server, stream sessions, iPhone Duo and its 3D scene |
-| [`host/Sources/SimBridge`](host/Sources/SimBridge) | The simulator bridge: screen capture, encoding, input, accessibility |
-| [`host/Guest/HingeControl`](host/Guest/HingeControl) | The helper that runs inside the simulator for iPhone Duo |
-| [`web/src`](web/src) | The Svelte UI, built by Vite into `web/dist` |
+| [`app/host/Sources/sim-agentation`](app/host/Sources/sim-agentation) | The server, the MCP server, stream sessions, iPhone Duo and its 3D scene |
+| [`app/host/Sources/SimBridge`](app/host/Sources/SimBridge) | The simulator bridge: screen capture, encoding, input, accessibility |
+| [`app/host/Guest/HingeControl`](app/host/Guest/HingeControl) | The helper that runs inside the simulator for iPhone Duo |
+| [`app/web/src`](app/web/src) | The Svelte UI, built by Vite into `app/web/dist` |
 | [`Sources/SimAgentationPlus`](Sources/SimAgentationPlus) | The optional in-app SDK, packaged by the root [`Package.swift`](Package.swift) |
 | [`examples/DemoApp`](examples/DemoApp) | A sample app that uses the SDK |
 | [`skills`](skills) | Agent skills for working through annotations and for adding the SDK |
 
-Without `pnpm dev`, the page runs `web/dist`; `pnpm build` or `pnpm watch` refreshes it. The dev server leaves a token for the host to pass the page, and the page loads from it only when they match, so nothing else on port 38472 can.
+Without `pnpm dev`, the page runs `app/web/dist`; `pnpm build` or `pnpm watch` refreshes it. The dev server leaves a token for the host to pass the page, and the page loads from it only when they match, so nothing else on port 38472 can.
 
 ## Limits
 
@@ -215,4 +215,4 @@ Without `pnpm dev`, the page runs `web/dist`; `pnpm build` or `pnpm watch` refre
 
 ## Credits
 
-The simulator code in `host/Sources/SimBridge` is adapted from [baguette](https://github.com/tddworks/baguette) by tddworks, under the Apache License 2.0 (`host/Sources/SimBridge/LICENSE-baguette`), and so is the iPhone Duo support (`Foldable.swift`, `Guest.swift` and `Device3D.swift` in `host/Sources/sim-agentation`, and the guest helper in `host/Guest/HingeControl`). The streaming pipeline follows baguette's. Recovering collapsed accessibility children (`CollapsedChildrenRecovery.swift`) is adapted from [sim-use](https://github.com/lycorp-jp/sim-use) by LY Corporation, under the Apache License 2.0 (`host/Sources/SimBridge/LICENSE-sim-use`), and restarting a stale accessibility bridge follows [idb](https://github.com/facebook/idb). Each adapted file notes what changed.
+The simulator code in `app/host/Sources/SimBridge` is adapted from [baguette](https://github.com/tddworks/baguette) by tddworks, under the Apache License 2.0 (`app/host/Sources/SimBridge/LICENSE-baguette`), and so is the iPhone Duo support (`Foldable.swift`, `Guest.swift` and `Device3D.swift` in `app/host/Sources/sim-agentation`, and the guest helper in `app/host/Guest/HingeControl`). The streaming pipeline follows baguette's. Recovering collapsed accessibility children (`CollapsedChildrenRecovery.swift`) is adapted from [sim-use](https://github.com/lycorp-jp/sim-use) by LY Corporation, under the Apache License 2.0 (`app/host/Sources/SimBridge/LICENSE-sim-use`), and restarting a stale accessibility bridge follows [idb](https://github.com/facebook/idb). Each adapted file notes what changed.

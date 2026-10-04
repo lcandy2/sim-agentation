@@ -5,11 +5,11 @@
   "description": "Annotate a running iOS simulator in the browser and hand the feedback to coding agents over MCP.",
   "type": "module",
   "scripts": {
-    "build": "vite build && swift build --package-path host",
+    "build": "vite build && swift build --package-path app/host",
     "dev": "vite",
     "watch": "vite build --watch",
-    "start": "host/.build/debug/sim-agentation serve --open",
-    "mcp": "host/.build/debug/sim-agentation mcp"
+    "start": "app/host/.build/debug/sim-agentation serve --open",
+    "mcp": "app/host/.build/debug/sim-agentation mcp"
   },
   "license": "MIT",
   "devDependencies": {

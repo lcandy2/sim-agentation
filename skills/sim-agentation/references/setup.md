@@ -5,8 +5,8 @@
 The MCP server is the `sim-agentation` binary built from the SimAgentation repository (`pnpm build` there), run with `mcp`. It speaks stdio and starts the web server on port 38470 if it isn't running.
 
 ```sh
-claude mcp add sim-agentation -- /path/to/Sim-Agentation/host/.build/debug/sim-agentation mcp
-codex mcp add sim-agentation -- /path/to/Sim-Agentation/host/.build/debug/sim-agentation mcp
+claude mcp add sim-agentation -- /path/to/Sim-Agentation/app/host/.build/debug/sim-agentation mcp
+codex mcp add sim-agentation -- /path/to/Sim-Agentation/app/host/.build/debug/sim-agentation mcp
 ```
 
 To have each annotation arrive in a Claude Code session as the user sends it, the session is started or resumed with the server as a channel:
