@@ -92,28 +92,74 @@ final class ChromeService: @unchecked Sendable {
         return try await task.value
     }
 
+    // MARK: - panels
+
+    /// One of a device's own screens, from its device type's capabilities.plist.
+    struct Panel: Sendable, Equatable {
+        /// CoreSimulator's name: `primary`, and on a foldable `primary-1`, the
+        /// larger panel that's lit unfolded.
+        let name: String
+        let screenId: UInt32
+        /// In pixels, as the framebuffer has it (portrait).
+        let width: Int
+        let height: Int
+    }
+
+    /// The device's integrated screens, `primary` first. iPhone Duo has two
+    /// (its cover and its unfolded panel); every other device one, or none
+    /// listed (Xcode 26 and older).
+    func panels(for udid: String) async throws -> [Panel] {
+        guard let typeId = try await deviceTypeIds()[udid], let bundle = try await bundlePaths()[typeId] else { return [] }
+        let caps = try? await plist(Path.join(bundle, "Contents/Resources/capabilities.plist"))
+        return Self.integratedDisplays(caps).compactMap { d -> Panel? in
+            guard let name = d["deviceName"]?.stringValue else { return nil }
+            return Panel(
+                name: name, screenId: UInt32(JS.number(d["screenID"])),
+                width: Int(JS.number(d["width"])), height: Int(JS.number(d["height"]))
+            )
+        }.sorted { a, _ in a.name == "primary" }
+    }
+
+    private static func integratedDisplays(_ caps: JSON?) -> [JSON] {
+        (caps?["capabilities"]?["displays"]?.arrayValue ?? []).filter { JS.same($0["displayType"]?.stringValue, "integrated") }
+    }
+
     // MARK: - chrome
 
-    func chrome(for udid: String) async throws -> JSON {
+    /// `panel` picks one of a foldable's screens by its CoreSimulator name
+    /// (see `panels`); without it, the device's own (the cover on a foldable).
+    func chrome(for udid: String, panel: String? = nil) async throws -> JSON {
+        let key = udid + "|" + (panel ?? "")
         let task: Task<JSON, Error> = lock.withLock {
-            if let task = chromes[udid] { return task }
-            let task = Task { try await self.resolve(udid) }
-            chromes[udid] = task
+            if let task = chromes[key] { return task }
+            let task = Task { try await self.resolve(udid, panel: panel) }
+            chromes[key] = task
             return task
         }
         do {
             return try await task.value
         } catch {
-            lock.withLock { if chromes[udid] == task { chromes[udid] = nil } } // retry next time
+            lock.withLock { if chromes[key] == task { chromes[key] = nil } } // retry next time
             throw error
         }
     }
 
-    private func resolve(_ udid: String) async throws -> JSON {
+    /// The panel's own entry in capabilities.plist's displays, when `panel` names one.
+    private func display(_ panel: String?, bundle: String) async throws -> JSON? {
+        guard let panel else { return nil }
+        let caps = try await plist(Path.join(bundle, "Contents/Resources/capabilities.plist"))
+        guard let display = Self.integratedDisplays(caps).first(where: { JS.same($0["deviceName"]?.stringValue, panel) }) else {
+            throw ChromeError("no screen \(panel) on this device")
+        }
+        return display
+    }
+
+    private func resolve(_ udid: String, panel: String?) async throws -> JSON {
         guard let typeId = try await deviceTypeIds()[udid] else { throw ChromeError("no simulator with udid \(udid)") }
         guard let bundle = try await bundlePaths()[typeId] else { throw ChromeError("no device type \(typeId)") }
         let profile = try await plist(Path.join(bundle, "Contents/Resources/profile.plist"))
-        let chromeIdentifier = profile["chromeIdentifier"].flatMap { $0.isNull ? nil : $0 } ?? .string("")
+        let display = try await display(panel, bundle: bundle)
+        let chromeIdentifier = (display ?? profile)["chromeIdentifier"].flatMap { $0.isNull ? nil : $0 } ?? .string("")
         let id = JS.string(chromeIdentifier).split(separator: ".", omittingEmptySubsequences: false).last.map(String.init) ?? ""
         guard let dir = Self.chromeDir(id) else { throw ChromeError("no chrome bundle \(JS.string(profile["chromeIdentifier"]))") }
         let def = try await blocking { try JSON.parse(Data(contentsOf: URL(fileURLWithPath: Path.join(dir, "chrome.json")))) }
@@ -121,13 +167,13 @@ final class ChromeService: @unchecked Sendable {
         let inset = images?["sizing"]
         func insetValue(_ key: String) -> Double { JS.number(inset?[key]) }
 
-        // Screen size in points, from the device type.
+        // Screen size in points, from the device type, or the panel's own.
         let caps = try await plist(Path.join(bundle, "Contents/Resources/capabilities.plist"))
         let dims = caps["capabilities"]?["ScreenDimensionsCapability"]
-        let scaleValue = JS.number(dims?["main-screen-scale"])
+        let scaleValue = display.map { JS.number($0["scale"]) } ?? JS.number(dims?["main-screen-scale"])
         let scale = scaleValue != 0 && !scaleValue.isNaN ? scaleValue : 1
-        let screenWidth = JS.number(dims?["main-screen-width"]) / scale
-        let screenHeight = JS.number(dims?["main-screen-height"]) / scale
+        let screenWidth = (display.map { JS.number($0["width"]) } ?? JS.number(dims?["main-screen-width"])) / scale
+        let screenHeight = (display.map { JS.number($0["height"]) } ?? JS.number(dims?["main-screen-height"])) / scale
         if screenWidth == 0 || screenWidth.isNaN || screenHeight == 0 || screenHeight.isNaN {
             throw ChromeError("no screen size for \(typeId)")
         }
@@ -140,11 +186,29 @@ final class ChromeService: @unchecked Sendable {
         ])
 
         var slices = JSONObject()
+        var sliceSizes = Set<String>()
         for key in Self.slices {
             let name = JS.string(images?[key])
             let page = try await pdfSize(Path.join(dir, "\(name).pdf"))
+            sliceSizes.insert("\(page.width)x\(page.height)")
             slices[key] = .object(JSONObject([
                 "url": .string("/chrome/\(id)/\(JS.encodeURIComponent(name)).png"),
+                "width": .number(page.width),
+                "height": .number(page.height),
+            ]))
+        }
+
+        // iPhone Duo's chromes (phone14, phone15) ship every slice as the same
+        // red 118 × 64 "unused" page and the bezel only as the baked composite;
+        // a real nine-slice has 1 pt edges, so one size for all eight means
+        // placeholders, and the page draws the composite stretched instead.
+        var composite = JSON.null
+        let compositeName = JS.string(images?["composite"])
+        if sliceSizes.count == 1, Self.safeName(compositeName),
+           FileManager.default.fileExists(atPath: Path.join(dir, "\(compositeName).pdf")) {
+            let page = try await pdfSize(Path.join(dir, "\(compositeName).pdf"))
+            composite = .object(JSONObject([
+                "url": .string("/chrome/\(id)/\(JS.encodeURIComponent(compositeName)).png"),
                 "width": .number(page.width),
                 "height": .number(page.height),
             ]))
@@ -172,9 +236,10 @@ final class ChromeService: @unchecked Sendable {
             ])))
         }
 
-        let maskName = profile["framebufferMask"]
+        let maskName = display?["framebufferMaskIdentifier"] ?? profile["framebufferMask"]
         let hasMask = JS.truthy(maskName)
             && FileManager.default.fileExists(atPath: Path.join(bundle, "Contents/Resources/\(JS.string(maskName)).pdf"))
+        let query = panel.map { "?panel=\(JS.encodeURIComponent($0))" } ?? ""
         let cornerRadius = def["paths"]?["simpleOutsideBorder"]?["cornerRadiusX"].flatMap { $0.isNull ? nil : $0 }
         return .object(JSONObject([
             "id": .string(id),
@@ -187,8 +252,12 @@ final class ChromeService: @unchecked Sendable {
             ])),
             "cornerRadius": cornerRadius ?? .number(0),
             "slices": .object(slices),
-            "mask": hasMask ? .string("/api/sims/\(udid)/mask.png") : .null,
+            "composite": composite,
+            "mask": hasMask ? .string("/api/sims/\(udid)/mask.png\(query)") : .null,
             "buttons": .array(buttons),
+            // Which screen this is; more than one listed means a foldable.
+            "panel": .string(panel ?? "primary"),
+            "panels": .array(Self.integratedDisplays(caps).compactMap { $0["deviceName"] }),
         ]))
     }
 
@@ -226,10 +295,11 @@ final class ChromeService: @unchecked Sendable {
 
     /// The screen's framebuffer mask. It is already at device pixels, so 1×
     /// of its page size is native resolution.
-    func maskImage(udid: String) async throws -> String? {
+    func maskImage(udid: String, panel: String? = nil) async throws -> String? {
         guard let typeId = try await deviceTypeIds()[udid], let bundle = try await bundlePaths()[typeId] else { return nil }
         let profile = try await plist(Path.join(bundle, "Contents/Resources/profile.plist"))
-        let name = JS.string(profile["framebufferMask"].flatMap { $0.isNull ? nil : $0 } ?? .string(""))
+        let display = try await display(panel, bundle: bundle)
+        let name = JS.string((display?["framebufferMaskIdentifier"] ?? profile["framebufferMask"]).flatMap { $0.isNull ? nil : $0 } ?? .string(""))
         let dir = Path.join(bundle, "Contents/Resources")
         guard Self.safeName(name), FileManager.default.fileExists(atPath: Path.join(dir, "\(name).pdf")) else { return nil }
         let out = Path.join(cache, "masks", "\(name).png")

@@ -1,4 +1,4 @@
-// Small device pictures for the list: nine-slice bezel with a blue screen.
+// Small device pictures for the list: nine-slice (or composite) bezel with a blue screen.
 
 const thumbnails = new Map(); // chrome id + screen size + height → Promise<object URL | null>
 
@@ -15,18 +15,22 @@ async function drawThumbnail(chrome, height) {
   const { size, screen, slices } = chrome;
   const canvas = new OffscreenCanvas(Math.ceil(size.width * k), Math.ceil(size.height * k));
   const g = canvas.getContext('2d');
-  const s = Object.fromEntries(await Promise.all(Object.entries(slices).map(async ([key, v]) => [key, await load(v.url)])));
-  const L = slices.topLeft.width, T = slices.topLeft.height, R = slices.topRight.width, B = slices.bottomLeft.height;
   const W = size.width, H = size.height;
   const draw = (img, x, y, w, h) => g.drawImage(img, x * k, y * k, w * k, h * k);
-  draw(s.topLeft, 0, 0, L, T);
-  draw(s.top, L, 0, W - L - R, T);
-  draw(s.topRight, W - R, 0, R, T);
-  draw(s.left, 0, T, L, H - T - B);
-  draw(s.right, W - R, T, R, H - T - B);
-  draw(s.bottomLeft, 0, H - B, L, B);
-  draw(s.bottom, L, H - B, W - L - R, B);
-  draw(s.bottomRight, W - R, H - B, R, B);
+  if (chrome.composite) {
+    draw(await load(chrome.composite.url), 0, 0, W, H);
+  } else {
+    const s = Object.fromEntries(await Promise.all(Object.entries(slices).map(async ([key, v]) => [key, await load(v.url)])));
+    const L = slices.topLeft.width, T = slices.topLeft.height, R = slices.topRight.width, B = slices.bottomLeft.height;
+    draw(s.topLeft, 0, 0, L, T);
+    draw(s.top, L, 0, W - L - R, T);
+    draw(s.topRight, W - R, 0, R, T);
+    draw(s.left, 0, T, L, H - T - B);
+    draw(s.right, W - R, T, R, H - T - B);
+    draw(s.bottomLeft, 0, H - B, L, B);
+    draw(s.bottom, L, H - B, W - L - R, B);
+    draw(s.bottomRight, W - R, H - B, R, B);
+  }
   // Screen: gradient, cut to the device's real screen shape.
   const sc = new OffscreenCanvas(Math.ceil(screen.width * k), Math.ceil(screen.height * k));
   const sg = sc.getContext('2d');

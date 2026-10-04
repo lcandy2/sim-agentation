@@ -117,7 +117,9 @@ final class AppServer: @unchecked Sendable {
                 if let bps = req.queryValue("bitrate").flatMap(Int.init), bps > 0 { options.bitrate = bps }
                 if let scale = req.queryValue("scale").flatMap(Int.init), scale > 0 { options.scale = min(scale, 4) }
                 let chosen = options
-                return .upgrade { socket in DeviceSession(udid: udid, socket: socket, options: chosen).start() }
+                // More than one integrated panel (iPhone Duo): follow the hinge.
+                let foldable = Foldable(udid: udid, panels: (try? await chrome.panels(for: udid)) ?? [])
+                return .upgrade { socket in DeviceSession(udid: udid, socket: socket, options: chosen, foldable: foldable).start() }
             }
 
             // Device chrome artwork: rasterized once, then immutable.
@@ -134,10 +136,10 @@ final class AppServer: @unchecked Sendable {
             if path == "/api/sims" { return .respond(Self.json(try await devices())) }
             if path == "/api/sims/new" { return .respond(Self.json(try await deviceOptions())) }
             if part(0) == "api" && part(1) == "sims" && part(3) == "chrome" {
-                return .respond(Self.json(try await chrome.chrome(for: parts[2])))
+                return .respond(Self.json(try await chrome.chrome(for: parts[2], panel: req.queryValue("panel"))))
             }
             if part(0) == "api" && part(1) == "sims" && part(3) == "mask.png" {
-                let png = try await chrome.maskImage(udid: parts[2])
+                let png = try await chrome.maskImage(udid: parts[2], panel: req.queryValue("panel"))
                 return .respond(png != nil ? await Self.file(png!, forever) : Self.notFound)
             }
             if part(0) == "api" && part(1) == "sims" && part(3) == "boot" && req.method == "POST" {

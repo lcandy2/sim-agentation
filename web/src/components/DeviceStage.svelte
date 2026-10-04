@@ -1,7 +1,7 @@
 <script>
   import { onMount, untrack } from 'svelte';
   import {
-    ui, MARGIN, ROTATION, attachStage, onStageResize, startDevice, pressHome, reclaimInput, saveScreenshot, toggleRecording, rotate,
+    ui, MARGIN, ROTATION, attachStage, onStageResize, startDevice, pressHome, reclaimInput, saveScreenshot, toggleRecording, rotate, isFoldable,
     onPointerDown, onPointerMove, onPointerUp, onWheel, onScreenKey,
   } from '../lib/app.svelte.js';
   import { icon } from '../lib/icons.js';
@@ -109,15 +109,21 @@
               <SideButton {button} frame={buttonFrame(button, chrome.size)} />
             {/each}
           </div>
-          <div
-            class="bezel-art"
-            style:grid-template-columns="{px(chrome.slices.topLeft.width)} 1fr {px(chrome.slices.topRight.width)}"
-            style:grid-template-rows="{px(chrome.slices.topLeft.height)} 1fr {px(chrome.slices.bottomLeft.height)}"
-          >
-            {#each SLICES as key, i (i)}
-              {#if key}<img src={chrome.slices[key].url} alt="" draggable="false">{:else}<span></span>{/if}
-            {/each}
-          </div>
+          {#if chrome.composite}
+            <div class="bezel-art composite">
+              <img src={chrome.composite.url} alt="" draggable="false">
+            </div>
+          {:else}
+            <div
+              class="bezel-art"
+              style:grid-template-columns="{px(chrome.slices.topLeft.width)} 1fr {px(chrome.slices.topRight.width)}"
+              style:grid-template-rows="{px(chrome.slices.topLeft.height)} 1fr {px(chrome.slices.bottomLeft.height)}"
+            >
+              {#each SLICES as key, i (i)}
+                {#if key}<img src={chrome.slices[key].url} alt="" draggable="false">{:else}<span></span>{/if}
+              {/each}
+            </div>
+          {/if}
         {/if}
         <div
           id="device-frame"
@@ -195,7 +201,7 @@
         >{@html icon(ui.recording ? 'record-stop' : 'record')}</button>
       </div>
       <div class="pill" role="group" aria-label="Rotate">
-        <button class="icon-btn" title="Rotate" data-icon="rotate" onclick={rotate}>{@html icon('rotate')}</button>
+        <button class="icon-btn" title={isFoldable() ? 'Turn iPhone Duo in Device Hub for now' : 'Rotate'} data-icon="rotate" disabled={isFoldable()} onclick={rotate}>{@html icon('rotate')}</button>
       </div>
     </div>
   </footer>

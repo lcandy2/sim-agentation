@@ -57,6 +57,8 @@ final class DeviceSession: @unchecked Sendable {
     private var reportedFailure = false
     private var idlePump: DispatchSourceTimer?
     private lazy var input = HIDInput(udid: udid)
+    /// iPhone Duo and its like: the stream follows the panel the hinge lights.
+    private let foldable: Foldable?
 
     // How the stream keeps up, reported once a second for the page's Auto
     // (see `report`).
@@ -85,9 +87,10 @@ final class DeviceSession: @unchecked Sendable {
         var timer: DispatchSourceTimer
     }
 
-    init(udid: String, socket: WebSocket, options: StreamOptions) {
+    init(udid: String, socket: WebSocket, options: StreamOptions, foldable: Foldable? = nil) {
         self.udid = udid
         self.socket = socket
+        self.foldable = foldable
         self.capture = ScreenCapture(udid: udid)
         self.options = options
         self.format = options.format
@@ -115,6 +118,7 @@ final class DeviceSession: @unchecked Sendable {
                 self.lock.lock()
                 self.idlePump?.cancel(); self.idlePump = nil
                 self.statsTimer?.cancel(); self.statsTimer = nil
+                self.foldable?.stop()
                 self.probing?.timer.cancel(); self.probing = nil
                 self.lock.unlock()
                 Self.liveLock.lock(); Self.live[ObjectIdentifier(self)] = nil; Self.liveLock.unlock()
@@ -126,12 +130,26 @@ final class DeviceSession: @unchecked Sendable {
         stats.setEventHandler { [weak self] in self?.report() }
         stats.resume()
         lock.lock(); statsTimer = stats; lock.unlock()
+        foldable?.start { [weak self] lit in self?.bind(lit) }
         do {
             try capture.start { [weak self] surface in self?.frame(surface) }
         } catch {
             socket.send(json: ["type": "error", "error": "\(error)"])
             socket.close()
         }
+    }
+
+    // MARK: - foldables
+
+    /// The hinge lit another panel: frames come from it, touches go to its
+    /// own digitizer, and the page draws its chrome, turned as the guest
+    /// turned it. The new size starts with a keyframe.
+    private func bind(_ lit: Foldable.Lit) {
+        capture.preferPlane(width: lit.panel.width, height: lit.panel.height)
+        inputQueue.async { [weak self] in self?.input.targetPanel(screenId: lit.panel.screenId) }
+        lock.lock(); pendingKeyframe = true; pendingSeed = true; lock.unlock()
+        socket.send(json: ["type": "panel", "panel": lit.panel.name, "orientation": lit.orientation])
+        capture.requestFrame()
     }
 
     // MARK: - frames
@@ -330,6 +348,10 @@ final class DeviceSession: @unchecked Sendable {
             let slackMs = min(300, max(40, (msg["slackMs"] as? NSNumber)?.intValue ?? 60))
             probe(bps: min(bps, 100_000_000), ms: min(1000, max(100, (msg["ms"] as? NSNumber)?.intValue ?? 400)), slackMs: slackMs)
         case "orientation":
+            // A foldable turns through the guest, as Device Hub's rotate
+            // button does, not the Purple event; until then, the hinge's
+            // own turn (see `bind`) is the one the page shows.
+            guard foldable == nil else { return }
             guard let name = msg["orientation"] as? String, let orientation = DeviceOrientation(wireName: name) else { return }
             let ok = Orientation.set(orientation, udid: udid)
             socket.send(json: ["type": "orientation_result", "ok": ok, "orientation": name])

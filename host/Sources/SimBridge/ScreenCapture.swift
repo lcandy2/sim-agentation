@@ -31,6 +31,7 @@ public final class ScreenCapture: @unchecked Sendable {
     private var idleTimer: DispatchSourceTimer?
     private var captureQueued = false
     private var io: NSObject?
+    private var preferred: (width: Int, height: Int)? // on `queue`
 
     /// SimulatorKit only composites when something changes; pull a frame at
     /// least this often so a still screen still produces one.
@@ -130,15 +131,30 @@ public final class ScreenCapture: @unchecked Sendable {
         }
     }
 
-    /// Forwards the largest framebuffer plane (the main screen).
+    /// A foldable's lit panel, by its size in pixels: frames come from the
+    /// plane closest to it instead of the largest (iPhone Duo's larger
+    /// panel is the dark one while it's folded).
+    public func preferPlane(width: Int, height: Int) {
+        queue.async { [weak self] in
+            guard let self else { return }
+            self.preferred = (width, height)
+            self.scheduleCapture()
+        }
+    }
+
+    /// Forwards the main screen: the largest framebuffer plane, or the one
+    /// closest to `preferred`.
     private func capture() {
         let sel = NSSelectorFromString("framebufferSurface")
-        var best: (surface: IOSurface, area: Int)?
+        var best: (surface: IOSurface, score: Int)?
         for descriptor in descriptors {
             guard let object = descriptor.perform(sel)?.takeUnretainedValue() else { continue }
             let surface = unsafeDowncast(object as AnyObject, to: IOSurface.self)
-            let area = IOSurfaceGetWidth(surface) * IOSurfaceGetHeight(surface)
-            if area > 0, area > (best?.area ?? 0) { best = (surface, area) }
+            let width = IOSurfaceGetWidth(surface), height = IOSurfaceGetHeight(surface)
+            guard width * height > 0 else { continue }
+            // Higher is better: the area, or how near the preferred size.
+            let score = preferred.map { p in -((width - p.width) * (width - p.width) + (height - p.height) * (height - p.height)) } ?? width * height
+            if best == nil || score > best!.score { best = (surface, score) }
         }
         if let best { onFrame?(best.surface) }
     }

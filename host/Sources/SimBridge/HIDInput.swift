@@ -29,8 +29,19 @@ public final class HIDInput: @unchecked Sendable {
     private var touchId: UInt32 = 0
     private var activeTouch: UInt32?
 
-    /// The built-in digitizer slot every phone and tablet screen answers on.
-    private static let target: UInt32 = 0x32
+    /// The built-in digitizer slot every phone and tablet screen answers on:
+    /// the last built-in panel created, which on a one-screen device is the
+    /// screen. A foldable has two, and the slot is the last (iPhone Duo's
+    /// unfolded panel), so it addresses the lit one by its own registration
+    /// (`panel(screenId:)`), as baguette does.
+    private var digitizer: UInt32 = 0x32
+    private var target: UInt32 { lock.withLock { digitizer } }
+
+    /// Touches go to this screen's own digitizer, `0x40000000 | screenId`
+    /// (a screen CoreSimulator lists as Integrated), not the shared slot.
+    public func targetPanel(screenId: UInt32) {
+        lock.withLock { digitizer = 0x4000_0000 | screenId }
+    }
 
     public init(udid: String) {
         self.udid = udid
@@ -50,7 +61,7 @@ public final class HIDInput: @unchecked Sendable {
         if phase == .down { activeTouch = nextTouchId() }
         let id = activeTouch ?? nextTouchId()
         if phase == .up { activeTouch = nil }
-        return Digitizer.send(normalized(point, size), id: id, phase: phase, edge: edge, target: Self.target, to: c)
+        return Digitizer.send(normalized(point, size), id: id, phase: phase, edge: edge, target: target, to: c)
     }
 
     @discardableResult
@@ -58,9 +69,9 @@ public final class HIDInput: @unchecked Sendable {
         guard let c = warm() else { return false }
         let id = nextTouchId()
         let p = normalized(point, size)
-        guard Digitizer.send(p, id: id, phase: .down, edge: nil, target: Self.target, to: c) else { return false }
+        guard Digitizer.send(p, id: id, phase: .down, edge: nil, target: target, to: c) else { return false }
         usleep(UInt32(max(0.02, hold) * 1_000_000))
-        return Digitizer.send(p, id: id, phase: .up, edge: nil, target: Self.target, to: c)
+        return Digitizer.send(p, id: id, phase: .up, edge: nil, target: target, to: c)
     }
 
     @discardableResult
@@ -68,7 +79,7 @@ public final class HIDInput: @unchecked Sendable {
         guard let c = warm() else { return false }
         let steps = 10
         let stepMs = UInt32(max(8, duration * 1000 / Double(steps + 2)))
-        return Digitizer.swipe(from: normalized(start, size), to: normalized(end, size), steps: steps, stepMs: stepMs, edge: nil, id: nextTouchId(), target: Self.target, to: c)
+        return Digitizer.swipe(from: normalized(start, size), to: normalized(end, size), steps: steps, stepMs: stepMs, edge: nil, id: nextTouchId(), target: target, to: c)
     }
 
     /// Two-finger gestures (pinch, rotate) go through the mouse-event path.
@@ -85,7 +96,7 @@ public final class HIDInput: @unchecked Sendable {
         for _ in 0..<12 {
             let msg = withUnsafePointer(to: &p1) { a in
                 withUnsafePointer(to: &p2) { b in
-                    mouse(a, b, Self.target, eventType, direction, 1, 1, size.width, size.height)
+                    mouse(a, b, target, eventType, direction, 1, 1, size.width, size.height)
                 }
             }
             if let msg {
@@ -99,7 +110,7 @@ public final class HIDInput: @unchecked Sendable {
 
     @discardableResult
     public func scroll(dx: Double, dy: Double) -> Bool {
-        guard let c = warm(), let scroll = Symbols.shared.scroll, let msg = scroll(Self.target, dx, dy, 0) else { return false }
+        guard let c = warm(), let scroll = Symbols.shared.scroll, let msg = scroll(target, dx, dy, 0) else { return false }
         Self.send(msg, to: c)
         return true
     }
@@ -118,7 +129,7 @@ public final class HIDInput: @unchecked Sendable {
             usleep(150_000)
             return legacyButton(0, holdUs: holdUs, on: c) && first
         case .swipeToHome:
-            return Digitizer.swipe(from: CGPoint(x: 0.5, y: 0.998), to: CGPoint(x: 0.5, y: 0.30), steps: 12, stepMs: 16, edge: .bottom, id: nextTouchId(), target: Self.target, to: c)
+            return Digitizer.swipe(from: CGPoint(x: 0.5, y: 0.998), to: CGPoint(x: 0.5, y: 0.30), steps: 12, stepMs: 16, edge: .bottom, id: nextTouchId(), target: target, to: c)
         case .power: return hid(page: 12, usage: 48, holdUs: holdUs, on: c)
         case .volumeUp: return hid(page: 12, usage: 233, holdUs: holdUs, on: c)
         case .volumeDown: return hid(page: 12, usage: 234, holdUs: holdUs, on: c)
@@ -131,16 +142,16 @@ public final class HIDInput: @unchecked Sendable {
     public func key(usage: UInt32, modifiers: [UInt32] = [], hold: Double = 0) -> Bool {
         guard let c = warm(), let arbitrary = Symbols.shared.hidArbitrary else { return false }
         for m in modifiers {
-            guard let down = arbitrary(Self.target, 7, m, 1) else { return false }
+            guard let down = arbitrary(target, 7, m, 1) else { return false }
             Self.send(down, to: c)
         }
-        guard let down = arbitrary(Self.target, 7, usage, 1) else { return false }
+        guard let down = arbitrary(target, 7, usage, 1) else { return false }
         Self.send(down, to: c)
         usleep(holdMicroseconds(hold == 0 ? 0.03 : hold))
-        guard let up = arbitrary(Self.target, 7, usage, 2) else { return false }
+        guard let up = arbitrary(target, 7, usage, 2) else { return false }
         Self.send(up, to: c)
         for m in modifiers.reversed() {
-            guard let release = arbitrary(Self.target, 7, m, 2) else { return false }
+            guard let release = arbitrary(target, 7, m, 2) else { return false }
             Self.send(release, to: c)
         }
         return true
@@ -173,10 +184,10 @@ public final class HIDInput: @unchecked Sendable {
     }
 
     private func hid(page: UInt32, usage: UInt32, holdUs: UInt32, on c: AnyObject) -> Bool {
-        guard let arbitrary = Symbols.shared.hidArbitrary, let down = arbitrary(Self.target, page, usage, 1) else { return false }
+        guard let arbitrary = Symbols.shared.hidArbitrary, let down = arbitrary(target, page, usage, 1) else { return false }
         Self.send(down, to: c)
         usleep(holdUs)
-        guard let up = arbitrary(Self.target, page, usage, 2) else { return false }
+        guard let up = arbitrary(target, page, usage, 2) else { return false }
         Self.send(up, to: c)
         return true
     }

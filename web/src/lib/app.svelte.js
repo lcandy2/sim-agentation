@@ -417,6 +417,8 @@ function onText(msg) {
   if (msg.type === 'describe_ui_result') {
     rt.pendingTree?.(msg.ok ? msg.tree : null);
     rt.pendingTree = null;
+  } else if (msg.type === 'panel') {
+    onPanel(msg);
   } else if (msg.type === 'stats') {
     onStats(msg);
   } else if (msg.type === 'probe_result') {
@@ -768,6 +770,7 @@ export function rotate() {
 /** Turns the device a quarter: 1 clockwise (Rotate Right), -1 the other way. */
 export async function rotateBy(step) {
   if (!ui.running) return;
+  if (isFoldable()) return flashStatus('Turn iPhone Duo in Device Hub for now');
   await setMode('interact');
   ui.orientation = TURN_ORDER[(TURN_ORDER.indexOf(ui.orientation) + step + TURN_ORDER.length) % TURN_ORDER.length];
   send({ type: 'orientation', orientation: ui.orientation });
@@ -1262,11 +1265,33 @@ export async function copyPending() {
 
 const chromes = new Map(); // udid → Promise<chrome | null>
 
-export function chromeOf(udid) {
-  if (!chromes.has(udid)) {
-    chromes.set(udid, fetch(`/api/sims/${udid}/chrome`).then((r) => (r.ok ? r.json() : null)).catch(() => null));
+/** `panel` picks one of a foldable's screens (`primary-1`, the unfolded one); without it, the device's own. */
+export function chromeOf(udid, panel = null) {
+  const key = panel ? `${udid}|${panel}` : udid;
+  if (!chromes.has(key)) {
+    const query = panel ? `?panel=${encodeURIComponent(panel)}` : '';
+    chromes.set(key, fetch(`/api/sims/${udid}/chrome${query}`).then((r) => (r.ok ? r.json() : null)).catch(() => null));
   }
-  return chromes.get(udid);
+  return chromes.get(key);
+}
+
+/** A device with more than one integrated panel, iPhone Duo: the stream follows the one the hinge lights. */
+export const isFoldable = () => (ui.chrome?.panels?.length ?? 0) > 1;
+
+/**
+ * The hinge lit another of a foldable's panels (see the host's Foldable):
+ * the stage draws its chrome, turned the way the guest turned it, which the
+ * open pose does by itself (landscape). The turn is the page's alone: a
+ * foldable turns through the guest, not the event `rotate` sends.
+ */
+async function onPanel({ panel, orientation }) {
+  const udid = ui.udid;
+  const chrome = await chromeOf(udid, panel === 'primary' ? null : panel);
+  if (!chrome || ui.udid !== udid) return;
+  ui.chrome = chrome;
+  ui.orientation = orientation in ROTATION ? orientation : 'portrait';
+  await tick();
+  updateScale();
 }
 
 export async function loadDevices() {
