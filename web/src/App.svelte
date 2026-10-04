@@ -36,7 +36,7 @@
 </div>
 
 {#if ui.sheet}
-  <DeviceSheet kind={ui.sheet} close={() => (ui.sheet = null)} />
+  <DeviceSheet kind={ui.sheet} close={() => { ui.sheet = null; ui.sheetFor = null; }} />
 {/if}
 {#if ui.draft}
   <Composer />

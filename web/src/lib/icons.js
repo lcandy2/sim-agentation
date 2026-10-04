@@ -4,6 +4,10 @@
 const paths = {
   search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
   'arrow-up': '<path d="M12 19.5V5M5.5 11.5 12 5l6.5 6.5"/>',
+  // A device row's context menu: start, and open in a new tab or window.
+  play: '<path d="M8 5.5v13l10-6.5z"/>',
+  'new-tab': '<rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M3 9.5h18M9 5v4.5"/>',
+  'new-window': '<path d="M10 19H5.5A2.5 2.5 0 0 1 3 16.5v-9A2.5 2.5 0 0 1 5.5 5h13A2.5 2.5 0 0 1 21 7.5v9a2.5 2.5 0 0 1-2.5 2.5H15"/><path d="M3 9.5h18M4.5 17.5h5M7 15v5"/>',
   // A selection's chip in the composer, by what it is: an image, a button,
   // text, a field, another view, an area dragged out; and the x that takes it away.
   'kind-image': '<rect x="3.5" y="5" width="17" height="14" rx="2.5"/><circle cx="9" cy="10" r="1.6"/><path d="m4 17 5-4.5 3.5 3 2.5-2 5 3.5"/>',

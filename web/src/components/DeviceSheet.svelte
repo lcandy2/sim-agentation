@@ -36,10 +36,12 @@
     dialog.close();
   }
 
-  const name = ui.simName;
+  // The selected device's, or the one a row's context menu is for.
+  const udid = ui.sheetFor ?? ui.udid;
+  const name = ui.sims.find((s) => s.udid === udid)?.name ?? ui.simName;
   let picture = $state(null);
   $effect(() => {
-    chromeOf(ui.udid).then((c) => c && thumbnail(c, 64)).then((url) => (picture = url));
+    chromeOf(udid).then((c) => c && thumbnail(c, 64)).then((url) => (picture = url));
   });
   let newName = $state(name);
   let busy = $state(false);
@@ -59,10 +61,10 @@
     busy = true;
     // Close first for the long ones; their progress shows in the status line.
     if (kind === 'rename') {
-      if (await renameDevice(newName.trim())) dismiss();
+      if (await renameDevice(newName.trim(), udid)) dismiss();
     } else {
       dismiss();
-      await (kind === 'erase' ? eraseDevice() : removeDevice());
+      await (kind === 'erase' ? eraseDevice(udid) : removeDevice(udid));
     }
     busy = false;
   }

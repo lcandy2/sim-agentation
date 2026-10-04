@@ -560,6 +560,8 @@ kbd {
 .device-row .kind { font-size: 11px; line-height: 14px; color: var(--sidebar-secondary); }
 .device-row .version { font-size: 11px; color: var(--sidebar-secondary); font-variant-numeric: tabular-nums; }
 .device-row.selected { background: var(--selection); color: var(--on-selection); }
+/* The row a context menu is for, ringed in the accent as macOS marks it. */
+.device-row.context-target { outline: 2px solid var(--accent); outline-offset: 1px; }
 .device-row.selected .kind,
 .device-row.selected .version { color: rgba(255, 255, 255, 0.85); }
 /* Selected, Device Hub's circle shows whether the device runs: 70% white
