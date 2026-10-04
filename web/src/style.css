@@ -886,6 +886,11 @@ kbd {
    Cartouche, 10.5 by 46, on the edge facing the selection: the box's
    clip-path is body and pointer as one (components/Composer.svelte). */
 .composer-at { position: fixed; z-index: 10; }
+/* Its fade as it pops in and out is on its parts, not on this wrapper:
+   opacity there would make the wrapper the glass's backdrop root, and the
+   glass would frost nothing, coming out black. */
+@property --pop { syntax: "<number>"; inherits: true; initial-value: 1; }
+.composer, .composer-shadow { opacity: var(--pop); }
 .composer-shadow { position: absolute; pointer-events: none; }
 .composer {
   position: relative;

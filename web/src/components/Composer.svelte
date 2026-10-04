@@ -44,7 +44,8 @@
     const wd = omega * Math.sqrt(1 - zeta * zeta);
     return 1 - Math.exp(-zeta * omega * s) * (Math.cos(wd * s) + ((zeta * omega) / wd) * Math.sin(wd * s));
   }
-  const pose = (k) => `transform: scale(${k}); opacity: ${Math.min(1, k)}`;
+  // The fade goes through --pop to the composer and its shadow (style.css).
+  const pose = (k) => `transform: scale(${k}); --pop: ${Math.min(1, k)}`;
   // Svelte runs t from 0 to 1 coming in and from 1 to 0 going out, evenly.
   const popIn = () => ({ duration: still() ? 0 : OPEN.duration * 1000, css: (t) => pose(spring(OPEN, t * OPEN.duration)) });
   const popOut = () => ({ duration: still() ? 0 : CLOSE.duration * 1000, css: (t) => pose(1 - spring(CLOSE, (1 - t) * CLOSE.duration)) });
