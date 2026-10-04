@@ -433,6 +433,7 @@ img { -webkit-user-drag: none; }
   color: #fff;
   box-shadow: 0 8px 12px rgba(0, 0, 0, 0.02), 1.25px 0 0 -0.75px rgba(0, 0, 0, 0.098), -1.25px 0 0 -0.75px rgba(0, 0, 0, 0.098);
   isolation: isolate; /* its light goes over its face, under its symbol */
+  touch-action: none; /* a finger pulls it too (components/Composer.svelte) */
   transition: transform 420ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 /* As Liquid Glass does on interaction: pressed, it lifts (springing) and
@@ -967,7 +968,7 @@ kbd {
    opacity there would make the wrapper the glass's backdrop root, and the
    glass would frost nothing, coming out black. */
 @property --pop { syntax: "<number>"; inherits: true; initial-value: 1; }
-.composer, .composer-shadow { opacity: var(--pop); }
+.composer, .composer-shadow, .composer-send { opacity: var(--pop); }
 .composer-shadow { position: absolute; pointer-events: none; }
 .composer {
   position: relative;
@@ -995,8 +996,11 @@ kbd {
 }
 .composer-target { font-size: 13px; line-height: 16px; font-weight: 700; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .composer .field { height: auto; padding: 4px 8px; line-height: 16px; resize: none; }
-.composer-row { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
-.composer-row .hint { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; color: var(--secondary); font-size: 11px; line-height: 14px; white-space: nowrap; }
+/* The send button's row; the button sits over it (components/Composer.svelte),
+   12 in from the bottom and the side away from the pointer. */
+.composer-row { height: 32px; margin-top: 4px; }
+.glass-btn.composer-send { position: absolute; bottom: 12px; }
+.glass-btn.composer-send:disabled { opacity: calc(var(--pop) * 0.4); }
 
 /* ---------- narrow windows ---------- */
 

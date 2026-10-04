@@ -57,11 +57,48 @@
     if (value) submitComposer(value);
   }
 
-  // Liquid Glass lights from within where it's touched (style.css).
+  // Liquid Glass lights from within where it's touched (style.css), and
+  // held, the button can be pulled: it follows the pointer a little, with
+  // more give the farther (never past 24 px), drawn out toward it and
+  // thinner across like a drop (up to 1.4 by 1/1.4), and springs back when
+  // let go (style.css's spring). A pull isn't a click.
+  let pull = null;
+  let pulled = false;
   function glow(e) {
     const r = e.currentTarget.getBoundingClientRect();
     e.currentTarget.style.setProperty('--glow-x', `${e.clientX - r.left}px`);
     e.currentTarget.style.setProperty('--glow-y', `${e.clientY - r.top}px`);
+  }
+  function grab(e) {
+    if (e.button !== 0) return;
+    pull = { x: e.clientX, y: e.clientY, moved: false };
+    e.currentTarget.setPointerCapture(e.pointerId);
+  }
+  function drag(e) {
+    glow(e);
+    if (!pull) return;
+    const dx = e.clientX - pull.x;
+    const dy = e.clientY - pull.y;
+    const d = Math.hypot(dx, dy);
+    if (!pull.moved && d < 4) return;
+    pull.moved = true;
+    const k = (24 * (1 - Math.exp(-d / 50))) / d;
+    const stretch = 1 + 0.4 * (1 - Math.exp(-d / 60));
+    const angle = Math.atan2(dy, dx);
+    const el = e.currentTarget;
+    el.style.transition = 'none';
+    el.style.transform = `translate(${dx * k}px, ${dy * k}px) rotate(${angle}rad) scale(${1.15 * stretch}, ${1.15 / stretch}) rotate(${-angle}rad)`;
+  }
+  function letGo(e) {
+    if (!pull) return;
+    pulled = pull.moved;
+    pull = null;
+    e.currentTarget.style.transition = '';
+    e.currentTarget.style.transform = '';
+    setTimeout(() => (pulled = false)); // after the click that follows
+  }
+  function press(e) {
+    if (pulled) e.preventDefault();
   }
 
   function keydown(e) {
@@ -83,6 +120,7 @@
   out:popOut|global
 >
   <form
+    id="composer-form"
     class="composer pointer-{place?.pointer.side ?? 'left'}"
     bind:this={form}
     data-pointer={place ? `${place.pointer.side} ${place.pointer.y}` : null}
@@ -91,10 +129,7 @@
   >
     <div class="composer-target">{ui.draft.label}</div>
     <textarea class="field" rows="3" placeholder="What should change?" bind:this={text} bind:value={comment} onkeydown={keydown}></textarea>
-    <div class="composer-row">
-      <span class="hint">⌘↩ to add · Esc to cancel</span>
-      <button type="submit" class="glass-btn prominent" title="Add (⌘↩)" aria-label="Add" disabled={!comment.trim()} onpointermove={glow}>{@html icon('arrow-up')}</button>
-    </div>
+    <div class="composer-row"></div>
   </form>
   {#if place}
     <!-- The outline's shadow, only outside it, drawn after the glass so the
@@ -112,4 +147,20 @@
       <path filter="url(#composer-shadow)" transform="translate({SHADOW_PAD} {SHADOW_PAD})" d={place.outline} />
     </svg>
   {/if}
+  <!-- Over the form's last row rather than in it: the form's outline clips
+       what's inside, and a pulled button reaches past it. -->
+  <button
+    type="submit"
+    form="composer-form"
+    class="glass-btn prominent composer-send"
+    style:right={place?.pointer.side === 'right' ? '22.5px' : '12px'}
+    title="Add (⌘↩)"
+    aria-label="Add"
+    disabled={!comment.trim()}
+    onpointerdown={grab}
+    onpointermove={drag}
+    onpointerup={letGo}
+    onpointercancel={letGo}
+    onclick={press}
+  >{@html icon('arrow-up')}</button>
 </div>
