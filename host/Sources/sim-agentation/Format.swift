@@ -39,11 +39,15 @@ enum Format {
         values.map { $0.isNull ? "" : JS.string($0) }.joined(separator: separator)
     }
 
-    /// Strings worth grepping the Swift sources for.
+    /// Strings worth grepping the Swift sources for. With several picked
+    /// together, the box spans everything between them, so what it covers
+    /// isn't part of the note: only the picks themselves count.
     private static func searchTerms(_ a: JSONObject) -> [String] {
         var terms: [String] = []
-        let parts = items(a["parts"]).flatMap { [$0["target"], $0["within"]] }
-        for n in ([a["target"], a["within"]] + parts + items(a["inside"]).map(Optional.some)) where JS.truthy(n) {
+        let picked = items(a["parts"])
+        let parts = picked.flatMap { [$0["target"], $0["within"]] }
+        let inside = picked.count > 1 ? [] : items(a["inside"]).map(Optional.some)
+        for n in ([a["target"], a["within"]] + parts + inside) where JS.truthy(n) {
             for key in ["identifier", "label", "title"] {
                 guard let t = JS.trimmed(n?[key]), !t.isEmpty, JS.length(t) > 1, JS.length(t) < 60 else { continue }
                 if !terms.contains(where: { JS.same($0, t) }) { terms.append(t) }
