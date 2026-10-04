@@ -32,6 +32,23 @@
     tick().then(() => text?.focus());
   });
 
+  // NSPopover's motion, measured from a 60 fps recording on macOS 26: it
+  // grows out of its pointer's tip on a spring (damping ratio 0.8 at 19.5
+  // rad/s: settled in about 0.37 s, overshooting 1.5%), its opacity
+  // following the scale; closing, it shrinks back into the tip on a quicker
+  // one and is gone at about a tenth of its size, 175 ms in.
+  const OPEN = { zeta: 0.8, omega: 19.5, duration: 0.4 };
+  const CLOSE = { zeta: 0.78, omega: 16.5, duration: 0.175 };
+  const still = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function spring({ zeta, omega }, s) {
+    const wd = omega * Math.sqrt(1 - zeta * zeta);
+    return 1 - Math.exp(-zeta * omega * s) * (Math.cos(wd * s) + ((zeta * omega) / wd) * Math.sin(wd * s));
+  }
+  const pose = (k) => `transform: scale(${k}); opacity: ${Math.min(1, k)}`;
+  // Svelte runs t from 0 to 1 coming in and from 1 to 0 going out, evenly.
+  const popIn = () => ({ duration: still() ? 0 : OPEN.duration * 1000, css: (t) => pose(spring(OPEN, t * OPEN.duration)) });
+  const popOut = () => ({ duration: still() ? 0 : CLOSE.duration * 1000, css: (t) => pose(1 - spring(CLOSE, (1 - t) * CLOSE.duration)) });
+
   function submit(e) {
     e.preventDefault();
     const value = comment.trim();
@@ -47,7 +64,15 @@
   }
 </script>
 
-<div class="composer-at" style:left="{place?.left ?? 0}px" style:top="{place?.top ?? 0}px" style:visibility={place ? null : 'hidden'}>
+<div
+  class="composer-at"
+  style:left="{place?.left ?? 0}px"
+  style:top="{place?.top ?? 0}px"
+  style:visibility={place ? null : 'hidden'}
+  style:transform-origin={place ? `${place.pointer.side === 'left' ? 0 : WIDTH}px ${place.pointer.y}px` : null}
+  in:popIn|global
+  out:popOut|global
+>
   <form
     class="composer pointer-{place?.pointer.side ?? 'left'}"
     bind:this={form}

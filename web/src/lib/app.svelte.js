@@ -830,7 +830,8 @@ export async function setMode(mode) {
     setStatus(ui.live ? '' : 'Connecting…');
     send({ type: 'snapshot' });
   }
-  rt.overlay?.focus();
+  // The tree can take a while: a composer opened meanwhile keeps its focus.
+  if (!ui.draft) rt.overlay?.focus();
 }
 
 /** SDK on/off, to compare exact view data with the pixel fallback on the same frame. */
