@@ -63,6 +63,7 @@ export const ui = $state({
   prefer3d: storage.get('view-3d') !== 'off', // a foldable drawn in 3D, as Device Hub draws it (see is3D)
   scene: null,        // the 3D book from the host: { pieces, buttons, width, height }, where its screen and keys land
   box3d: null,        // the 3D view's size on the page, CSS px
+  zoom3d: 1,          // the 3D book's zoom: the camera moves in (above 1) or out; 1 frames the book
   annotations: [],
   draft: null,        // { label, box } while the composer is open: the selection's box, viewport px
   stream: {
@@ -603,8 +604,16 @@ export function onPointerUp(e) {
   send({ type: 'touch1-up', ...point });
 }
 
+let pinchFrame = 0;
+
 export function onWheel(e) {
   e.preventDefault();
+  if (is3D() && e.ctrlKey) {
+    // A trackpad pinch (or ⌃-scroll) zooms the 3D book, at most once a frame.
+    ui.zoom3d = Math.min(4, Math.max(0.5, ui.zoom3d * Math.exp(-e.deltaY / 100)));
+    if (!pinchFrame) pinchFrame = requestAnimationFrame(() => ((pinchFrame = 0), syncView()));
+    return;
+  }
   if (ui.mode === 'interact') send({ type: 'scroll', deltaX: e.deltaX, deltaY: e.deltaY });
   else if (Math.abs(e.deltaY) > 2) changeLevel(e.deltaY < 0 ? 1 : -1);
 }
@@ -1434,7 +1443,7 @@ export function syncView() {
     };
     if (box.width !== ui.box3d?.width || box.height !== ui.box3d?.height) ui.box3d = box;
     const k = Math.min(window.devicePixelRatio || 1, 2);
-    msg = { type: 'view', mode: '3d', width: Math.round(box.width * k), height: Math.round(box.height * k), background: stageColor() };
+    msg = { type: 'view', mode: '3d', width: Math.round(box.width * k), height: Math.round(box.height * k), background: stageColor(), zoom: ui.zoom3d };
   }
   const key = JSON.stringify(msg);
   if (key === sentView || rt.ws?.readyState !== WebSocket.OPEN) return;
@@ -1711,14 +1720,22 @@ export function onStageResize() {
 
 export function setZoom(next) {
   if (!ui.running) return;
+  if (is3D()) {
+    // The 3D book zooms by moving the camera; the page stays the stage's size.
+    ui.zoom3d = next === 'fit' ? 1 : Math.min(4, Math.max(0.5, Math.round(next * 100) / 100));
+    return syncView();
+  }
   ui.zoom = next === 'fit' ? 'fit' : String(Math.min(3, Math.max(0.25, Math.round(next * 100) / 100)));
   storage.set('zoom', ui.zoom);
   closeComposer();
   updateScale();
 }
 
-export const zoomIn = () => setZoom(currentScale() * ZOOM_STEP);
-export const zoomOut = () => setZoom(currentScale() / ZOOM_STEP);
+export const zoomIn = () => setZoom((is3D() ? ui.zoom3d : currentScale()) * ZOOM_STEP);
+export const zoomOut = () => setZoom((is3D() ? ui.zoom3d : currentScale()) / ZOOM_STEP);
+
+/** Whether the device is shown at the size that fits: Fit Screen is on. */
+export const isFit = () => (is3D() ? ui.zoom3d === 1 : ui.zoom === 'fit');
 
 // ---------- panels ----------
 

@@ -1,6 +1,6 @@
 <script>
   import {
-    ui, setMode, setZoom, zoomIn, zoomOut, togglePanel, toggleFocus,
+    ui, setMode, setZoom, zoomIn, zoomOut, isFit, togglePanel, toggleFocus,
     copyPending, clearDone, saveScreenshot, pressButton, pressAppSwitcher, pressHome,
     startDevice, shutdownDevice, restartDevice, copyScreen, toggleRecording, rotateBy, feature,
   } from '../lib/app.svelte.js';
@@ -124,7 +124,7 @@
       <button
         id="zoom-fit"
         class="icon-btn"
-        class:on={ui.zoom === 'fit' && ui.running}
+        class:on={isFit() && ui.running}
         title="Fit to window (⌘9)"
         data-icon="zoom-fit"
         onclick={() => setZoom('fit')}

@@ -271,6 +271,10 @@ final class DuoScene {
     private let downscale: MPSImageLanczosScale
     private(set) var size: (width: Int, height: Int) = (0, 0)
     private var camera = Camera(distance: 1, aspect: 1)
+    /// The distance that frames the book, and the page's zoom: the camera
+    /// moves in and out, as a dolly, rather than the lens changing.
+    private var framedDistance = 1.0
+    private var zoom = 1.0
     private var degrees = 0.0
     private var unfoldedLit = false
     private var turn = 0
@@ -341,6 +345,13 @@ final class DuoScene {
         pose(degrees: 0, unfoldedLit: false, turn: 0)
     }
 
+    /// 1 frames the whole book; 2 is the camera halfway in.
+    func setZoom(_ zoom: Double) {
+        self.zoom = max(0.25, min(8, zoom))
+        camera.distance = framedDistance / self.zoom
+        cameraEntity.position = [0, 0, Float(camera.distance)]
+    }
+
     /// The color behind the book (frames have no transparency).
     func setBackground(_ color: CGColor) {
         renderer.cameraSettings.colorBackground = .color(color)
@@ -351,7 +362,8 @@ final class DuoScene {
         guard (width, height) != size else { return }
         size = (width, height)
         camera = Camera.fit(width: body.x, height: body.y, depth: depth, aspect: Double(width) / Double(height))
-        cameraEntity.position = [0, 0, Float(camera.distance)]
+        framedDistance = camera.distance
+        setZoom(zoom)
         let bytesPerRow = ((width * 4 + 63) / 64) * 64
         let descriptor = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: .bgra8Unorm_srgb, width: width, height: height, mipmapped: false)
         descriptor.storageMode = .shared

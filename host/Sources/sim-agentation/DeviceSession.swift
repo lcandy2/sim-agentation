@@ -212,22 +212,31 @@ final class DeviceSession: @unchecked Sendable {
         height *= fit
         let size = (width: Int(width / 2) * 2, height: Int(height / 2) * 2)
         let background = Self.color(msg["background"] as? String)
+        let zoom = (msg["zoom"] as? NSNumber)?.doubleValue ?? 1
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
             MainActor.assumeIsolated {
                 do {
-                    let current = self.lock.withLock { self.scene }
+                    let (current, showing) = self.lock.withLock { (self.scene, self.view3D) }
                     let scene = try current ?? DuoScene(width: size.width, height: size.height, background: background)
+                    // A new picture, or a new size, starts with a keyframe;
+                    // a zoom or a color only draws the book again.
+                    let fresh = !showing || scene.size != size
                     try scene.resize(width: size.width, height: size.height)
                     scene.setBackground(background)
+                    scene.setZoom(zoom)
                     self.lock.lock()
                     self.scene = scene
                     self.view3D = true
-                    self.lastRender = nil
-                    self.pendingKeyframe = true
-                    self.pendingSeed = true
+                    if fresh {
+                        self.lastRender = nil
+                        self.pendingKeyframe = true
+                        self.pendingSeed = true
+                    }
                     self.lock.unlock()
-                    self.socket.send(json: ["type": "view_result", "ok": true, "mode": "3d", "width": size.width, "height": size.height])
+                    if fresh {
+                        self.socket.send(json: ["type": "view_result", "ok": true, "mode": "3d", "width": size.width, "height": size.height])
+                    }
                     self.poseScene()
                 } catch {
                     self.socket.send(json: ["type": "view_result", "ok": false, "mode": "3d", "error": "\(error)"])
