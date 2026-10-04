@@ -59,8 +59,8 @@
 
   // Liquid Glass lights from within where it's touched (style.css), and
   // held, the button can be pulled: it follows the pointer a little, with
-  // more give the farther (never past 24 px), drawn out toward it and
-  // thinner across like a drop (up to 1.4 by 1/1.4), and springs back when
+  // more give the farther (never past 14 px), drawn out toward it and
+  // thinner across like a drop (up to 1.3 by 1/1.3), and snaps back when
   // let go (style.css's spring). A pull isn't a click.
   let pull = null;
   let pulled = false;
@@ -82,8 +82,8 @@
     const d = Math.hypot(dx, dy);
     if (!pull.moved && d < 4) return;
     pull.moved = true;
-    const k = (24 * (1 - Math.exp(-d / 50))) / d;
-    const stretch = 1 + 0.4 * (1 - Math.exp(-d / 60));
+    const k = (14 * (1 - Math.exp(-d / 70))) / d;
+    const stretch = 1 + 0.3 * (1 - Math.exp(-d / 80));
     const angle = Math.atan2(dy, dx);
     const el = e.currentTarget;
     el.style.transition = 'none';

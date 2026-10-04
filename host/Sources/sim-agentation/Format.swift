@@ -92,12 +92,13 @@ enum Format {
             // Several picked together: the note is about all of them.
             lines.append("- **Elements** (\(parts.count), the note is about them together):")
             for p in parts {
+                let box = JS.truthy(p["color"]) ? " (\(JS.string(p["color"])) box)" : ""
                 if JS.same(p["kind"]?.stringValue, "element") && JS.truthy(p["target"]) {
-                    lines.append("  - \(node(p["target"])) at \(frame(p["target"]?["frame"]))")
+                    lines.append("  - \(node(p["target"])) at \(frame(p["target"]?["frame"]))\(box)")
                 } else {
                     let picked = JS.trimmed(p["label"]).flatMap { $0.isEmpty || $0 == "Area" ? nil : $0 }
                     let within = JS.truthy(p["within"]) ? ", within \(node(p["within"]))" : ""
-                    lines.append("  - Area \(picked.map { "\($0) " } ?? "")at \(frame(p["rect"]))\(within)")
+                    lines.append("  - Area \(picked.map { "\($0) " } ?? "")at \(frame(p["rect"]))\(within)\(box)")
                 }
                 if let s = items(p["source"]).first, JS.truthy(s) {
                     lines.append("    - source `\(JS.string(s["name"]))` at \(JS.string(s["file"])):\(JS.string(s["line"]))")
@@ -119,9 +120,9 @@ enum Format {
         }
         let terms = searchTerms(a)
         if !terms.isEmpty { lines.append("- **Search the source for**: \(terms.map { "`\($0)`" }.joined(separator: ", "))") }
-        let boxes = parts.count > 1 ? "boxes" : "box"
-        lines.append("- **Screenshot (\(boxes) drawn in red)**: \(JS.string(a["images"]?["full"]))")
-        lines.append("- **Close-up of the \(boxes)**: \(JS.string(a["images"]?["crop"]))")
+        let several = parts.count > 1
+        lines.append("- **Screenshot (\(several ? "each element's box drawn in its color" : "box drawn in red"))**: \(JS.string(a["images"]?["full"]))")
+        lines.append("- **Close-up of the \(several ? "boxes" : "box")**: \(JS.string(a["images"]?["crop"]))")
         for r in items(a["replies"]) { lines.append("- **\(JS.string(r["from"]))**: \(JS.string(r["message"]))") }
         if JS.truthy(a["resolution"]) { lines.append("- **Resolution**: \(JS.string(a["resolution"]))") }
         return lines.joined(separator: "\n")

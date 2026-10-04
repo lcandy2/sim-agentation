@@ -80,6 +80,16 @@
   --preview-screen: linear-gradient(#3b8ed0, #5aaced);
   --mark: #ff383c; /* red; annotations' markers and count, recording */
   --design: #6155f5; /* indigo; Design Mode: its button, the frozen device's outline, hover and selection */
+  /* Several selected tell apart by color: the first indigo, each next one of
+     these macOS system colors (lib/app.svelte.js, PICK_COLORS). */
+  --pick-indigo: var(--design);
+  --pick-orange: #ff8d28;
+  --pick-green: #34c759;
+  --pick-pink: #ff2d55;
+  --pick-cyan: #00c0e8;
+  --pick-purple: #cb30e0;
+  --pick-yellow: #ffcc00;
+  --pick-brown: #ac7f5e;
   --ok: #34c759; /* green */
   --warn: #ff8d28; /* orange */
   --glass: rgba(255, 255, 255, 0.8);
@@ -91,6 +101,13 @@
 @media (prefers-color-scheme: dark) {
   :root {
     --design: #6d7cff;
+    --pick-orange: #ff9230;
+    --pick-green: #30d158;
+    --pick-pink: #ff375f;
+    --pick-cyan: #3cd3fe;
+    --pick-purple: #db34f2;
+    --pick-yellow: #ffd600;
+    --pick-brown: #b78a66;
     --accent: #0091ff;
     --mark: #ff4245;
     /* Not yet measured against Device Hub in dark mode: macOS dark equivalents. */
@@ -434,7 +451,7 @@ img { -webkit-user-drag: none; }
   box-shadow: 0 8px 12px rgba(0, 0, 0, 0.02), 1.25px 0 0 -0.75px rgba(0, 0, 0, 0.098), -1.25px 0 0 -0.75px rgba(0, 0, 0, 0.098);
   isolation: isolate; /* its light goes over its face, under its symbol */
   touch-action: none; /* a finger pulls it too (components/Composer.svelte) */
-  transition: transform 420ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: transform 280ms cubic-bezier(0.25, 1.35, 0.5, 1); /* a stiff spring, overshooting 4% */
 }
 /* As Liquid Glass does on interaction: pressed, it lifts (springing) and
    lights from within where it's touched; hovered, it glows a little. */
@@ -780,7 +797,7 @@ kbd {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.sel { outline: 2px solid var(--design); outline-offset: 0.5px; background: color-mix(in srgb, var(--design) 12%, transparent); border-radius: 3px; }
+.sel { outline: 2px solid var(--pick, var(--design)); outline-offset: 0.5px; background: color-mix(in srgb, var(--pick, var(--design)) 12%, transparent); border-radius: 3px; }
 .marker {
   width: 20px;
   height: 20px;

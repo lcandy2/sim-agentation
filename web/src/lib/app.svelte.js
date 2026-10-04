@@ -91,7 +91,7 @@ const rt = {
   hover: null,       // { point, targets: [{ rect, label, node? }], level }
   drag: null,
   draft: null,       // { kind, rect, point?, label, parts? }: what the composer will save
-  picks: [],         // what's selected, each { kind, rect, point?, label, el }
+  picks: [],         // what's selected, each { kind, rect, point?, label, color, el }
   failed: new Set(), // formats Auto gave up on this session
   auto: createAuto(), // what Auto has learned about the connection and decoder (see auto.js)
   seen: { received: 0, decoded: 0, bytes: 0, at: 0 }, // the page's counts at the host's last report
@@ -868,6 +868,23 @@ export function toggleSdk() {
   rt.overlay?.focus();
 }
 
+// Several selected tell apart by color: the first in Design Mode's indigo,
+// each next in the first of these not taken (style.css's --pick-*), and the
+// screenshot draws them so, in their light values.
+const PICK_COLORS = [
+  ['indigo', '#6155f5'], ['orange', '#ff8d28'], ['green', '#34c759'], ['pink', '#ff2d55'],
+  ['cyan', '#00c0e8'], ['purple', '#cb30e0'], ['yellow', '#ffcc00'], ['brown', '#ac7f5e'],
+];
+function nextColor() {
+  const taken = new Set(rt.picks.map((k) => k.color));
+  return (PICK_COLORS.find(([name]) => !taken.has(name)) ?? PICK_COLORS[rt.picks.length % PICK_COLORS.length])[0];
+}
+function selectionBox(color) {
+  const el = Object.assign(document.createElement('div'), { className: 'sel' });
+  el.style.setProperty('--pick', `var(--pick-${color})`);
+  return el;
+}
+
 // With the composer open, hovering and selecting go on: a click or a drag
 // takes the selection's place, Shift+click adds an element to it (or takes
 // a selected one away) and Shift+drag adds an area. The composer, its note
@@ -875,7 +892,7 @@ export function toggleSdk() {
 function annotateDown(e) {
   if (!rt.frozen) return;
   rt.overlay.setPointerCapture(e.pointerId);
-  rt.drag = { start: axPoint(e), moved: false, add: e.shiftKey, box: null };
+  rt.drag = { start: axPoint(e), moved: false, add: e.shiftKey, box: null, color: null };
 }
 
 function annotateMove(e) {
@@ -890,7 +907,8 @@ function annotateMove(e) {
     rt.hover = null;
     if (!rt.drag.box) {
       if (!rt.drag.add) clearPicks();
-      rt.overlay.append((rt.drag.box = Object.assign(document.createElement('div'), { className: 'sel' })));
+      rt.drag.color = nextColor();
+      rt.overlay.append((rt.drag.box = selectionBox(rt.drag.color)));
     }
     placeBox(rt.drag.box, normalize(rt.drag.start, p));
     return;
@@ -905,10 +923,10 @@ function annotateMove(e) {
 function annotateUp(e) {
   if (!rt.drag) return;
   const p = axPoint(e);
-  const { moved, start, add, box } = rt.drag;
+  const { moved, start, add, box, color: dragged } = rt.drag;
   rt.drag = null;
   if (moved) {
-    rt.picks.push({ kind: 'area', rect: normalize(start, p), label: 'Area', el: box });
+    rt.picks.push({ kind: 'area', rect: normalize(start, p), label: 'Area', color: dragged, el: box });
     return openComposer();
   }
   const target = rt.hover?.targets[rt.hover.level] ?? targetsAt(p)[0];
@@ -920,10 +938,11 @@ function annotateUp(e) {
     return rt.picks.length ? openComposer() : closeComposer();
   }
   if (!add) clearPicks();
-  const el = Object.assign(document.createElement('div'), { className: 'sel' });
+  const color = nextColor();
+  const el = selectionBox(color);
   placeBox(el, rect);
   rt.overlay.append(el);
-  rt.picks.push({ kind: target?.node ? 'element' : 'area', rect, point: target?.node ? p : undefined, label: target?.label ?? 'Area', el });
+  rt.picks.push({ kind: target?.node ? 'element' : 'area', rect, point: target?.node ? p : undefined, label: target?.label ?? 'Area', color, el });
   openComposer();
 }
 
@@ -1049,7 +1068,7 @@ function openComposer() {
         kind: 'area',
         rect: union(picks.map((k) => k.rect)),
         label: picks.map((k) => k.label).join(', '),
-        parts: picks.map(({ kind, rect, point, label }) => ({ kind, rect, point, label })),
+        parts: picks.map(({ kind, rect, point, label, color }) => ({ kind, rect, point, label, color })),
       };
   const boxes = picks.map((k) => k.el.getBoundingClientRect());
   ui.draft = {
@@ -1099,11 +1118,13 @@ export async function submitComposer(comment) {
   const full = new OffscreenCanvas(img.width, img.height);
   const fc = full.getContext('2d');
   fc.drawImage(img, 0, 0);
-  fc.strokeStyle = '#ff383c'; // --mark
   fc.lineWidth = Math.max(3, scale * 1.5);
-  // Just outside each box, as on screen, so the line doesn't cover the text.
+  // Just outside each box, as on screen, so the line doesn't cover the text:
+  // one in red (--mark), several each in its color.
   const out = 1 + fc.lineWidth / scale / 2;
-  for (const b of draft.parts?.map((part) => part.rect) ?? [r]) {
+  const boxes = draft.parts?.map((part) => [part.rect, PICK_COLORS.find(([name]) => name === part.color)?.[1] ?? '#ff383c']) ?? [[r, '#ff383c']];
+  for (const [b, color] of boxes) {
+    fc.strokeStyle = color;
     fc.strokeRect((b.x - out) * scale, (b.y - out) * scale, (b.width + out * 2) * scale, (b.height + out * 2) * scale);
   }
 

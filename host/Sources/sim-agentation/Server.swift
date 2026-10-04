@@ -497,6 +497,8 @@ final class AppServer: @unchecked Sendable {
                 "kind": .string(partHit != nil ? "element" : "area"),
                 "rect": partRect,
                 "label": part["label"]?.stringValue.map { .string(JS.trim($0)) } ?? .null,
+                // The color its box is drawn in, on screen and in the screenshot: a name.
+                "color": part["color"]?.stringValue.flatMap { $0.count < 16 && $0.allSatisfy(\.isLetter) ? JSON.string($0) : nil } ?? .null,
                 "target": partHit.map { AX.summarize($0.node) } ?? .null,
                 "within": partWithin.map { AX.summarize($0.node) } ?? .null,
                 "source": part["source"]?.arrayValue != nil ? part["source"]! : .array([]),
