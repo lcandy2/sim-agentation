@@ -63,8 +63,9 @@ export const MATERIALS = {
   // Liquid Glass's prominent button (Figma, Materials page: Liquid Glass -
   // Small, Active, State=Primary): white at 94% under the tint, #0088ff,
   // Linear Burned in (the accent, all but solid), then the controls' Glass
-  // effect and rims. Its light doesn't show on the tint in Figma's render,
-  // so no glares: so it matches that render to a few levels at the rims.
+  // effect and rims. Figma's render barely shows its light on the tint;
+  // the controls' fitted glares put it back, the specular rims that make it
+  // read as glass.
   prominent: {
     selector: '.glass-btn.prominent',
     solid: true, // it sits in the composer's glass, and its fill hides what's behind anyway
@@ -78,7 +79,10 @@ export const MATERIALS = {
       { blend: 'dodge', gray: 0.1569, y: -40, blur: 10, spread: -40 },
       { blend: 'dodge', gray: 0.1569, y: 40, blur: 10, spread: -40 },
     ],
-    glares: [],
+    glares: [
+      { angle: 0, range: 32.4, hardness: 0.054, factor: 0.721, convergence: 0.282, opposite: 0.957 },
+      { angle: Math.PI, range: 31.8, hardness: 0.197, factor: 0.279, convergence: 0.46, opposite: 0.322 },
+    ],
   },
   // The Alert (Figma, Alerts page), for every dialog and toast: white at 70%
   // under #bfbfbf at 10% (Lighten and Darken, plain mixes over the light

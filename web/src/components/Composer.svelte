@@ -57,6 +57,13 @@
     if (value) submitComposer(value);
   }
 
+  // Liquid Glass lights from within where it's touched (style.css).
+  function glow(e) {
+    const r = e.currentTarget.getBoundingClientRect();
+    e.currentTarget.style.setProperty('--glow-x', `${e.clientX - r.left}px`);
+    e.currentTarget.style.setProperty('--glow-y', `${e.clientY - r.top}px`);
+  }
+
   function keydown(e) {
     if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) form.requestSubmit();
     if (e.key === 'Escape') {
@@ -86,8 +93,7 @@
     <textarea class="field" rows="3" placeholder="What should change?" bind:this={text} bind:value={comment} onkeydown={keydown}></textarea>
     <div class="composer-row">
       <span class="hint">⌘↩ to add · Esc to cancel</span>
-      <button type="button" class="alert-btn" onclick={cancelComposer}>Cancel</button>
-      <button type="submit" class="glass-btn prominent" title="Add (⌘↩)" aria-label="Add" disabled={!comment.trim()}>{@html icon('arrow-up')}</button>
+      <button type="submit" class="glass-btn prominent" title="Add (⌘↩)" aria-label="Add" disabled={!comment.trim()} onpointermove={glow}>{@html icon('arrow-up')}</button>
     </div>
   </form>
   {#if place}
