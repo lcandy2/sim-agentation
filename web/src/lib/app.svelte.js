@@ -1344,9 +1344,12 @@ export async function startDevice(udid = ui.udid) {
   const sim = ui.sims.find((s) => s.udid === udid);
   if (!sim) return;
   if (ui.udid === sim.udid) ui.starting = true;
+  // Its row says "Starting…" until it has finished booting, its home screen
+  // up: boot answers sooner, and the stage already streams the boot.
   ui.busy[sim.udid] = 'Starting…';
   const res = await fetch(`/api/sims/${sim.udid}/boot`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' }).catch(() => null);
-  delete ui.busy[sim.udid];
+  if (res?.ok) fetch(`/api/sims/${sim.udid}/ready`).catch(() => null).finally(() => delete ui.busy[sim.udid]);
+  else delete ui.busy[sim.udid];
   if (!res?.ok) {
     ui.starting = false;
     flashStatus((await res?.json().catch(() => null))?.error ?? "Couldn't start the simulator");

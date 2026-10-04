@@ -150,6 +150,12 @@ final class AppServer: @unchecked Sendable {
                 Task.detached { await InputSurface.healAfterBoot(udid: udid) }
                 return .respond(Self.json(JSONObject(["ok": .bool(true)])))
             }
+            // Answers once a device has finished starting (its home screen up),
+            // for the page to stop saying "Starting…": boot answers sooner.
+            if part(0) == "api" && part(1) == "sims", let udid = part(2), part(3) == "ready",
+               udid.allSatisfy({ $0.isHexDigit || $0 == "-" }) {
+                return .respond(Self.json(JSONObject(["ready": .bool(await waitUntilBooted(udid))])))
+            }
             // Device Hub's … menu: shut down, restart, rename, reset, remove.
             if part(0) == "api" && part(1) == "sims", let udid = part(2), parts.count <= 4,
                ["shutdown", "restart", "rename", "erase", nil].contains(part(3)),
@@ -443,6 +449,28 @@ final class AppServer: @unchecked Sendable {
 
     private func boot(_ udid: String) async throws {
         try await blocking { try Simulators.shared.boot(udid) }
+    }
+
+    /// Waits until a device has finished booting (SpringBoard up, data
+    /// migrated) as `simctl bootstatus` reports it, three minutes at most:
+    /// it waits for ever on a device nobody boots.
+    private func waitUntilBooted(_ udid: String, limit: Int = 180) async -> Bool {
+        (try? await blocking {
+            let task = Process()
+            task.executableURL = URL(fileURLWithPath: "/usr/bin/env")
+            task.arguments = ["xcrun", "simctl", "bootstatus", udid]
+            task.standardInput = FileHandle.nullDevice
+            task.standardOutput = FileHandle.nullDevice
+            task.standardError = FileHandle.nullDevice
+            let done = DispatchSemaphore(value: 0)
+            task.terminationHandler = { _ in done.signal() }
+            try task.run()
+            if done.wait(timeout: .now() + .seconds(limit)) == .timedOut {
+                task.terminate()
+                return false
+            }
+            return task.terminationStatus == 0
+        }) ?? false
     }
 
     private func sdkSnapshot() async -> Response {
