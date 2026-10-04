@@ -75,6 +75,7 @@
   --thumb: #ffffff;
   --thumb-off: rgba(0, 0, 0, 0.045);
   --start: rgba(0, 0, 0, 0.14);
+  --start-pressed: rgba(0, 0, 0, 0.094);
   --on-start: rgba(0, 0, 0, 0.87);
   --accent: #0088ff;
   --accent-tint: color-mix(in srgb, var(--accent) 6%, transparent);
@@ -146,6 +147,7 @@
     --popup-chevrons: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.85)' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 9.5l3-3 3 3M9 14.5l3 3 3-3'/%3E%3C/svg%3E");
     --thumb-off: rgba(255, 255, 255, 0.08);
     --start: rgba(255, 255, 255, 0.16);
+    --start-pressed: rgba(255, 255, 255, 0.1);
     --on-start: rgba(255, 255, 255, 0.9);
     --menu: #262626;
     --card: #1f1f1f;
@@ -697,6 +699,10 @@ kbd {
   font-weight: 400;
 }
 .start-btn:hover { background: color-mix(in srgb, var(--start), #000 4%); }
+/* Pressed, it darkens (lightens in dark mode) as macOS 27's push button does
+   (measured: 9.4% black over its fill, 10% white in dark mode), while the
+   pointer is over it; slid off, it clears, and letting go there isn't a click. */
+.start-btn:active:hover:not(:disabled) { background: linear-gradient(var(--start-pressed), var(--start-pressed)), var(--start); }
 .start-btn:disabled { opacity: 0.6; }
 
 .canvas-bottom {
