@@ -183,10 +183,6 @@ button { cursor: default; }
 .icon-btn.small { width: 28px; height: 28px; }
 .icon-btn.small svg { width: 16px; height: 16px; }
 #mode-annotate.on { background: var(--design); color: #fff; }
-/* Off, it hovers in that color, see-through (Apple's tinted style), and
-   turns it solid once on. */
-#mode-annotate:not(.on):not(:disabled):hover { background: color-mix(in srgb, var(--design) 18%, transparent); color: var(--design); }
-#mode-annotate:not(.on):not(:disabled):active { background: color-mix(in srgb, var(--design) 28%, transparent); }
 /* Design Mode: the annotate button grows its name while it's on and folds
    back to a symbol when it's off, in the sidebar's motion (320 ms, the same
    curve). The name's column eases from 0fr to 1fr, i.e. exactly to its own
