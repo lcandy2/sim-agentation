@@ -202,7 +202,7 @@ One Swift binary, built from `host/`, runs everything. It serves the page and it
 | [`host/Sources/SimBridge`](host/Sources/SimBridge) | The simulator bridge: screen capture, encoding, input, accessibility |
 | [`host/Guest/HingeControl`](host/Guest/HingeControl) | The helper that runs inside the simulator for iPhone Duo |
 | [`web/src`](web/src) | The Svelte UI, built by Vite into `web/dist` |
-| [`sdk/SimAgentationPlus`](sdk/SimAgentationPlus) | The optional in-app SDK, packaged by the root [`Package.swift`](Package.swift) |
+| [`Sources/SimAgentationPlus`](Sources/SimAgentationPlus) | The optional in-app SDK, packaged by the root [`Package.swift`](Package.swift) |
 | [`examples/DemoApp`](examples/DemoApp) | A sample app that uses the SDK |
 | [`skills`](skills) | Agent skills for working through annotations and for adding the SDK |
 

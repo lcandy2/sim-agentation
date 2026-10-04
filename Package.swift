@@ -17,6 +17,6 @@ let package = Package(
         .library(name: "SimAgentationPlus", targets: ["SimAgentationPlus"]),
     ],
     targets: [
-        .target(name: "SimAgentationPlus", path: "sdk/SimAgentationPlus/Sources/SimAgentationPlus"),
+        .target(name: "SimAgentationPlus"),
     ]
 )
