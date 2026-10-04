@@ -753,7 +753,6 @@ kbd {
 /* Selection layers on the screen. --unrotate turns labels and markers back
    upright when the device is turned. */
 .hl, .hl-label, .sel, .marker { position: absolute; pointer-events: none; }
-/* Outlines sit just outside the box (1 pt) so they never cover the text they mark. */
 /* Hover and selection are Design Mode's color, like its button and the
    device's outline: see-through while hovering, solid once selected. */
 /* Hover and selection draw one and the same box; only their colors differ.
