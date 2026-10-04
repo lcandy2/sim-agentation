@@ -112,12 +112,15 @@
   const in3D = $derived(is3D());
   // Switching between the book and the flat chrome isn't a turn: the flat
   // view's angle accumulates (450° after a few turns), and animating it to
-  // or from the book's none spun the device round. Only turns animate.
+  // or from the book's none spun the device round. Nor is a foldable lighting
+  // its other panel, which is mounted turned (the unfolded one landscape).
+  // Only turns animate.
   let switching = $state(false);
-  let wasIn3D;
+  let shown;
   $effect.pre(() => {
-    if (in3D === wasIn3D) return;
-    wasIn3D = in3D;
+    const view = `${in3D}|${ui.chrome?.panel}`;
+    if (view === shown) return;
+    shown = view;
     switching = true;
     requestAnimationFrame(() => requestAnimationFrame(() => (switching = false)));
   });
