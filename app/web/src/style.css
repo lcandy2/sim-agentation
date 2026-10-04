@@ -1105,6 +1105,12 @@ kbd {
 .glass-btn.composer-send { position: absolute; bottom: 12px; width: 24px; height: 24px; }
 .glass-btn.composer-send svg { width: 15px; height: 15px; }
 .glass-btn.composer-send:disabled { opacity: calc(var(--pop) * 0.4); }
+/* Open on an annotation, Delete sits left of the send button, plain until
+   hovered, when it shows the red it does. */
+.composer-delete { position: absolute; bottom: 12px; width: 24px; height: 24px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 50%; background: none; color: var(--secondary); opacity: var(--pop); }
+.composer-delete svg { width: 15px; height: 15px; }
+.composer-delete:hover { background: color-mix(in srgb, var(--mark) 10%, transparent); color: var(--mark); }
+.note-text.with-delete { padding-right: 64px; }
 
 /* ---------- narrow windows ---------- */
 

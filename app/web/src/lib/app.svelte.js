@@ -1375,6 +1375,27 @@ export function editMark(i) {
   openComposer();
 }
 
+/**
+ * The composer's Delete, open on an annotation: the annotation goes, its
+ * marker with it, and the markers after it count down to close the gap.
+ */
+export async function deleteEditing() {
+  const mark = rt.editing;
+  const f = rt.frozen;
+  if (!mark) return;
+  closeComposer();
+  rt.overlay?.focus();
+  if (!(await deleteAnnotation(mark.id)) || !f) return;
+  const i = f.marks.indexOf(mark);
+  if (i < 0) return;
+  f.marks.splice(i, 1);
+  mark.el.remove();
+  f.marks.forEach((m, j) => {
+    m.el.dataset.mark = j;
+    m.el.textContent = j + 1;
+  });
+}
+
 const samePicks = (a, b) => a.length === b.length && a.every((k, i) => sameRect(k.rect, b[i].rect));
 
 export async function submitComposer(comment) {

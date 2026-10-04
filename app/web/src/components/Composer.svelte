@@ -1,6 +1,6 @@
 <script>
   import { tick, untrack } from 'svelte';
-  import { ui, submitComposer, cancelComposer, removePick } from '../lib/app.svelte.js';
+  import { ui, submitComposer, cancelComposer, removePick, deleteEditing } from '../lib/app.svelte.js';
   import { POINTER, outlinePath, pointerScale, pointerCorner } from '../lib/glass.js';
   import { icon } from '../lib/icons.js';
 
@@ -209,6 +209,7 @@
       </div>
       <textarea
         class="note-text"
+        class:with-delete={ui.draft.editing}
         rows="1"
         placeholder="What should change?"
         style:padding-top="{8 + start.top}px"
@@ -238,6 +239,17 @@
       </filter>
       <path filter="url(#composer-shadow)" transform="translate({SHADOW_PAD} {SHADOW_PAD})" d={place.outline} />
     </svg>
+  {/if}
+  {#if ui.draft.editing}
+    <!-- Open on an annotation: Delete, beside the send button. -->
+    <button
+      type="button"
+      class="composer-delete"
+      style:right="{(place?.side === 'right' ? 22.5 : 12) + 24 + 4}px"
+      title="Delete Annotation"
+      aria-label="Delete annotation"
+      onclick={deleteEditing}
+    >{@html icon('trash')}</button>
   {/if}
   <!-- In the text field's bottom right corner, but over the form rather
        than in it: the form's outline clips what's inside, and a pulled button
