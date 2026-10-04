@@ -185,7 +185,7 @@
       <div class="preview-info" bind:this={previewInfo}>
         <div class="preview-name">{ui.simName}</div>
         <div class="preview-sub">{ui.runtime} Simulator</div>
-        <button class="start-btn" disabled={ui.starting} onclick={startDevice}>{ui.starting ? 'Starting…' : 'Start'}</button>
+        <button class="start-btn" disabled={ui.starting} onclick={() => startDevice()}>{ui.starting ? 'Starting…' : 'Start'}</button>
       </div>
     {/if}
   </div>
