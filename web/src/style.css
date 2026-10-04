@@ -676,6 +676,7 @@ kbd {
 }
 .banner {
   pointer-events: auto;
+  touch-action: pan-y; /* a sideways swipe is the banner's (components/Notification.svelte) */
   display: flex;
   align-items: center;
   gap: 8px;
