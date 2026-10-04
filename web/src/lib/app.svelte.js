@@ -181,7 +181,7 @@ function connect(udid) {
 
   ws.onopen = () => {
     ws.send(JSON.stringify({ type: 'snapshot' }));
-    ws.send(JSON.stringify({ type: 'orientation', orientation: ui.orientation }));
+    ws.send(JSON.stringify({ type: 'orientation', orientation: ui.orientation, sync: true }));
     // Nudge with a harmless scroll so an idle screen still emits a frame.
     setTimeout(() => !rt.frame && send({ type: 'scroll', deltaX: 0, deltaY: 0 }), 600);
     // Once video arrives, a working decoder shows something within moments

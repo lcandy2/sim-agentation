@@ -37,6 +37,8 @@ final class Foldable: @unchecked Sendable {
     private let unfolded: ChromeService.Panel
     private let lock = NSLock()
     private var process: Process?
+    /// The host's end of the watcher's input (see `watch`).
+    private var leash: FileHandle?
     private var lit: Lit?
     private var degrees: Double?
     /// Whether the hinge last opened the device (passed `opensAt`) or shut
@@ -79,12 +81,13 @@ final class Foldable: @unchecked Sendable {
     }
 
     func stop() {
-        let process: Process? = lock.withLock {
+        let (process, leash): (Process?, FileHandle?) = lock.withLock {
             stopped = true
             onLit = nil
             onAngle = nil
-            return self.process
+            return (self.process, self.leash)
         }
+        try? leash?.close()
         if process?.isRunning == true { process?.terminate() }
     }
 
@@ -92,17 +95,22 @@ final class Foldable: @unchecked Sendable {
     /// is the current angle, then one for every change (the 60 Hz sweep
     /// Device Hub makes). Restarted if it ends while the stream goes on (it
     /// can fall silent after SpringBoard restarts, until the pose moves).
+    ///
+    /// devicectl doesn't read its input, so a host stopped outright would
+    /// leave it watching for a day: a shell runs it and stops it when the
+    /// host's end of the shell's input closes, as it does when the host goes.
     private func watch() {
         let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/xcrun")
+        process.executableURL = URL(fileURLWithPath: "/bin/sh")
         process.arguments = [
-            "devicectl", "device", "motion", "hinge-angle", "--device", udid,
+            "-c", #"exec 3<&0; "$@" </dev/null & child=$!; (cat <&3 >/dev/null; kill $child) >/dev/null 2>&1 & wait $child"#, "sh",
+            "/usr/bin/xcrun", "devicectl", "device", "motion", "hinge-angle", "--device", udid,
             "--timeout", "86400", "--update-interval", "0.01", "--change-threshold", "0.1",
         ]
-        let out = Pipe()
+        let out = Pipe(), leash = Pipe()
         process.standardOutput = out
         process.standardError = FileHandle.nullDevice
-        process.standardInput = FileHandle.nullDevice
+        process.standardInput = leash
         let buffer = LineBuffer()
         out.fileHandleForReading.readabilityHandler = { [weak self] handle in
             let data = handle.availableData
@@ -112,13 +120,17 @@ final class Foldable: @unchecked Sendable {
             }
         }
         process.terminationHandler = { [weak self] _ in
+            try? leash.fileHandleForWriting.close()
             guard let self, !self.lock.withLock({ self.stopped }) else { return }
             DispatchQueue.global().asyncAfter(deadline: .now() + 2) { [weak self] in
                 guard let self, !self.lock.withLock({ self.stopped }) else { return }
                 self.watch()
             }
         }
-        lock.withLock { self.process = process }
+        lock.withLock {
+            self.process = process
+            self.leash = leash.fileHandleForWriting
+        }
         do { try process.run() } catch {
             FileHandle.standardError.write(Data("sim-agentation: hinge: devicectl didn't start: \(error)\n".utf8))
         }
