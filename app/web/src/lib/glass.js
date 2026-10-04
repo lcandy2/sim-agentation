@@ -232,22 +232,68 @@ function pointerPath(side, base, at, k) {
 // A rounded rect with a radius for each corner: top left, top right, bottom right, bottom left.
 const roundedRect = (x, w, h, [tl, tr, br, bl]) => `M${x + tl} 0H${x + w - tr}A${tr} ${tr} 0 0 1 ${x + w} ${tr}V${h - br}A${br} ${br} 0 0 1 ${x + w - br} ${h}H${x + bl}A${bl} ${bl} 0 0 1 ${x} ${h - bl}V${tl}A${tl} ${tl} 0 0 1 ${x + tl} 0Z`;
 
-/** How big a box h tall with corners r draws its pointer: whole when it fits
- *  between the corners, else in proportion to the box's height. */
-export const pointerScale = (h, r) => Math.min(1, h / (2 * r + POINTER.span));
-/** The corners on the pointer's side, rounded less to make room for it. */
-export const pointerCorner = (h, r, k) => Math.min(r, (h - POINTER.span * k) / 2);
+// How much of Figma's pointer a box h tall with corners r has room for
+// between its corners: 1, all of it, and it sits anywhere along the side;
+// less, and it comes out of the middle of a side that stays as round as
+// the other (a one-line composer is a capsule at both ends), smaller.
+const room = (h, r) => Math.min(1, Math.max(0, (h - 2 * r) / POINTER.span));
+/** How far the pointer's tip stands out from the box's side: Figma's 10.5,
+ *  else down to 7 on a capsule. */
+export const pointerReach = (h, r) => (room(h, r) === 1 ? POINTER.depth : 7 + 3.5 * room(h, r));
+/** Where along its side the pointer can be centered: clear of the corners,
+ *  else the middle. */
+export const pointerRange = (h, r) => (room(h, r) === 1 ? [r + POINTER.span / 2, h - r - POINTER.span / 2] : [h / 2, h / 2]);
 
 /** A glass's outline in CSS px, for a box w by h with corners r and maybe a
- *  pointer ({ side: 'left' | 'right', at, scale }), which the box's width
- *  includes at full size: a smaller one keeps its base on the box. */
+ *  pointer ({ side: 'left' | 'right', at }), which the box's width includes
+ *  at full size. */
 export function outlinePath(w, h, r, pointer) {
   if (!pointer) return roundedRect(0, w, h, [r, r, r, r]);
-  const k = pointer.scale ?? 1;
-  const body = w - POINTER.depth;
-  const c = pointerCorner(h, r, k);
-  if (pointer.side === 'left') return roundedRect(POINTER.depth, body, h, [c, r, r, c]) + pointerPath('left', POINTER.depth, pointer.at, k);
-  return roundedRect(0, body, h, [r, c, c, r]) + pointerPath('right', body, pointer.at, k);
+  if (room(h, r) === 1) {
+    if (pointer.side === 'left') return roundedRect(POINTER.depth, w - POINTER.depth, h, [r, r, r, r]) + pointerPath('left', POINTER.depth, pointer.at, 1);
+    return roundedRect(0, w - POINTER.depth, h, [r, r, r, r]) + pointerPath('right', w - POINTER.depth, pointer.at, 1);
+  }
+  return roundEndPointer(w, h, r, pointer.side, room(h, r));
+}
+
+// The pointer out of the middle of a round end, all one outline: the
+// Cartouche drawn as lines at 45° to a round tip, curving into the side
+// (Figma's has a tip of radius 5.4 and curves of 12, 10.5 out), here
+// smaller as the end is rounder: on a capsule, 7 out, a tip of 3, curves
+// of 5, which keep the end round and the pointer a pointer.
+function roundEndPointer(w, h, r, side, t) {
+  const X = w - POINTER.depth; // the side, drawn for a pointer on the right and mirrored for the left
+  const cy = h / 2;
+  const reach = 7 + 3.5 * t, tip = 3 + 2.4 * t, curve = 5 + 7 * t;
+  const c = Math.SQRT1_2; // cos and sin of 45°
+  const apex = X + reach + tip * (Math.SQRT2 - 1); // where the lines would meet
+  const back = [-c, -c]; // the upper line, from the apex toward the box
+  const out = [c, -c]; // away from the pointer, square to it
+  // The curve's center: `curve` off the line and `curve` off the corner's circle,
+  // or off the straight side when it meets the line there.
+  const corner = [X - r, r];
+  const a = [apex + curve * out[0] - corner[0], cy + curve * out[1] - corner[1]];
+  const R = r + curve;
+  const along = a[0] * back[0] + a[1] * back[1];
+  let d = -along - Math.sqrt(Math.max(0, along * along - (a[0] ** 2 + a[1] ** 2) + R * R));
+  let center = [apex + d * back[0] + curve * out[0], cy + d * back[1] + curve * out[1]];
+  let onSide = [corner[0] + ((center[0] - corner[0]) * r) / R, corner[1] + ((center[1] - corner[1]) * r) / R];
+  const round = onSide[1] <= r + 1e-6;
+  if (!round) {
+    d = (apex + curve * c - X - curve) / c;
+    center = [apex + d * back[0] + curve * out[0], cy + d * back[1] + curve * out[1]];
+    onSide = [X, center[1]];
+  }
+  const onLine = [apex + d * back[0], cy + d * back[1]];
+  const toTip = [apex + tip * back[0], cy + tip * back[1]];
+  const below = ([x, y]) => [x, h - y];
+  const at = ([x, y]) => `${+(side === 'left' ? w - x : x).toFixed(3)} ${+y.toFixed(3)}`;
+  const arc = (radius, sweep, to) => `A${+radius.toFixed(3)} ${+radius.toFixed(3)} 0 0 ${side === 'left' ? 1 - sweep : sweep} ${at(to)}`;
+  return `M${at([r, 0])}L${at([X - r, 0])}`
+    + (round ? arc(r, 1, onSide) : arc(r, 1, [X, r]) + `L${at(onSide)}`)
+    + arc(curve, 0, onLine) + `L${at(toTip)}` + arc(tip, 1, below(toTip)) + `L${at(below(onLine))}` + arc(curve, 0, below(onSide))
+    + (round ? arc(r, 1, [X - r, h]) : `L${at([X, h - r])}` + arc(r, 1, [X - r, h]))
+    + `L${at([r, h])}` + arc(r, 1, [0, h - r]) + `L${at([0, r])}` + arc(r, 1, [r, 0]) + 'Z';
 }
 
 // Distance from each pixel inside a mask to the nearest pixel outside it, in
@@ -495,7 +541,7 @@ function filterFor(material, urls, width, height) {
 }
 
 function glassFor(name, width, height, radius, dpr, dark, pointer) {
-  const key = `${name}:${width}x${height}r${radius}@${dpr}:${dark}:${pointer ? `${pointer.side}${pointer.at}x${pointer.scale}` : ''}`;
+  const key = `${name}:${width}x${height}r${radius}@${dpr}:${dark}:${pointer ? `${pointer.side}${pointer.at}` : ''}`;
   if (!glasses.has(key)) {
     glasses.set(key, (async () => {
       const material = MATERIALS[name];
@@ -518,9 +564,9 @@ async function paint(el, name) {
   if (!w || !h) return;
   const dark = matchMedia('(prefers-color-scheme: dark)').matches;
   const radius = parseFloat(getComputedStyle(el).borderTopLeftRadius) || h / 2;
-  // data-pointer="left 64 1": a popover's pointer, on that edge, centered 64 px down, at that scale.
-  const [side, at, scale] = (el.dataset.pointer ?? '').split(' ');
-  const pointer = side ? { side, at: Math.round(Number(at)), scale: scale ? Number(scale) : 1 } : null;
+  // data-pointer="left 64": a popover's pointer, on that edge, centered 64 px down (see outlinePath).
+  const [side, at] = (el.dataset.pointer ?? '').split(' ');
+  const pointer = side ? { side, at: Math.round(Number(at)) } : null;
   const { lightURL, faceURL, filter } = await glassFor(name, w, h, radius, devicePixelRatio || 1, dark, pointer);
   el.style.setProperty('--glass-light', `url("${lightURL}")`);
   if (faceURL) {

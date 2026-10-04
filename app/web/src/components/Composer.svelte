@@ -1,7 +1,7 @@
 <script>
   import { tick, untrack } from 'svelte';
   import { ui, submitComposer, cancelComposer, removePick, deleteEditing } from '../lib/app.svelte.js';
-  import { POINTER, outlinePath, pointerScale, pointerCorner } from '../lib/glass.js';
+  import { POINTER, outlinePath, pointerReach, pointerRange } from '../lib/glass.js';
   import { icon } from '../lib/icons.js';
 
   let form = $state(null);
@@ -23,9 +23,10 @@
   // macOS's popover: beside the selection, centered on it where the window
   // allows, its pointer at the selection's middle and clear of the corners.
   // Too short for the whole pointer between its corners (a line or two of
-  // note), it draws it smaller and rounds that side's corners less, the tip
-  // still GAP from the selection. The pointer belongs to the composer's own
-  // box, so one glass, one outline and one shadow cover both, as in Figma.
+  // note), the pointer comes out of the middle of a side as round as the
+  // other, smaller, the tip still GAP from the selection (see glass.js's
+  // outlinePath). The pointer belongs to the composer's own box, so one
+  // glass, one outline and one shadow cover both, as in Figma.
   const BODY = 360;
   const WIDTH = BODY + POINTER.depth;
   const RADIUS = 24;                       // concentric with the note's field, 8 in (style.css)
@@ -34,11 +35,10 @@
   const clamp = (v, lo, hi) => Math.min(Math.max(v, lo), hi);
   // Its left edge, pointer and outline for its height; top as given.
   function settle(p, top, h) {
-    const k = pointerScale(h, RADIUS);
-    const short = POINTER.depth * (1 - k); // how far a smaller pointer's tip falls short of the box's edge
+    const short = POINTER.depth - pointerReach(h, RADIUS); // how far a smaller pointer's tip falls short of the box's edge
     const left = p.side === 'left' ? Math.min(p.right + GAP - short, innerWidth - WIDTH - 12) : p.left0 - GAP - WIDTH + short;
-    const clear = pointerCorner(h, RADIUS, k) + (POINTER.span * k) / 2;
-    const pointer = { side: p.side, at: Math.round(clamp(p.cy - top, clear, h - clear)), scale: +k.toFixed(3) };
+    const [lo, hi] = pointerRange(h, RADIUS);
+    const pointer = { side: p.side, at: Math.round(clamp(p.cy - top, lo, hi)) };
     return { ...p, top, h, left, tip: p.side === 'left' ? short : WIDTH - short, pointer, outline: outlinePath(WIDTH, h, RADIUS, pointer) };
   }
   $effect(() => {
@@ -195,7 +195,7 @@
     id="composer-form"
     class="composer pointer-{place?.side ?? 'left'}"
     bind:this={form}
-    data-pointer={place ? `${place.side} ${place.pointer.at} ${place.pointer.scale}` : null}
+    data-pointer={place ? `${place.side} ${place.pointer.at}` : null}
     style:clip-path={place ? `path('${place.outline}')` : null}
     onsubmit={submit}
   >
