@@ -10,7 +10,7 @@ import { matchesFrontApp, sdkContainers, sourceFor, viewContext } from './sdk.js
 import { createDecoder, decodeCapabilities, decodesSmoothly, formatLabel, pickFormat } from './stream.js';
 import { HIDDEN_FPS, createAuto, decide, newFormat, observe, probeFor, probed, restart } from './auto.js';
 import { isTurned, sdkToPortrait, treeToPortrait, uprightDegrees } from './rotation.js';
-import { pieceMaps, locate, stageBox, project, facing, angleAt } from './screen3d.js';
+import { pieceMaps, locate, stageBox, facing, labelMatrix } from './screen3d.js';
 
 export const storage = {
   get(k) {
@@ -572,23 +572,25 @@ export function attachScreen3D({ boxes, floats, mirrors, flat }) {
   boxes.append(...rt.overlay.querySelectorAll('.hl, .sel'));
   floats.append(...rt.float.children);
   // Boxes are copied onto every piece; labels and markers stand on the
-  // page where their anchor lands, unwarped so they read at any angle, but
-  // turned as the screen's text runs there, so they lean with the screen.
+  // screen where their anchor lands, in its perspective but not stretched
+  // by it, so they lean with a half-open book and still read.
   const sync = () => {
     for (const to of mirrors) if (to) to.innerHTML = boxes.innerHTML;
     const maps = activeMaps3D();
-    // The interface's rightward in the framebuffer (the page turns it by ROTATION).
+    // The interface's right and down in the framebuffer (the page turns
+    // it by ROTATION), a point per label pixel.
     const turn = ((ROTATION[ui.orientation] ?? 0) * Math.PI) / 180;
     const { width, height } = rt.frozen?.points ?? ui.chrome.screen;
-    const [du, dv] = [(Math.cos(turn) / width) * 20, (-Math.sin(turn) / height) * 20];
+    const [rx, ry] = [Math.cos(turn), -Math.sin(turn)];
+    const right = [rx / width, ry / height], down = [-ry / width, rx / height];
     flat.replaceChildren(...[...floats.children].flatMap((el) => {
-      const [u, v] = [parseFloat(el.style.left) / 100, parseFloat(el.style.top) / 100];
-      const at = project(maps, u, v);
-      if (!at) return [];
+      const matrix = labelMatrix(maps, parseFloat(el.style.left) / 100, parseFloat(el.style.top) / 100, right, down);
+      if (!matrix) return [];
       const copy = el.cloneNode(true);
-      copy.style.left = `${at.x}px`;
-      copy.style.top = `${at.y}px`;
-      copy.style.setProperty('--unrotate', `${angleAt(maps, u, v, du, dv)}deg`);
+      copy.style.left = copy.style.top = '0px';
+      copy.style.margin = '0';
+      // Each keeps where it sits from its anchor: a label above the box's corner, a marker centred.
+      copy.style.transform = `${matrix} ${el.classList.contains('marker') ? 'translate(-50%, -50%)' : 'translate(-3px, calc(-100% - 5px))'}`;
       return [copy];
     }));
   };

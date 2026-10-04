@@ -76,26 +76,45 @@ export function locate(maps, x, y) {
   return fallback ?? { u: 0, v: 0, inside: false };
 }
 
+const mapAt = (maps, u, v, eps = 1e-6) =>
+  maps.find(({ piece }) => u >= piece.u[0] - eps && u <= piece.u[1] + eps && v >= piece.v[0] - eps && v <= piece.v[1] + eps);
+
 /** Where a framebuffer point (normalized) is on the stage, through the piece showing it; null off them. */
 export function project(maps, u, v) {
-  const eps = 1e-6;
-  const map = maps.find(({ piece }) => u >= piece.u[0] - eps && u <= piece.u[1] + eps && v >= piece.v[0] - eps && v <= piece.v[1] + eps);
+  const map = mapAt(maps, u, v);
   if (!map) return null;
   const [x, y] = apply(map.toStage, [u, v]);
   return { x, y };
 }
 
 /**
- * The angle (degrees, clockwise) at which a line from a framebuffer point
- * runs on the stage, going (du, dv) in the framebuffer: how the screen's
- * text leans there, for a label laid flat beside it.
+ * A label's `matrix3d` (from its anchor, `transform-origin: 0 0`) that
+ * stands it on the screen at a framebuffer point (normalized) without
+ * stretching it: the screen's own perspective there, less its stretch and
+ * shear at the anchor (only their rotation is kept, so the label is its
+ * own size there) and with `depth` of the convergence (0 flat, 1 the
+ * screen's). `right` and `down` are the interface's directions, in the
+ * framebuffer per label pixel. Null off the screen.
  */
-export function angleAt(maps, u, v, du, dv) {
-  const at = project(maps, u, v);
-  if (!at) return 0;
-  const ahead = project(maps, u + du, v + dv);
-  const [from, to] = ahead ? [at, ahead] : [project(maps, u - du, v - dv), at];
-  return from ? (Math.atan2(to.y - from.y, to.x - from.x) * 180) / Math.PI : 0;
+export function labelMatrix(maps, u, v, right, down, depth = 0.6) {
+  const map = mapAt(maps, u, v);
+  if (!map) return null;
+  // Label px → framebuffer → stage.
+  const [a, b, c, d, e, f, g, h, i] = multiply(map.toStage, [right[0], down[0], u, right[1], down[1], v, 0, 0, 1]);
+  const [x0, y0] = [c / i, f / i];
+  // Its linear part at the anchor, and the rotation nearest it.
+  const J = [(a - x0 * g) / i, (b - x0 * h) / i, (d - y0 * g) / i, (e - y0 * h) / i];
+  const det = J[0] * J[3] - J[1] * J[2];
+  if (!(det > 0)) return null;
+  const turn = Math.atan2(J[2] - J[1], J[0] + J[3]);
+  const [cos, sin] = [Math.cos(turn), Math.sin(turn)];
+  // K = J⁻¹ · R: undoes the stretch at the anchor, keeps the turn.
+  const inv = [J[3] / det, -J[1] / det, -J[2] / det, J[0] / det];
+  const K = [inv[0] * cos + inv[1] * sin, -inv[0] * sin + inv[1] * cos, 0, inv[2] * cos + inv[3] * sin, -inv[2] * sin + inv[3] * cos, 0, 0, 0, 1];
+  const m = multiply([a, b, c, d, e, f, g, h, i], K);
+  m[6] *= depth;
+  m[7] *= depth;
+  return `matrix3d(${[m[0], m[3], 0, m[6], m[1], m[4], 0, m[7], 0, 0, 1, 0, m[2], m[5], 0, m[8]].join(',')})`;
 }
 
 /** How squarely a piece faces the camera, 1 head-on (the host's cosine). */
