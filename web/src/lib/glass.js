@@ -196,39 +196,42 @@ function shapeSDF(x, y, w, h, r, n) {
 const POINTER_PATH = 'M10.5 23C10.5 21.65 10.2 20.4 8.81 19.07L5.5 15.76 2.85 13.11C1.92 12.17.94 11.15.5 10.03.06 8.9 0 7.78 0 5.28V0 46 40.72C0 38.22.06 37.1.5 35.97.94 34.84 1.92 33.83 2.85 32.89L5.5 30.24 8.81 26.93C10.19 25.6 10.5 24.35 10.5 23Z';
 export const POINTER = { depth: 10.5, span: 46 };
 
-// The pointer on a side of the box: its base along that side at base (an x
-// for left and right, a y for top and bottom), centered at along it,
-// pointing out. The path is drawn for the left and right sides (x out from
-// the base, y along it); top and bottom swap the two.
+// The pointer on a side of the box, its base along x = base, centered at
+// y = at, pointing out of that side, drawn at scale k.
 const POINTER_SEGMENTS = POINTER_PATH.match(/[MCLVZ][^MCLVZ]*/g).map((segment) => ({
   command: segment[0],
   values: (segment.slice(1).match(/-?(?:\d+\.?\d*|\.\d+)/g) ?? []).map(Number),
 }));
-function pointerPath(side, base, at) {
-  const across = side === 'left' || side === 'right';
-  const away = side === 'left' || side === 'top' ? -1 : 1;
-  const out = (v) => +(base + away * v).toFixed(3);
-  const along = (v) => +(v + at - POINTER.span / 2).toFixed(3);
+function pointerPath(side, base, at, k) {
+  const away = side === 'left' ? -1 : 1;
+  const out = (v) => +(base + away * v * k).toFixed(3);
+  const along = (v) => +(v * k + at - (POINTER.span * k) / 2).toFixed(3);
   return POINTER_SEGMENTS.map(({ command, values }) => {
-    if (command === 'V') return (across ? 'V' : 'H') + values.map(along).join(' ');
+    if (command === 'V') return 'V' + values.map(along).join(' ');
     const points = [];
-    for (let i = 0; i < values.length; i += 2) points.push(across ? `${out(values[i])} ${along(values[i + 1])}` : `${along(values[i + 1])} ${out(values[i])}`);
+    for (let i = 0; i < values.length; i += 2) points.push(`${out(values[i])} ${along(values[i + 1])}`);
     return command + points.join(' ');
   }).join('');
 }
-const roundedRect = (x, y, w, h, r) => `M${x + r} ${y}H${x + w - r}A${r} ${r} 0 0 1 ${x + w} ${y + r}V${y + h - r}A${r} ${r} 0 0 1 ${x + w - r} ${y + h}H${x + r}A${r} ${r} 0 0 1 ${x} ${y + h - r}V${y + r}A${r} ${r} 0 0 1 ${x + r} ${y}Z`;
+// A rounded rect with a radius for each corner: top left, top right, bottom right, bottom left.
+const roundedRect = (x, w, h, [tl, tr, br, bl]) => `M${x + tl} 0H${x + w - tr}A${tr} ${tr} 0 0 1 ${x + w} ${tr}V${h - br}A${br} ${br} 0 0 1 ${x + w - br} ${h}H${x + bl}A${bl} ${bl} 0 0 1 ${x} ${h - bl}V${tl}A${tl} ${tl} 0 0 1 ${x + tl} 0Z`;
+
+/** How big a box h tall with corners r draws its pointer: whole when it fits
+ *  between the corners, else in proportion to the box's height. */
+export const pointerScale = (h, r) => Math.min(1, h / (2 * r + POINTER.span));
+/** The corners on the pointer's side, rounded less to make room for it. */
+export const pointerCorner = (h, r, k) => Math.min(r, (h - POINTER.span * k) / 2);
 
 /** A glass's outline in CSS px, for a box w by h with corners r and maybe a
- *  pointer ({ side: 'left' | 'right' | 'top' | 'bottom', at }), which the
- *  box includes. */
+ *  pointer ({ side: 'left' | 'right', at, scale }), which the box's width
+ *  includes at full size: a smaller one keeps its base on the box. */
 export function outlinePath(w, h, r, pointer) {
-  if (!pointer) return roundedRect(0, 0, w, h, r);
-  const d = POINTER.depth;
-  const { side, at } = pointer;
-  if (side === 'left') return roundedRect(d, 0, w - d, h, r) + pointerPath(side, d, at);
-  if (side === 'right') return roundedRect(0, 0, w - d, h, r) + pointerPath(side, w - d, at);
-  if (side === 'top') return roundedRect(0, d, w, h - d, r) + pointerPath(side, d, at);
-  return roundedRect(0, 0, w, h - d, r) + pointerPath(side, h - d, at);
+  if (!pointer) return roundedRect(0, w, h, [r, r, r, r]);
+  const k = pointer.scale ?? 1;
+  const body = w - POINTER.depth;
+  const c = pointerCorner(h, r, k);
+  if (pointer.side === 'left') return roundedRect(POINTER.depth, body, h, [c, r, r, c]) + pointerPath('left', POINTER.depth, pointer.at, k);
+  return roundedRect(0, body, h, [r, c, c, r]) + pointerPath('right', body, pointer.at, k);
 }
 
 // Distance from each pixel inside a mask to the nearest pixel outside it, in
@@ -476,7 +479,7 @@ function filterFor(material, urls, width, height) {
 }
 
 function glassFor(name, width, height, radius, dpr, dark, pointer) {
-  const key = `${name}:${width}x${height}r${radius}@${dpr}:${dark}:${pointer ? `${pointer.side}${pointer.at}` : ''}`;
+  const key = `${name}:${width}x${height}r${radius}@${dpr}:${dark}:${pointer ? `${pointer.side}${pointer.at}x${pointer.scale}` : ''}`;
   if (!glasses.has(key)) {
     glasses.set(key, (async () => {
       const material = MATERIALS[name];
@@ -499,9 +502,9 @@ async function paint(el, name) {
   if (!w || !h) return;
   const dark = matchMedia('(prefers-color-scheme: dark)').matches;
   const radius = parseFloat(getComputedStyle(el).borderTopLeftRadius) || h / 2;
-  // data-pointer="left 64": a popover's pointer, on that edge, centered 64 px along it.
-  const [side, at] = (el.dataset.pointer ?? '').split(' ');
-  const pointer = side ? { side, at: Math.round(Number(at)) } : null;
+  // data-pointer="left 64 1": a popover's pointer, on that edge, centered 64 px down, at that scale.
+  const [side, at, scale] = (el.dataset.pointer ?? '').split(' ');
+  const pointer = side ? { side, at: Math.round(Number(at)), scale: scale ? Number(scale) : 1 } : null;
   const { lightURL, faceURL, filter } = await glassFor(name, w, h, radius, devicePixelRatio || 1, dark, pointer);
   el.style.setProperty('--glass-light', `url("${lightURL}")`);
   if (faceURL) {

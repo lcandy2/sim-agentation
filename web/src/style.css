@@ -979,12 +979,6 @@ kbd {
 }
 .composer.pointer-left { padding-left: 18.5px; }
 .composer.pointer-right { padding-right: 18.5px; }
-/* With its pointer on top or bottom (a short composer, below or above the
-   selection), its box is the body's width and takes the pointer in height. */
-.composer.pointer-top,
-.composer.pointer-bottom { width: 360px; }
-.composer.pointer-top { padding-top: 18.5px; }
-.composer.pointer-bottom { padding-bottom: 18.5px; }
 .composer.glass-filtered { background: none; }
 .composer.glass-on::after {
   content: "";
