@@ -78,8 +78,8 @@
   --accent-tint: color-mix(in srgb, var(--accent) 6%, transparent);
   --on-accent: rgba(255, 255, 255, 0.92);
   --preview-screen: linear-gradient(#3b8ed0, #5aaced);
-  --mark: #ff383c; /* red; annotations: hover, the selection, markers */
-  --design: #6155f5; /* indigo; Design Mode: its button and the frozen device's outline */
+  --mark: #ff383c; /* red; annotations' markers and count, recording */
+  --design: #6155f5; /* indigo; Design Mode: its button, the frozen device's outline, hover and selection */
   --ok: #34c759; /* green */
   --warn: #ff8d28; /* orange */
   --glass: rgba(255, 255, 255, 0.8);
@@ -686,14 +686,14 @@ kbd {
    upright when the device is turned. */
 .hl, .hl-label, .sel, .marker { position: absolute; pointer-events: none; }
 /* Outlines sit just outside the box (1 pt) so they never cover the text they mark. */
-/* Hover and selection are one color, the selection's: see-through while
-   hovering, solid once selected. */
-.hl { outline: 1.5px solid color-mix(in srgb, var(--mark) 50%, transparent); outline-offset: 1px; background: color-mix(in srgb, var(--mark) 6%, transparent); border-radius: 3px; }
+/* Hover and selection are Design Mode's color, like its button and the
+   device's outline: see-through while hovering, solid once selected. */
+.hl { outline: 1.5px solid color-mix(in srgb, var(--design) 50%, transparent); outline-offset: 1px; background: color-mix(in srgb, var(--design) 6%, transparent); border-radius: 3px; }
 .hl-label {
   z-index: 1;
   transform-origin: 0 0;
   transform: rotate(var(--unrotate, 0deg)) translate(-3px, calc(-100% - 5px));
-  background: var(--mark);
+  background: var(--design);
   color: #fff;
   font-size: 11px;
   padding: 1px 7px;
@@ -703,7 +703,7 @@ kbd {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.sel { outline: 2px solid var(--mark); outline-offset: 0.5px; background: color-mix(in srgb, var(--mark) 12%, transparent); border-radius: 3px; }
+.sel { outline: 2px solid var(--design); outline-offset: 0.5px; background: color-mix(in srgb, var(--design) 12%, transparent); border-radius: 3px; }
 .marker {
   width: 20px;
   height: 20px;
