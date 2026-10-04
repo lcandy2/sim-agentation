@@ -7,7 +7,7 @@ const paths = {
   // A selection's chip in the composer, by what it is: an image, a button,
   // text, a field, another view, an area dragged out; and the x that takes it away.
   'kind-image': '<rect x="3.5" y="5" width="17" height="14" rx="2.5"/><circle cx="9" cy="10" r="1.6"/><path d="m4 17 5-4.5 3.5 3 2.5-2 5 3.5"/>',
-  'kind-button': '<rect x="3" y="7" width="18" height="10" rx="5"/>',
+  'kind-button': '<path d="M11 17.5H6A2.5 2.5 0 0 1 3.5 15V8A2.5 2.5 0 0 1 6 5.5h12A2.5 2.5 0 0 1 20.5 8v3.5"/><path d="m13.5 13.5 7 2.4-3 1.1-1.2 3z"/>',
   'kind-text': '<path d="M5.5 6h13M12 6v13"/>',
   'kind-field': '<rect x="3" y="6" width="18" height="12" rx="2.5"/><path d="M8 9.5v5"/>',
   'kind-view': '<rect x="4" y="4" width="16" height="16" rx="3"/>',

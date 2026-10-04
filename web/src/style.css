@@ -974,10 +974,9 @@ kbd {
 
 /* ---------- composer popover ---------- */
 
-/* macOS 27's Popover (Figma, Popovers page): its glass (lib/glass.js), 12 pt
-   in with 8 pt between, its corners concentric with the capsule buttons
-   (12 + 16); the target as a headline, the note in a text field,
-   the Alert's capsule buttons. Its box takes in its pointer, Figma's
+/* macOS 27's Popover (Figma, Popovers page): its glass (lib/glass.js), 8 pt
+   in, its corners concentric with the note's field (8 + 16); the field
+   holds the selections' chips, the note and the send button. Its box takes in its pointer, Figma's
    Cartouche, 10.5 by 46, on the edge facing the selection: the box's
    clip-path is body and pointer as one (components/Composer.svelte). */
 .composer-at { position: fixed; z-index: 10; }
@@ -993,14 +992,14 @@ kbd {
   display: grid;
   grid-template-columns: minmax(0, 1fr); /* the row can't widen it past its edges */
   gap: 8px;
-  padding: 12px;
-  border-radius: 28px;
+  padding: 8px;
+  border-radius: 24px;
   background: var(--popover-fill);
   -webkit-backdrop-filter: blur(13px);
   backdrop-filter: blur(13px);
 }
-.composer.pointer-left { padding-left: 22.5px; }
-.composer.pointer-right { padding-right: 22.5px; }
+.composer.pointer-left { padding-left: 18.5px; }
+.composer.pointer-right { padding-right: 18.5px; }
 .composer.glass-filtered { background: none; }
 .composer.glass-on::after {
   content: "";
@@ -1011,7 +1010,7 @@ kbd {
   background: var(--glass-light) center / 100% 100% no-repeat;
   pointer-events: none;
 }
-/* The note's field, its corners concentric with the composer's (28 - 12),
+/* The note's field, its corners concentric with the composer's (24 - 8),
    room on the right for the send button in its corner: the selections'
    chips first, the note going on after them (components/Composer.svelte). */
 .composer .field.note { position: relative; height: auto; padding: 0; border-radius: 16px; }
@@ -1033,7 +1032,7 @@ kbd {
 .chip-icon { display: inline-grid; }
 /* The send button, 4 in from the field's bottom right corner, concentric
    with it (12 + 4), placed over the form (components/Composer.svelte). */
-.glass-btn.composer-send { position: absolute; bottom: 16px; width: 24px; height: 24px; }
+.glass-btn.composer-send { position: absolute; bottom: 12px; width: 24px; height: 24px; }
 .glass-btn.composer-send svg { width: 15px; height: 15px; }
 .glass-btn.composer-send:disabled { opacity: calc(var(--pop) * 0.4); }
 

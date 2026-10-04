@@ -15,7 +15,7 @@
   // and one shadow cover both, as in Figma.
   const BODY = 360;
   const WIDTH = BODY + POINTER.depth;
-  const RADIUS = 28;                       // concentric with the capsule buttons, 12 in (style.css)
+  const RADIUS = 24;                       // concentric with the note's field, 8 in (style.css)
   const GAP = 12;                          // from the selection to the pointer's tip
   const CLEAR = RADIUS + POINTER.span / 2; // the corner radius plus half the pointer
   const SHADOW_PAD = 80;                   // room around the outline for the shadow
@@ -75,8 +75,8 @@
 
   // Liquid Glass lights from within where it's touched (style.css), and
   // held, the button can be pulled: it follows the pointer a little, with
-  // more give the farther (never past 8 px), drawn out toward it and
-  // thinner across like a drop (up to 1.2 by 1/1.2), and snaps back when
+  // much resistance (never past 4 px), drawn out toward it and thinner
+  // across like a drop (up to 1.15 by 1/1.15), and snaps back when
   // let go (style.css's spring). A pull isn't a click.
   let pull = null;
   let pulled = false;
@@ -98,8 +98,8 @@
     const d = Math.hypot(dx, dy);
     if (!pull.moved && d < 4) return;
     pull.moved = true;
-    const k = (8 * (1 - Math.exp(-d / 90))) / d;
-    const stretch = 1 + 0.2 * (1 - Math.exp(-d / 100));
+    const k = (4 * (1 - Math.exp(-d / 120))) / d;
+    const stretch = 1 + 0.15 * (1 - Math.exp(-d / 120));
     const angle = Math.atan2(dy, dx);
     const el = e.currentTarget;
     el.style.transition = 'none';
@@ -201,7 +201,7 @@
     type="submit"
     form="composer-form"
     class="glass-btn prominent composer-send"
-    style:right={place?.pointer.side === 'right' ? '26.5px' : '16px'}
+    style:right={place?.pointer.side === 'right' ? '22.5px' : '12px'}
     title="Add (⌘↩)"
     aria-label="Add"
     disabled={!comment.trim()}
