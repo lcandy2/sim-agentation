@@ -1,39 +1,38 @@
-// macOS-style notification banners: one at a time, gone after a few seconds
-// unless the pointer rests on it.
+// macOS-style notification banners, stacked at the top right with the
+// newest on top; each goes after a few seconds unless the pointer rests on it.
 
-export const banner = $state({ current: null });
+export const banners = $state([]);
 
 const SHOWN_FOR = 5000;
-let timer = null;
-let held = false;
+const MOST = 4; // past this many, the oldest goes
+const timers = new Map();
+let next = 1;
 
 /** Shows { title, message, image?, action? } as a banner; action runs on click. */
 export function notify(note) {
-  if (banner.current?.image?.startsWith('blob:')) URL.revokeObjectURL(banner.current.image);
-  banner.current = { ...note, id: (banner.current?.id ?? 0) + 1 };
-  restart();
+  const id = next++;
+  banners.unshift({ ...note, id });
+  while (banners.length > MOST) dismiss(banners.at(-1).id);
+  restart(id);
+  return id;
 }
 
-export function dismiss() {
-  clearTimeout(timer);
-  if (banner.current?.image?.startsWith('blob:')) {
-    const url = banner.current.image;
-    setTimeout(() => URL.revokeObjectURL(url), 1000); // after it has slid out
-  }
-  banner.current = null;
+export function dismiss(id) {
+  hold(id);
+  const i = banners.findIndex((b) => b.id === id);
+  if (i < 0) return;
+  const [gone] = banners.splice(i, 1);
+  if (gone.image?.startsWith('blob:')) setTimeout(() => URL.revokeObjectURL(gone.image), 1000); // after it has slid out
 }
 
-export function hold() {
-  held = true;
-  clearTimeout(timer);
+export function hold(id) {
+  clearTimeout(timers.get(id));
+  timers.delete(id);
 }
 
-export function release() {
-  held = false;
-  restart();
-}
+export const release = (id) => restart(id);
 
-function restart() {
-  clearTimeout(timer);
-  if (!held) timer = setTimeout(dismiss, SHOWN_FOR);
+function restart(id) {
+  clearTimeout(timers.get(id));
+  timers.set(id, setTimeout(() => dismiss(id), SHOWN_FOR));
 }

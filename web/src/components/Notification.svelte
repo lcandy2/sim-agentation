@@ -1,32 +1,38 @@
 <script>
   import { fly } from 'svelte/transition';
+  import { flip } from 'svelte/animate';
   import { cubicOut, cubicIn } from 'svelte/easing';
-  import { banner, dismiss, hold, release } from '../lib/notify.svelte.js';
+  import { banners, dismiss, hold, release } from '../lib/notify.svelte.js';
 
-  // macOS 27's notification banner (Figma, Notifications page), sliding in
-  // from the right as macOS's do. A click runs its action and closes it.
-  function open() {
-    banner.current?.action?.();
-    dismiss();
+  // macOS 27's notification banners (Figma, Notifications page), stacked at
+  // the top right, the newest on top. Each slides in from beyond the window's
+  // right edge and back out as macOS's do, without fading, and the others
+  // glide to make or close the room. Global: the first banner and the last
+  // come and go with the list, which local transitions don't play for. A
+  // click runs its action and closes it.
+  function open(b) {
+    b.action?.();
+    dismiss(b.id);
   }
 </script>
 
-{#if banner.current}
-  {#key banner.current.id}
+<div class="banners">
+  {#each banners as b (b.id)}
     <button
       class="notice banner"
-      onclick={open}
-      onmouseenter={hold}
-      onmouseleave={release}
-      in:fly={{ x: 380, duration: 380, easing: cubicOut }}
-      out:fly={{ x: 380, duration: 240, easing: cubicIn }}
+      onclick={() => open(b)}
+      onmouseenter={() => hold(b.id)}
+      onmouseleave={() => release(b.id)}
+      in:fly|global={{ x: 380, opacity: 1, duration: 380, easing: cubicOut }}
+      out:fly|global={{ x: 380, opacity: 1, duration: 240, easing: cubicIn }}
+      animate:flip={{ duration: 320, easing: cubicOut }}
     >
-      {#if banner.current.image}<img class="banner-image" src={banner.current.image} alt="">{/if}
+      {#if b.image}<img class="banner-image" src={b.image} alt="">{/if}
       <span class="banner-text">
-        <strong>{banner.current.title}</strong>
-        {#if banner.current.message}<span>{banner.current.message}</span>{/if}
+        <strong>{b.title}</strong>
+        {#if b.message}<span>{b.message}</span>{/if}
       </span>
       <span class="banner-time">now</span>
     </button>
-  {/key}
-{/if}
+  {/each}
+</div>

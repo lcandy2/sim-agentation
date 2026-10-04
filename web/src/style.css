@@ -657,12 +657,19 @@ kbd {
   background: var(--glass-light) center / 100% 100% no-repeat;
   pointer-events: none;
 }
-.banner {
+/* Banners stack at the top right, 8 pt apart. */
+.banners {
   position: fixed;
   z-index: 40;
   top: 56px;
   right: 12px;
   width: 344px;
+  display: grid;
+  gap: 8px;
+  pointer-events: none;
+}
+.banner {
+  pointer-events: auto;
   display: flex;
   align-items: center;
   gap: 8px;
