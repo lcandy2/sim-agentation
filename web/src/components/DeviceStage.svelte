@@ -116,6 +116,8 @@
     action: ['Camera Control', '<path d="M2.5 6.5h3l1.5-2h4l1.5 2h3v8h-13z"/><circle cx="9" cy="10.2" r="2.4"/>'],
     power: ['Sleep/Wake', '<rect x="4" y="8" width="10" height="7.5" rx="1.5"/><path d="M6 8V5.8a3 3 0 0 1 6 0V8"/>'],
   };
+  // A key's glyph stays on the stage, however close the book comes.
+  const keySpot = (at, length) => Math.min(length - 16, Math.max(16, at * length));
   const glyph = (paths) => `<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths}</svg>`;
 </script>
 
@@ -143,8 +145,8 @@
                 class="hw-key"
                 title={KEYS[key.id]?.[0] ?? key.id}
                 aria-label={KEYS[key.id]?.[0] ?? key.id}
-                style:left="{key.control[0] * box.width}px"
-                style:top="{key.control[1] * box.height}px"
+                style:left="{keySpot(key.control[0], box.width)}px"
+                style:top="{keySpot(key.control[1], box.height)}px"
                 onclick={() => pressButton(key.id)}
               >{@html glyph(KEYS[key.id]?.[1] ?? '')}</button>
             {/each}

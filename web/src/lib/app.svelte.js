@@ -1443,7 +1443,8 @@ export function syncView() {
     };
     if (box.width !== ui.box3d?.width || box.height !== ui.box3d?.height) ui.box3d = box;
     const k = Math.min(window.devicePixelRatio || 1, 2);
-    msg = { type: 'view', mode: '3d', width: Math.round(box.width * k), height: Math.round(box.height * k), background: stageColor(), zoom: ui.zoom3d };
+    // The book fills the stage to 32 px from its edges, clear of their fade.
+    msg = { type: 'view', mode: '3d', width: Math.round(box.width * k), height: Math.round(box.height * k), background: stageColor(), zoom: ui.zoom3d, margin: 32 * k };
   }
   const key = JSON.stringify(msg);
   if (key === sentView || rt.ws?.readyState !== WebSocket.OPEN) return;

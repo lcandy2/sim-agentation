@@ -213,6 +213,7 @@ final class DeviceSession: @unchecked Sendable {
         let size = (width: Int(width / 2) * 2, height: Int(height / 2) * 2)
         let background = Self.color(msg["background"] as? String)
         let zoom = (msg["zoom"] as? NSNumber)?.doubleValue ?? 1
+        let margin = (msg["margin"] as? NSNumber)?.doubleValue ?? 0
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
             MainActor.assumeIsolated {
@@ -224,6 +225,7 @@ final class DeviceSession: @unchecked Sendable {
                     let fresh = !showing || scene.size != size
                     try scene.resize(width: size.width, height: size.height)
                     scene.setBackground(background)
+                    scene.setMargin(margin * fit)
                     scene.setZoom(zoom)
                     self.lock.lock()
                     self.scene = scene

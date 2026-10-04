@@ -149,18 +149,16 @@ struct FoldPose {
 /// on the world z axis looking down -z, a fixed vertical field of view.
 struct Camera {
     static let fieldOfView = 32.0
-    /// How much of the frame the posed book (and the keys beside it) fills
-    /// at 100%, on its tighter side.
-    static let fill = 0.9
     var distance: Double
     var aspect: Double
 
-    /// The distance at which every point, in camera space, is in frame
-    /// with `fill` to spare: a point at x, y and depth z is in frame once
-    /// distance − z ≥ |x| / tan(half width) and |y| / tan(half height).
-    static func distance(fitting points: [Vector3], aspect: Double) -> Double {
+    /// The distance at which every point, in camera space, is in frame,
+    /// filling `fill` of its width and height: a point at x, y and depth z
+    /// is in frame once distance − z ≥ |x| / tan(half width) and
+    /// |y| / tan(half height).
+    static func distance(fitting points: [Vector3], aspect: Double, fill: (x: Double, y: Double)) -> Double {
         let tanV = tan(fieldOfView * .pi / 360), tanH = tanV * aspect
-        return points.map { $0.z + max(abs($0.x) / (tanH * fill), abs($0.y) / (tanV * fill)) }.max() ?? 1
+        return points.map { $0.z + max(abs($0.x) / (tanH * fill.x), abs($0.y) / (tanV * fill.y)) }.max() ?? 1
     }
 
     /// (0, 0) top-left of the frame, (1, 1) bottom-right.
@@ -277,6 +275,8 @@ final class DuoScene {
     /// moves in and out, as a dolly, rather than the lens changing.
     private var framedDistance = 1.0
     private var zoom = 1.0
+    /// Pixels the book stays in from each edge at 100%.
+    private var margin = 0.0
     private var degrees = 0.0
     private var unfoldedLit = false
     private var turn = 0
@@ -351,9 +351,17 @@ final class DuoScene {
         cameraEntity.position = [0, 0, Float(camera.distance)]
     }
 
-    /// Frames the book as it's posed now, the keys beside it included: a
-    /// shut book is half as wide as an open one, so the camera comes in as
-    /// it shuts and backs off as it opens, and turns with the device.
+    /// How far in from each edge the book stays at 100%, in pixels of the
+    /// frame (the page fades the frame's edges, and the keys go beside it).
+    func setMargin(_ pixels: Double) {
+        guard pixels != margin else { return }
+        margin = pixels
+        frame()
+    }
+
+    /// Frames the book as it's posed now, as large as `margin` lets it be:
+    /// a shut book is half as wide as an open one, so the camera comes in
+    /// as it shuts and backs off as it opens, and turns with the device.
     private func frame() {
         let pose = FoldPose.at(degrees: degrees)
         let raise = 180 - max(0, min(180, degrees))
@@ -369,16 +377,12 @@ final class DuoScene {
                 }
             }
         }
-        // The keys' glyphs sit beside the body (see `Projection.buttons`).
-        let margin = max(body.x, body.y) * 0.06
-        for anchor in anchors {
-            let p = anchor.at
-            let onSide = abs(p.x) / max(hx, 1e-9) >= abs(p.y) / max(hy, 1e-9)
-            let control = p + (onSide ? Vector3(x: p.x < 0 ? -margin : margin, y: 0, z: 0) : Vector3(x: 0, y: p.y < 0 ? -margin : margin, z: 0))
-            points.append(p.x < 0 ? control.rotatedY(raise) : control)
-        }
         let placed = points.map { rotation.apply($0.rotatedY(pose.yawDegrees) + offset) }
-        framedDistance = Camera.distance(fitting: placed, aspect: camera.aspect)
+        let fill = (
+            x: max(0.5, 1 - 2 * margin / Double(max(size.width, 1))),
+            y: max(0.5, 1 - 2 * margin / Double(max(size.height, 1)))
+        )
+        framedDistance = Camera.distance(fitting: placed, aspect: camera.aspect, fill: fill)
         setZoom(zoom)
     }
 
