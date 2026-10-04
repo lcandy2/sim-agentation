@@ -442,7 +442,7 @@ function onText(msg) {
     onPanel(msg);
   } else if (msg.type === 'hinge') {
     ui.hinge = msg.degrees;
-    refreezeSoon();
+    onFolding();
   } else if (msg.type === 'scene') {
     ui.scene = { pieces: msg.pieces, buttons: msg.buttons, width: msg.width, height: msg.height };
     if (typeof msg.degrees === 'number') ui.hinge = msg.degrees; // the pose the book is drawn in
@@ -454,7 +454,7 @@ function onText(msg) {
   } else if (msg.type === 'pose_result') {
     ui.posing = false;
     if (!msg.ok) setStatus(msg.error);
-    refreezeSoon();
+    onFolding();
   } else if (msg.type === 'stats') {
     onStats(msg);
   } else if (msg.type === 'probe_result') {
@@ -912,9 +912,10 @@ export async function setMode(mode) {
   if (mode === ui.mode) return;
   // Nothing to freeze yet: no live frame from a running device.
   if (mode === 'annotate' && (!rt.frame || !ui.chrome)) return;
-  const was3D = is3D();
   ui.mode = mode;
   closeComposer();
+  folding = false;
+  clearTimeout(foldTimer);
   syncView(); // in 3D, the host holds the screen while annotating
 
   if (mode === 'annotate') {
@@ -923,78 +924,92 @@ export async function setMode(mode) {
     ui.panels.tab = 'annotations';
     storage.set('inspector-tab', 'annotations');
     if (!ui.panels.inspector && !crowdedOut.inspector) showPanel('inspector', true);
-    // Freeze the frame on screen right now, then fetch the accessibility tree
-    // and SDK data and warm the pixel regions while those requests are out.
-    const data = Promise.all([
-      fetchTree(),
-      fetch('/api/sdk').then((r) => (r.status === 200 ? r.json() : null)).catch(() => null),
-    ]);
-    // Freeze a copy: video frames belong to the decoder and must be closed soon.
-    const source = rt.frame;
-    rt.frame = null;
-    // A 3D frame is the book, not the screen: freeze the screen itself.
-    const bitmap = was3D ? await requestStill() : await createImageBitmap(source);
-    source.close?.();
-    if (!bitmap) {
-      ui.mode = 'interact';
-      syncView();
-      return flashStatus("Couldn't freeze the screen");
-    }
-    // A stream below full resolution blurs small things together (a ring of
-    // dots, a word and its icon), so ask for the screen at full size too.
-    const still = !was3D && bitmap.width < devicePixels().width ? requestStill() : Promise.resolve(null);
-    if (ui.mode !== 'annotate') return bitmap.close(); // left annotate mode meanwhile
-    const f = (rt.frozen = {
-      bitmap,
-      tree: null,
-      sdk: null,
-      sdkAvailable: null,
-      // The stream may be scaled down, so points come from the device, not the frame.
-      points: { width: ui.chrome.screen.width, height: ui.chrome.screen.height },
-      marks: [],
-    });
-    if (!is3D()) paint(bitmap);
-    ui.frozen = true;
-    setStatus('Freezing…');
-    await new Promise(requestAnimationFrame); // let the frozen frame paint first
-    f.pixels = sampler(bitmap, f.points.width, f.points.height);
-    warm(f.pixels);
-    // The full-size still replaces the frame: what's read, drawn and saved.
-    const full = await still;
-    if (rt.frozen !== f) return full?.close();
-    if (full) {
-      f.bitmap.close?.();
-      f.bitmap = full;
-      if (!is3D()) paint(full);
-      f.pixels = sampler(full, f.points.width, f.points.height);
-      warm(f.pixels);
-    }
-
-    const [tree, sdk] = await data;
-    if (rt.frozen !== f) return; // left annotate mode meanwhile
-    // A turned interface reports turned coordinates; bring them into the
-    // framebuffer's, where the overlay, pixels and touches live.
-    const screen = ui.chrome.screen;
-    // iPhone Duo's root says nothing to go by (see rotation.js); its panels
-    // are drawn upright as the page turns them, home screen included.
-    const foldable = isFoldable();
-    f.turned = (foldable ? ui.orientation.startsWith('landscape') : isTurned(tree, screen)) ? ui.orientation : null;
-    f.tree = treeToPortrait(tree, ui.orientation, screen, foldable);
-    if (f.tree?.frame?.width) f.points = { width: f.tree.frame.width, height: f.tree.frame.height };
-    f.sdkAvailable = matchesFrontApp(sdk, tree) ? sdkToPortrait(sdk, ui.orientation, screen) : null;
-    applySdk();
+    await freeze();
   } else {
-    rt.frozen?.bitmap.close?.();
-    rt.frozen = null;
-    ui.frozen = false;
-    ui.sdkAvailable = false;
-    clearLayer('.hl, .hl-label, .sel, .marker');
-    rt.hover = null;
+    thaw();
     setStatus(ui.live ? '' : 'Connecting…');
-    send({ type: 'snapshot' });
   }
   // The tree can take a while: a composer opened meanwhile keeps its focus.
   if (!ui.draft) rt.overlay?.focus();
+}
+
+/**
+ * Holds the screen as it is now for Design Mode: the frame on screen at
+ * once, then the accessibility tree and SDK data, the pixel regions warmed
+ * while those requests are out.
+ */
+async function freeze() {
+  const was3D = is3D();
+  const data = Promise.all([
+    fetchTree(),
+    fetch('/api/sdk').then((r) => (r.status === 200 ? r.json() : null)).catch(() => null),
+  ]);
+  // Freeze a copy: video frames belong to the decoder and must be closed soon.
+  const source = rt.frame;
+  rt.frame = null;
+  // A 3D frame is the book, not the screen: freeze the screen itself.
+  const bitmap = was3D ? await requestStill() : await createImageBitmap(source);
+  source.close?.();
+  if (!bitmap) {
+    ui.mode = 'interact';
+    syncView();
+    setStatus(ui.live ? '' : 'Connecting…');
+    return flashStatus("Couldn't freeze the screen");
+  }
+  // A stream below full resolution blurs small things together (a ring of
+  // dots, a word and its icon), so ask for the screen at full size too.
+  const still = !was3D && bitmap.width < devicePixels().width ? requestStill() : Promise.resolve(null);
+  if (ui.mode !== 'annotate' || folding) return bitmap.close(); // left annotate mode, or folding again, meanwhile
+  const f = (rt.frozen = {
+    bitmap,
+    tree: null,
+    sdk: null,
+    sdkAvailable: null,
+    // The stream may be scaled down, so points come from the device, not the frame.
+    points: { width: ui.chrome.screen.width, height: ui.chrome.screen.height },
+    marks: [],
+  });
+  if (!is3D()) paint(bitmap);
+  ui.frozen = true;
+  setStatus('Freezing…');
+  await new Promise(requestAnimationFrame); // let the frozen frame paint first
+  f.pixels = sampler(bitmap, f.points.width, f.points.height);
+  warm(f.pixels);
+  // The full-size still replaces the frame: what's read, drawn and saved.
+  const full = await still;
+  if (rt.frozen !== f) return full?.close();
+  if (full) {
+    f.bitmap.close?.();
+    f.bitmap = full;
+    if (!is3D()) paint(full);
+    f.pixels = sampler(full, f.points.width, f.points.height);
+    warm(f.pixels);
+  }
+
+  const [tree, sdk] = await data;
+  if (rt.frozen !== f) return; // left annotate mode meanwhile
+  // A turned interface reports turned coordinates; bring them into the
+  // framebuffer's, where the overlay, pixels and touches live.
+  const screen = ui.chrome.screen;
+  // iPhone Duo's root says nothing to go by (see rotation.js); its panels
+  // are drawn upright as the page turns them, home screen included.
+  const foldable = isFoldable();
+  f.turned = (foldable ? ui.orientation.startsWith('landscape') : isTurned(tree, screen)) ? ui.orientation : null;
+  f.tree = treeToPortrait(tree, ui.orientation, screen, foldable);
+  if (f.tree?.frame?.width) f.points = { width: f.tree.frame.width, height: f.tree.frame.height };
+  f.sdkAvailable = matchesFrontApp(sdk, tree) ? sdkToPortrait(sdk, ui.orientation, screen) : null;
+  applySdk();
+}
+
+/** Lets the screen go live again, Design Mode's boxes and markers cleared. */
+function thaw() {
+  rt.frozen?.bitmap.close?.();
+  rt.frozen = null;
+  ui.frozen = false;
+  ui.sdkAvailable = false;
+  clearLayer('.hl, .hl-label, .sel, .marker');
+  rt.hover = null;
+  send({ type: 'snapshot' });
 }
 
 /** SDK on/off, to compare exact view data with the pixel fallback on the same frame. */
@@ -1451,6 +1466,7 @@ export function currentPose() {
 export function setPose(degrees) {
   if (!ui.running || !isFoldable() || ui.posing) return;
   ui.posing = true;
+  onFolding(); // Design Mode lets the screen go while it folds
   send({ type: 'pose', degrees });
 }
 
@@ -1500,7 +1516,7 @@ export function syncView() {
     if (box.width !== ui.box3d?.width || box.height !== ui.box3d?.height) ui.box3d = box;
     const k = Math.min(window.devicePixelRatio || 1, 2);
     // The book fills the stage to 32 px from its edges, clear of their fade.
-    msg = { type: 'view', mode: '3d', width: Math.round(box.width * k), height: Math.round(box.height * k), background: stageColor(), zoom: ui.zoom3d, margin: 32 * k, frozen: ui.mode === 'annotate' };
+    msg = { type: 'view', mode: '3d', width: Math.round(box.width * k), height: Math.round(box.height * k), background: stageColor(), zoom: ui.zoom3d, margin: 32 * k, frozen: ui.mode === 'annotate' && !folding };
   }
   const key = JSON.stringify(msg);
   if (key === sentView || rt.ws?.readyState !== WebSocket.OPEN) return;
@@ -1534,6 +1550,7 @@ let slideFrame = 0;
  */
 export function slideHinge(degrees) {
   ui.hingeDrag = degrees;
+  if (degrees != null) onFolding();
   if (degrees == null || slideFrame) return;
   slideFrame = requestAnimationFrame(() => {
     slideFrame = 0;
@@ -1556,24 +1573,33 @@ async function onPanel({ panel, orientation, degrees }) {
   ui.orientation = orientation in ROTATION ? orientation : 'portrait';
   await tick();
   updateScale();
-  refreezeSoon();
+  onFolding();
 }
 
-let refreezeTimer = 0;
+let folding = false, foldTimer = 0;
 
 /**
  * Folding a foldable in Design Mode changes what's on its screen, and can
- * light the other one: once the hinge has stopped and SpringBoard has laid
- * the screen out again (a second or so), the screen is frozen afresh, still,
- * tree and all. A note being written is left alone.
+ * light the other one: the screen goes live while the hinge moves, and is
+ * frozen afresh, still, tree and all, once it has stopped and SpringBoard
+ * has laid the screen out again (a second or so). A note being written is
+ * left alone.
  */
-function refreezeSoon() {
-  if (ui.mode !== 'annotate' || !isFoldable()) return;
-  clearTimeout(refreezeTimer);
-  refreezeTimer = setTimeout(async () => {
-    if (ui.mode !== 'annotate' || ui.draft) return;
-    await setMode('interact');
-    await setMode('annotate');
+function onFolding() {
+  if (ui.mode !== 'annotate' || !isFoldable() || ui.draft) return;
+  if (!folding) {
+    folding = true;
+    thaw();
+    syncView(); // the host lets the 3D book's screens go too
+    setStatus('Folding…');
+  }
+  clearTimeout(foldTimer);
+  foldTimer = setTimeout(async function settle() {
+    if (ui.mode !== 'annotate' || !folding) return;
+    if (!rt.frame) return void (foldTimer = setTimeout(settle, 300)); // no live frame yet
+    folding = false;
+    syncView();
+    await freeze();
   }, 1200);
 }
 
