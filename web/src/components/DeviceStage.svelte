@@ -156,7 +156,7 @@
 </script>
 
 <section class="stage" bind:this={stage}>
-  <div class="device-wrap" bind:this={wrap} hidden={!!ui.message || !chrome}>
+  <div class="device-wrap" bind:this={wrap} hidden={!!ui.message || !chrome} style:visibility={ui.settling ? 'hidden' : null}>
     <div
       class="rotor"
       bind:this={rotor}

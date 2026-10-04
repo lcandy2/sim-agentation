@@ -41,6 +41,7 @@ export const ui = $state({
   zoom: storage.get('zoom') ?? 'fit', // 'fit' or CSS pixels per point
   scale: 1,
   shown: 0,           // counts each time a device is shown at its size, for the grow-in
+  settling: false,    // a running foldable just shown, hidden until its view is up (see settleView)
   panels: {
     sidebar: storage.get('panel-sidebar') !== 'hidden',
     inspector: storage.get('panel-inspector') !== 'hidden',
@@ -98,6 +99,8 @@ const rt = {
   watchdog: null,
   pending: null,     // newest decoded frame, not painted yet
   frame: null,       // last painted frame: ImageBitmap or VideoFrame
+  render3D: null,    // { width, height } of the book's frames, once the host draws it
+  panelLit: false,   // the host has said which of a foldable's panels is lit, and the stage drew it
   counts: { frames: 0, bytes: 0 },
   frozen: null,      // { bitmap, tree, points, pixels, sdk, sdkAvailable, marks }
   pendingTree: null,
@@ -190,6 +193,8 @@ function connect(udid) {
     // A new stream says where the hinge is; what the last one said may be stale.
     ui.hinge = null;
     ui.scene = null;
+    rt.render3D = null;
+    rt.panelLit = false;
     sentView = '';
     syncView();
     ws.send(JSON.stringify({ type: 'snapshot' }));
@@ -255,6 +260,7 @@ function paintLoop() {
         setStatus(''); // streaming is the normal state; say nothing
       }
       paint(frame);
+      if (ui.settling) settleView();
     } else if (is3D()) {
       // Design Mode in 3D: the host holds the screen and keeps drawing the
       // book, so it zooms and turns; the frozen still is what's read.
@@ -446,10 +452,13 @@ function onText(msg) {
   } else if (msg.type === 'scene') {
     ui.scene = { pieces: msg.pieces, buttons: msg.buttons, width: msg.width, height: msg.height };
     if (typeof msg.degrees === 'number') ui.hinge = msg.degrees; // the pose the book is drawn in
+    settleView();
   } else if (msg.type === 'view_result') {
+    if (msg.ok && msg.mode === '3d') rt.render3D = { width: msg.width, height: msg.height };
     if (!msg.ok) {
       ui.scene = null;
       setStatus(msg.error);
+      settleView(true); // the flat screen it is
     }
   } else if (msg.type === 'pose_result') {
     ui.posing = false;
@@ -1607,7 +1616,32 @@ async function onPanel({ panel, orientation, degrees }) {
   ui.orientation = orientation in ROTATION ? orientation : 'portrait';
   await tick();
   updateScale();
+  rt.panelLit = true;
   onFolding();
+}
+
+let viewTimer = 0;
+
+/**
+ * A running foldable comes up in steps: the cover's chrome first, then the
+ * panel the hinge lights, then the host's 3D book, each with a frame or two
+ * of the last one's picture (the unfolded screen in the cover, the flat
+ * screen stretched over the book), which flashed. So the stage keeps it
+ * hidden until the view it settles on has its own first frame, a book's
+ * frame at the book's size or the lit panel's in its chrome, and grows it in
+ * then; `now` (or SETTLE_LIMIT) shows whatever is there.
+ */
+const SETTLE_LIMIT = 4000; // ms
+function settleView(now = false) {
+  if (!ui.settling) return;
+  if (!now) {
+    // The book's frames are the stage's shape (the stream may scale them down).
+    const book = rt.render3D && rt.canvas && Math.abs(rt.canvas.width / rt.canvas.height - rt.render3D.width / rt.render3D.height) < 0.01;
+    if (wants3D() ? !(is3D() && book) : !rt.panelLit) return;
+  }
+  clearTimeout(viewTimer);
+  ui.settling = false;
+  ui.shown++;
 }
 
 let folding = false, foldTimer = 0;
@@ -1649,6 +1683,7 @@ export async function loadDevices() {
 
 /** Selecting shows the device; only a running one streams. Starting is explicit. */
 export async function selectDevice(sim) {
+  const starting = ui.starting;
   ui.picked = [sim.udid]; // showing a device selects it alone
   await setMode('interact');
   stopStream();
@@ -1673,7 +1708,12 @@ export async function selectDevice(sim) {
   if (!ui.running) rt.ctx?.clearRect(0, 0, rt.canvas.width, rt.canvas.height);
   await tick();
   updateScale();
-  ui.shown++;
+  // A running foldable shows once its view is up (see settleView); one just
+  // started shows its boot as it goes.
+  clearTimeout(viewTimer);
+  ui.settling = ui.running && !starting && isFoldable();
+  if (ui.settling) viewTimer = setTimeout(() => settleView(true), SETTLE_LIMIT);
+  else ui.shown++;
   ui.inputShadowed = false;
   ui.hinge = null;
   ui.hingeDrag = null;
