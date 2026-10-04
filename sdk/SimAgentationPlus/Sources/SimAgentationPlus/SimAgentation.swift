@@ -48,6 +48,8 @@ func typeName(_ type: Any.Type) -> String {
     return base == "ModifiedContent" || base.hasPrefix("_") ? "View" : base
 }
 
+// UIKit's views: iOS and iPadOS (Mac Catalyst too), tvOS and visionOS.
+#if os(iOS) || os(tvOS) || os(visionOS)
 public extension UIView {
     /// Makes this view selectable in sim-agentation under its class name,
     /// with the file and line where it was tagged (Debug only).
@@ -60,3 +62,4 @@ public extension UIView {
         return self
     }
 }
+#endif

@@ -145,12 +145,14 @@ Status changes and replies show up in the browser's inspector.
 
 ## SimAgentationPlus SDK
 
-Add SimAgentationPlus (iOS 17 and later) to an app you build yourself for exact selections and source locations. Everything compiles out of Release builds.
+Add SimAgentationPlus to an app you build yourself for exact selections and source locations. Everything compiles out of Release builds.
+
+It builds for every Apple platform: iOS and iPadOS 17, Mac Catalyst 17, macOS 14, tvOS 17, watchOS 10 and visionOS 1, or later. Where UIKit draws the interface it walks the views and layers; on macOS and watchOS it reports the `.simTag()` views only.
 
 In Xcode, choose **File > Add Package Dependencies**, enter `https://github.com/lcandy2/sim-agentation`, and add SimAgentationPlus, the package's one library, to your app target. In a `Package.swift`:
 
 ```swift
-.package(url: "https://github.com/lcandy2/sim-agentation", from: "0.1.0"),
+.package(url: "https://github.com/lcandy2/sim-agentation", from: "0.1.1"),
 // in your target's dependencies:
 .product(name: "SimAgentationPlus", package: "sim-agentation"),
 ```

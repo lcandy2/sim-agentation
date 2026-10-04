@@ -1,5 +1,8 @@
 #if DEBUG
-import UIKit
+import SwiftUI
+#if os(watchOS)
+import WatchKit
+#endif
 
 struct Rect: Encodable {
     let x: Double
@@ -40,24 +43,43 @@ struct Snapshot: Encodable {
 }
 
 /// Walks every visible window's views, plus the layers SwiftUI draws
-/// backgrounds and shapes into, in window coordinates (points).
+/// backgrounds and shapes into, in window coordinates (points). Without
+/// UIKit (macOS, watchOS) there are no views to walk, and the snapshot is
+/// the `.simTag()` views alone.
 @MainActor
 enum SnapshotBuilder {
     static func build() -> Snapshot {
+        #if os(iOS) || os(tvOS) || os(visionOS)
         let windows = UIApplication.shared.connectedScenes
             .compactMap { $0 as? UIWindowScene }
             .flatMap(\.windows)
             .filter { !$0.isHidden }
+        #if os(visionOS)
+        let screen = windows.first?.bounds ?? .zero // no screen: the window is the space
+        #else
+        let screen = windows.first?.screen.bounds ?? .zero
+        #endif
+        let nodes = windows.compactMap { node($0, in: $0) }
+        #elseif os(watchOS)
+        let screen = WKInterfaceDevice.current().screenBounds
+        let nodes: [Node] = []
+        #else
+        let window = NSApplication.shared.mainWindow ?? NSApplication.shared.windows.first(where: \.isVisible)
+        let screen = window?.contentView?.bounds ?? .zero
+        let nodes: [Node] = []
+        #endif
         return Snapshot(
             bundleId: Bundle.main.bundleIdentifier,
             // Localized when available, matching the name the accessibility tree reports.
             appName: (Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName")
                 ?? Bundle.main.object(forInfoDictionaryKey: "CFBundleName")) as? String,
-            screen: Rect(windows.first?.screen.bounds ?? .zero),
+            screen: Rect(screen),
             tags: TagRegistry.shared.visible,
-            windows: windows.compactMap { node($0, in: $0) }
+            windows: nodes
         )
     }
+
+    #if os(iOS) || os(tvOS) || os(visionOS)
 
     private static func node(_ view: UIView, in window: UIWindow) -> Node? {
         guard !view.isHidden, view.alpha > 0.01 else { return nil }
@@ -152,6 +174,7 @@ enum SnapshotBuilder {
         let bytes = [c[0], c[1], c[2], rgb.alpha].map { Int(($0 * 255).rounded().clamped(to: 0...255)) }
         return "#" + bytes.map { String(format: "%02x", $0) }.joined()
     }
+    #endif
 }
 
 private extension Comparable {
