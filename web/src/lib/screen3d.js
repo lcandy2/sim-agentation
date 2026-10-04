@@ -122,17 +122,15 @@ export const facing = ({ piece }) => piece.facing ?? 1;
 
 /**
  * The CSS that lays a layer of framebuffer coordinates, `size` px, onto
- * one piece: its `matrix3d` (with `transform-origin: 0 0`), and a clip
- * along the hinge only, so what crosses it is cut there while labels may
- * still stand past the screen's outer edges.
+ * one piece: its `matrix3d` (with `transform-origin: 0 0`), and a clip to
+ * the part of the screen it shows, so a box is cut at the hinge and at the
+ * screen's edges (labels and markers stand on a layer of their own).
  */
 export function layerStyle({ piece, toStage }, size) {
   const scale = [1 / size.width, 0, 0, 0, 1 / size.height, 0, 0, 0, 1];
   const [a, b, c, d, e, f, g, h, i] = multiply(toStage, scale);
   const transform = `matrix3d(${[a, d, 0, g, b, e, 0, h, 0, 0, 1, 0, c, f, 0, i].join(',')})`;
-  const edge = (t, outer) => (t > 0.0001 && t < 0.9999 ? `${t * 100}%` : outer);
-  const [l, r] = [edge(piece.u[0], '-100%'), edge(piece.u[1], '200%')];
-  const [t, bottom] = [edge(piece.v[0], '-100%'), edge(piece.v[1], '200%')];
+  const [l, r, t, bottom] = [piece.u[0], piece.u[1], piece.v[0], piece.v[1]].map((x) => `${x * 100}%`);
   return { transform, clip: `polygon(${l} ${t}, ${r} ${t}, ${r} ${bottom}, ${l} ${bottom})` };
 }
 

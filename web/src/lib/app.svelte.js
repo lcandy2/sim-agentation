@@ -986,8 +986,26 @@ async function freeze() {
     warm(f.pixels);
   }
 
-  const [tree, sdk] = await data;
+  let [tree, sdk] = await data;
   if (rt.frozen !== f) return; // left annotate mode meanwhile
+  // A foldable's tree can still be the other panel's just after the fold:
+  // ask again a few times. The cover can't hold what lies outside it, so
+  // there it's no tree rather than the wrong one; the unfolded panel's own
+  // can look like the cover's (a sparse screen), so there it's kept.
+  if (isFoldable()) {
+    const cover = (await chromeOf(ui.udid))?.screen;
+    const folded = isFolded();
+    for (let tries = 0; tree && cover && withinCover(tree, cover) !== folded; tries++) {
+      if (tries === 4) {
+        if (folded) tree = null;
+        break;
+      }
+      await new Promise((r) => setTimeout(r, 400));
+      if (rt.frozen !== f) return;
+      tree = await fetchTree();
+      if (rt.frozen !== f) return;
+    }
+  }
   // A turned interface reports turned coordinates; bring them into the
   // framebuffer's, where the overlay, pixels and touches live.
   const screen = ui.chrome.screen;
@@ -999,6 +1017,22 @@ async function freeze() {
   if (f.tree?.frame?.width) f.points = { width: f.tree.frame.width, height: f.tree.frame.height };
   f.sdkAvailable = matchesFrontApp(sdk, tree) ? sdkToPortrait(sdk, ui.orientation, screen) : null;
   applySdk();
+}
+
+/**
+ * Whether every element of a tree lies on iPhone Duo's cover (its root
+ * aside, which can say either panel's size): the cover's screen does,
+ * while the unfolded panel's spreads past it (the home screen's widgets
+ * below, Settings' sidebar across).
+ */
+function withinCover(tree, cover) {
+  let within = true;
+  (function walk(node, root) {
+    const f = node?.frame;
+    if (!root && f && (f.x + f.width > cover.width + 2 || f.y + f.height > cover.height + 2)) within = false;
+    for (const child of node?.children ?? []) walk(child, false);
+  })(tree, true);
+  return within;
 }
 
 /** Lets the screen go live again, Design Mode's boxes and markers cleared. */
