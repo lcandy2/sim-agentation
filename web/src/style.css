@@ -667,6 +667,7 @@ kbd {
   align-items: center;
   gap: 8px;
   padding: 12px 14px 12px 10px;
+  border-radius: 20px; /* Figma's Notification, concentric with the picture (6 + 14) */
 }
 .banner-image { width: 32px; height: 32px; margin: 0 4px; flex: none; border-radius: 6px; object-fit: cover; object-position: top; }
 .banner-text { flex: 1; min-width: 0; display: grid; }
