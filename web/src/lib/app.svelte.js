@@ -780,6 +780,11 @@ export async function setMode(mode) {
   closeComposer();
 
   if (mode === 'annotate') {
+    // Design Mode's annotations show in the inspector: its tab, and the
+    // inspector itself unless a narrow window put it away (not saved).
+    ui.panels.tab = 'annotations';
+    storage.set('inspector-tab', 'annotations');
+    if (!ui.panels.inspector && !crowdedOut.inspector) showPanel('inspector', true);
     // Freeze the frame on screen right now, then fetch the accessibility tree
     // and SDK data and warm the pixel regions while those requests are out.
     const data = Promise.all([
