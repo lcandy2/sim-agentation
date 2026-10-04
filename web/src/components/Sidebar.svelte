@@ -1,6 +1,7 @@
 <script>
   import { ui, setFilter } from '../lib/app.svelte.js';
   import { icon } from '../lib/icons.js';
+  import { blink } from '../lib/blink.js';
   import DeviceRow from './DeviceRow.svelte';
   import NewSimulator from './NewSimulator.svelte';
   import Popover from './Popover.svelte';
@@ -44,7 +45,7 @@
         {#snippet children(close)}
           <div class="menu" role="menu">
             {#each FILTERS as f (f.id)}
-              <button class="menu-item" role="menuitemradio" aria-checked={ui.filter === f.id} onclick={() => { setFilter(f.id); close(); }}>
+              <button class="menu-item" role="menuitemradio" aria-checked={ui.filter === f.id} onclick={async (e) => { if (!(await blink(e.currentTarget))) return; close(); setFilter(f.id); }}>
                 <span class="check">{ui.filter === f.id ? '✓' : ''}</span>{@html icon(f.icon)}{f.label}
               </button>
             {/each}

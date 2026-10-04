@@ -337,6 +337,13 @@ button { cursor: default; }
 .menu-item.opened:not(:hover) { background: var(--menu-separator); }
 .menu-item:hover:not(:disabled) { background: var(--menu-highlight); color: #fff; }
 .menu-item:disabled { color: var(--menu-disabled); }
+/* The chosen item's blink (lib/blink.js): its highlight off, then on,
+   whatever the pointer does; menus take no pointer input meanwhile. */
+.menu-blinking .popover { pointer-events: none; }
+.menu-item.blink-off:not(:disabled) { background: none; color: var(--menu-label); }
+.menu-item.blink-off:not(:disabled) .shortcut { color: var(--menu-disabled); }
+.menu-item.blink-on:not(:disabled) { background: var(--menu-highlight); color: #fff; }
+.menu-item.blink-on:not(:disabled) .shortcut { color: inherit; }
 /* A menu with checkmarks moves every title in 16 pt, the mark centered 12 pt in. */
 .menu-item .check { width: 12px; margin: 0 -2px 0 6px; flex: none; font-size: 10px; font-weight: 700; text-align: center; }
 

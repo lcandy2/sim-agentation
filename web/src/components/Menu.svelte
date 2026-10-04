@@ -1,6 +1,7 @@
 <script>
   import { icon } from '../lib/icons.js';
   import { glyphs } from '../lib/keys.js';
+  import { blink } from '../lib/blink.js';
   import Menu from './Menu.svelte';
 
   // macOS 27's menu (Figma, nodes 4370:42750 and 4370:42756): groups of items
@@ -50,7 +51,7 @@
           role="menuitem"
           disabled={item.disabled}
           onpointerenter={() => (open = null)}
-          onclick={() => { close(); item.run(); }}
+          onclick={async (e) => { if (!(await blink(e.currentTarget))) return; close(); item.run(); }}
         >
           {#if item.icon}{@html icon(item.icon)}{/if}<span class="menu-title">{item.label}</span>
           {#if item.keys}<span class="shortcut" aria-label="Shortcut {glyphs(item.keys).join('')}">{#each glyphs(item.keys) as g, k (k)}<span>{g}</span>{/each}</span>{/if}
