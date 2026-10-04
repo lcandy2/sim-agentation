@@ -6,7 +6,7 @@ import ImageIO
 // and Simulator find it: simulator → device type → profile.plist's
 // chromeIdentifier → /Library/Developer/DeviceKit/Chrome/<id>.devicechrome.
 // Artwork ships as PDFs; they're rasterized at 3× with CoreGraphics and the
-// PNGs cached under <home>/chrome.
+// PNGs cached under `cache` (the user's Caches folder, see Config.cacheDirectory).
 
 final class ChromeService: @unchecked Sendable {
     private static let root = "/Library/Developer/DeviceKit/Chrome"
@@ -22,8 +22,8 @@ final class ChromeService: @unchecked Sendable {
     private var deviceTypeOf: (at: Date, map: Task<[String: String], Error>)? // udid → identifier
     private var chromes: [String: Task<JSON, Error>] = [:] // by udid
 
-    init(home: String) {
-        cache = Path.join(home, "chrome")
+    init(cache: String) {
+        self.cache = cache
     }
 
     // MARK: - lookups

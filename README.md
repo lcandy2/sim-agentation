@@ -81,7 +81,7 @@ When the app in front has the SDK, the status reads **Frozen · SDK**. Parents t
 | Variable | Default |
 |---|---|
 | `SIM_AGENTATION_PORT` | `38470` |
-| `SIM_AGENTATION_HOME` | `~/.sim-agentation` (annotations; their screenshots go in the temporary directory) |
+| `SIM_AGENTATION_HOME` | `sim-agentation` in the temporary directory (annotations and their screenshots: kept through a restart of the host, not of the Mac). Rendered device chrome is cached in `~/Library/Caches/sim-agentation`. |
 | `SIM_AGENTATION_WEB` | the repo's `web/` directory (the UI) |
 | `SIM_AGENTATION_SDK_URL` | `http://127.0.0.1:38471` |
 

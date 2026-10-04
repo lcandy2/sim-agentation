@@ -1,11 +1,10 @@
 import Foundation
 
 /// Annotations in `<home>/annotations.json` (formatted like
-/// JSON.stringify(list, null, 2)), their screenshots in the user's
-/// temporary directory: they only matter while an agent works on the
-/// annotation, go when it's cleared, and macOS sweeps up any left behind.
-/// Annotations are kept as ordered JSON objects so fields this code doesn't
-/// know about survive a save unchanged.
+/// JSON.stringify(list, null, 2)), their screenshots in `<home>/images`,
+/// gone with the annotation when it's cleared. Home is temporary by default
+/// (see Config.home). Annotations are kept as ordered JSON objects so fields
+/// this code doesn't know about survive a save unchanged.
 final class Store: @unchecked Sendable {
     static let statuses = ["pending", "acknowledged", "resolved", "dismissed"]
 
@@ -21,7 +20,7 @@ final class Store: @unchecked Sendable {
     init(home: String) {
         self.home = home
         file = Path.join(home, "annotations.json")
-        images = Path.join(NSTemporaryDirectory(), "sim-agentation", "images")
+        images = Path.join(home, "images")
         try? FileManager.default.createDirectory(atPath: images, withIntermediateDirectories: true)
         annotations = load()
     }

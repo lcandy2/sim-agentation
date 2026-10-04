@@ -30,7 +30,7 @@ case "serve":
     let store = Store(home: Config.home)
     // Served per request, so `pnpm build` (or `pnpm dev`) shows up on reload.
     let dist = Config.webDirectory.map { Path.join($0, "dist") }
-    let app = AppServer(port: port, store: store, chrome: ChromeService(home: Config.home), dist: dist)
+    let app = AppServer(port: port, store: store, chrome: ChromeService(cache: Path.join(Config.cacheDirectory, "chrome")), dist: dist)
     let server: HTTPServer
     do {
         server = try HTTPServer(port: port) { request in await app.handle(request) }

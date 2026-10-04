@@ -17,8 +17,17 @@ enum Config {
         return UInt16(number)
     }()
 
-    /// SIM_AGENTATION_HOME, default ~/.sim-agentation: annotations (their screenshots are temporary, see Store).
-    static let home: String = env("SIM_AGENTATION_HOME") ?? Path.join(homeDirectory, ".sim-agentation")
+    /// SIM_AGENTATION_HOME, default sim-agentation in the user's temporary
+    /// directory: annotations and their screenshots. They're a handoff to an
+    /// agent, kept through a restart of the host but not of the Mac.
+    static let home: String = env("SIM_AGENTATION_HOME") ?? Path.join(NSTemporaryDirectory(), "sim-agentation")
+
+    /// Rendered device chrome, which can always be made again: in the user's
+    /// Caches folder, where macOS may clear it.
+    static let cacheDirectory: String = Path.join(
+        FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first?.path ?? Path.join(homeDirectory, "Library/Caches"),
+        "sim-agentation"
+    )
 
     /// SimAgentationPlus, the optional in-app SDK.
     static let sdkURL: String = env("SIM_AGENTATION_SDK_URL") ?? "http://127.0.0.1:38471"
