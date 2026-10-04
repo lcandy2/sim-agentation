@@ -37,11 +37,10 @@
   --control-label: #1a1a1a;
   --control-secondary: #727272;
   --control-on: rgba(0, 0, 0, 0.1);
-  /* macOS 27's Menu (Figma, nodes 4370:42750 and 4370:42756): #d9d9d9 at 55%
-     luminosity under #d9d9d9 at 40% (lib/glass.js blends them with what's
-     behind; this is the fallback), hairlines that Linear Burn #dbdbdb, and
-     a deep shadow. */
-  --menu-fill: linear-gradient(rgba(217, 217, 217, 0.4) 0 0), rgba(217, 217, 217, 0.55);
+  /* macOS 27's Menu (Figma, nodes 4370:42750 and 4370:42756) in the
+     Popover's material (lib/glass.js; this is the fallback), with the
+     Menu's hairlines that Linear Burn #dbdbdb, and a deep shadow. */
+  --menu-fill: var(--popover-fill);
   --menu-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.141), 1.25px 0 0 -0.75px rgba(0, 0, 0, 0.141), -1.25px 0 0 -0.75px rgba(0, 0, 0, 0.141), 0 8px 38px rgba(0, 0, 0, 0.25);
   /* Its labels and separators are vibrant, burned in (plus-darker), which
      Chrome can't blend through the glass: these land where Figma's do on
@@ -296,8 +295,8 @@ button { cursor: default; }
   background: var(--menu-fill);
   box-shadow: var(--menu-shadow);
   color: var(--menu-label);
-  -webkit-backdrop-filter: blur(3px);
-  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(13px);
+  backdrop-filter: blur(13px);
 }
 .popover.glass-on::after {
   content: "";
