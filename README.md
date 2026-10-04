@@ -143,6 +143,10 @@ Any client that runs a stdio MCP server takes the same command.
 
 Status changes and replies show up in the browser's inspector.
 
+### Skills
+
+[`skills/`](skills) holds two agent skills. `sim-agentation` works through annotations: what each line of one tells the agent, how to find code whose label was built at runtime, and when to reply instead of editing. `sim-agentation-sdk` adds the SDK to an app, with a script that adds the package to a plain `.xcodeproj`. Copy a folder into `~/.claude/skills` for Claude Code, or `~/.agents/skills` for Codex.
+
 ## SimAgentationPlus SDK
 
 Add SimAgentationPlus to an app you build yourself for exact selections and source locations. Everything compiles out of Release builds.
@@ -200,6 +204,7 @@ One Swift binary, built from `host/`, runs everything. It serves the page and it
 | [`web/src`](web/src) | The Svelte UI, built by Vite into `web/dist` |
 | [`sdk/SimAgentationPlus`](sdk/SimAgentationPlus) | The optional in-app SDK, packaged by the root [`Package.swift`](Package.swift) |
 | [`examples/DemoApp`](examples/DemoApp) | A sample app that uses the SDK |
+| [`skills`](skills) | Agent skills for working through annotations and for adding the SDK |
 
 Without `pnpm dev`, the page runs `web/dist`; `pnpm build` or `pnpm watch` refreshes it. The dev server leaves a token for the host to pass the page, and the page loads from it only when they match, so nothing else on port 38472 can.
 

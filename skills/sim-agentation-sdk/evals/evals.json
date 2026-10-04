@@ -1,0 +1,21 @@
+{
+  "skill_name": "sim-agentation-sdk",
+  "evals": [
+    {
+      "id": 1,
+      "name": "sdk-add-spm-package-layout",
+      "prompt": "Add the SimAgentationPlus SDK (https://github.com/lcandy2/sim-agentation) to this app so the annotations I draw come with file and line numbers. Tag the views I'd actually point at.",
+      "expected_output": "URL dependency and product added to the feature package's target, .simAgentation() on the root view, .simTag() directly on NextUpCard, ShowRow, VenueTips (and the UIKit ticket views), builds, tags show their type names in the snapshot.",
+      "files": [],
+      "fixture": "examples/DemoApp with the SDK removed"
+    },
+    {
+      "id": 2,
+      "name": "sdk-add-plain-xcodeproj",
+      "prompt": "Can you set up the SimAgentation SDK in this app? It's the Swift package at https://github.com/lcandy2/sim-agentation, the one that gives annotations exact source locations.",
+      "expected_output": "Package added to the plain .xcodeproj's app target (reference, product dependency, Frameworks phase), resolves and builds, .simAgentation() on the root, tags on the custom views.",
+      "files": [],
+      "fixture": "examples/DemoApp with the SDK removed and the feature package folded into a plain .xcodeproj app target"
+    }
+  ]
+}
