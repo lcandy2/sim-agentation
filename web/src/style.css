@@ -60,6 +60,8 @@
   --sheet-fill: rgba(0, 0, 0, 0.08);
   --sheet-field-border: rgba(0, 0, 0, 0.08);
   --sheet-focus: color-mix(in srgb, var(--accent) 50%, transparent);
+  /* The search field's focus ring, which the composer's note shares. */
+  --focus-ring: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent);
   --popup-chevrons: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='rgba(0,0,0,0.85)' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 9.5l3-3 3 3M9 14.5l3 3 3-3'/%3E%3C/svg%3E");
   --menu: #ffffff;
   --card: #ffffff;
@@ -539,7 +541,7 @@ kbd {
 .search input { flex: 1; min-width: 0; height: 16px; padding: 0; border: 0; background: none; outline: none; color: var(--control-label); font-size: 13px; line-height: 16px; font-weight: 500; }
 .search input::placeholder { color: var(--control-secondary); }
 .search input::-webkit-search-cancel-button { opacity: 0.5; }
-.search:focus-within { box-shadow: var(--control-shadow), 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent); }
+.search:focus-within { box-shadow: var(--control-shadow), var(--focus-ring); }
 
 /* The list scrolls, which clips what leaves it; it reaches 7 px into the
    sidebar's padding (and gives it back) so a selected row can too. */
@@ -1013,7 +1015,7 @@ kbd {
    room on the right for the send button in its corner: the selections'
    chips first, the note going on after them (components/Composer.svelte). */
 .composer .field.note { position: relative; height: auto; padding: 0; border-radius: 16px; }
-.composer .field.note:focus-within { box-shadow: 0 0 0 1px var(--sheet-field-border), 0 0 0 3.5px var(--sheet-focus), inset 0 0 0 1px var(--sheet-focus); }
+.composer .field.note:focus-within { box-shadow: 0 0 0 1px var(--sheet-field-border), var(--focus-ring); }
 .note-chips { position: absolute; top: 8px; left: 12px; right: 36px; display: flex; flex-wrap: wrap; column-gap: 8px; pointer-events: none; }
 .note-text { display: block; width: 100%; padding: 8px 36px 8px 12px; border: 0; border-radius: inherit; background: none; outline: none; color: var(--text); font-size: 13px; font-weight: 500; line-height: 16px; resize: none; caret-color: var(--accent); }
 /* A selection's chip, as Cursor's: its symbol and short name in its color;
