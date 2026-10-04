@@ -572,11 +572,13 @@ kbd {
 .device-row.selected { background: var(--selection); color: var(--on-selection); }
 /* Busy, a row's second line says with what, after a small spinner; being
    removed, it fades; the one being created stands in until it's listed. */
-.device-row .spinner { display: inline-block; width: 9px; height: 9px; margin: 0 5px -1px 0; border: 1.5px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spin 0.8s linear infinite; }
+/* macOS's progress indicator (lib/icons.js), stepping a spoke at a time. */
+.device-row .spinner { display: inline-grid; width: 11px; height: 11px; margin: 0 4px -2px 0; }
+.device-row .spinner svg { width: 11px; height: 11px; animation: spin 0.8s steps(8) infinite; }
 .device-row.removing,
 .device-row.creating { opacity: 0.55; }
 @keyframes spin { to { transform: rotate(360deg); } }
-@media (prefers-reduced-motion: reduce) { .device-row .spinner { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .device-row .spinner svg { animation: none; } }
 /* The row a context menu is for, ringed in the accent as macOS marks it:
    inside the row, where the list's scrolling can't cut it off, a white
    line within so it shows on a selected row too. */

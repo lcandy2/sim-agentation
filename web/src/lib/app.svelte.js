@@ -52,6 +52,8 @@ export const ui = $state({
   sheetFor: null, // the device it's for when not the selected one (a row's context menu)
   managing: null, // what the … menu is doing to the device: 'Shutting Down…' and so on
   busy: {},        // by udid, what this page is doing to a device ('Starting…', 'Removing…'), for its row
+  picked: [],      // the device list's selection (⌘- and ⇧-click), udids; empty: the shown device alone
+  contextFor: [],  // the rows a context menu is open for, ringed meanwhile
   creating: null,  // { name, runtime } while a new simulator is being created, for its row
   reclaiming: false,
   recording: false,
@@ -1306,6 +1308,7 @@ export async function loadDevices() {
 
 /** Selecting shows the device; only a running one streams. Starting is explicit. */
 export async function selectDevice(sim) {
+  ui.picked = [sim.udid]; // showing a device selects it alone
   await setMode('interact');
   stopStream();
   ui.udid = sim.udid;

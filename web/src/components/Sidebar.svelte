@@ -1,5 +1,5 @@
 <script>
-  import { ui, setFilter, refreshDevices } from '../lib/app.svelte.js';
+  import { ui, setFilter, refreshDevices, selectDevice } from '../lib/app.svelte.js';
   import { icon } from '../lib/icons.js';
   import { blink } from '../lib/blink.js';
   import DeviceRow from './DeviceRow.svelte';
@@ -36,6 +36,36 @@
       .sort(byVersionThenName);
   });
 
+  // As a Mac list: a click selects one device and shows it; ⌘-click adds or
+  // takes away one, ⇧-click selects the range from the last clicked (⌘⇧ adds
+  // it), neither changing the device shown. ⌘⌫ removes what's selected.
+  let anchor = null;
+  function pick(sim, e) {
+    const order = list.map((s) => s.udid);
+    const current = ui.picked.length ? ui.picked : ui.udid ? [ui.udid] : [];
+    const from = order.indexOf(anchor ?? ui.udid);
+    if (e.shiftKey && from >= 0) {
+      const to = order.indexOf(sim.udid);
+      const range = order.slice(Math.min(from, to), Math.max(from, to) + 1);
+      ui.picked = e.metaKey ? [...new Set([...current, ...range])] : range;
+      return;
+    }
+    anchor = sim.udid;
+    if (e.metaKey) {
+      ui.picked = current.includes(sim.udid) ? current.filter((u) => u !== sim.udid) : [...current, sim.udid];
+      return;
+    }
+    selectDevice(sim);
+  }
+  function listKeys(e) {
+    if (!(e.metaKey && e.key === 'Backspace')) return;
+    const picked = (ui.picked.length ? ui.picked : [ui.udid]).filter((u) => ui.sims.some((s) => s.udid === u));
+    if (!picked.length) return;
+    e.preventDefault();
+    ui.sheetFor = picked.length > 1 ? picked : picked[0] === ui.udid ? null : picked[0];
+    ui.sheet = 'remove';
+  }
+
   let listAt = $state(null);
   function listMenu(e) {
     if (e.target.closest('.device-row')) return;
@@ -68,10 +98,10 @@
     <input type="search" placeholder="Search" autocomplete="off" spellcheck="false" bind:value={ui.query}>
   </label>
   <!-- Right-clicked outside a row (rows have their own), the list's menu. -->
-  <nav class="devices" aria-label="Simulators" oncontextmenu={listMenu}>
+  <nav class="devices" aria-label="Simulators" oncontextmenu={listMenu} onkeydown={listKeys}>
     <h3>{filter.heading}</h3>
     {#each list as sim (sim.udid)}
-      <DeviceRow {sim} version={version(sim.runtime)} />
+      <DeviceRow {sim} version={version(sim.runtime)} {pick} />
     {:else}
       {#if !ui.creating}<p class="none">No simulators match.</p>{/if}
     {/each}
@@ -81,7 +111,7 @@
         <span class="thumb">{@html icon('phone')}</span>
         <span class="text">
           <span class="name">{ui.creating.name}</span>
-          <span class="kind"><span class="spinner" aria-hidden="true"></span>Creating…</span>
+          <span class="kind"><span class="spinner" aria-hidden="true">{@html icon('progress')}</span>Creating…</span>
         </span>
         <span class="version">{version(ui.creating.runtime)}</span>
       </div>

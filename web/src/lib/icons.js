@@ -6,6 +6,8 @@ const paths = {
   'arrow-up': '<path d="M12 19.5V5M5.5 11.5 12 5l6.5 6.5"/>',
   // A device row's context menu: start, and open in a new tab or window.
   play: '<path d="M8 5.5v13l10-6.5z"/>',
+  // macOS's progress indicator: eight spokes, the trail behind the head fading (style.css steps it round).
+  progress: '<g stroke-width="2.4"><path d="M12.00 6.80L12.00 2.40" opacity="1.000"/><path d="M15.68 8.32L18.79 5.21" opacity="0.125"/><path d="M17.20 12.00L21.60 12.00" opacity="0.250"/><path d="M15.68 15.68L18.79 18.79" opacity="0.375"/><path d="M12.00 17.20L12.00 21.60" opacity="0.500"/><path d="M8.32 15.68L5.21 18.79" opacity="0.625"/><path d="M6.80 12.00L2.40 12.00" opacity="0.750"/><path d="M8.32 8.32L5.21 5.21" opacity="0.875"/></g>',
   refresh: '<path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3"/><path d="M19.5 4.5v4h-4"/>',
   'new-tab': '<rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M3 9.5h18M9 5v4.5"/>',
   'new-window': '<path d="M10 19H5.5A2.5 2.5 0 0 1 3 16.5v-9A2.5 2.5 0 0 1 5.5 5h13A2.5 2.5 0 0 1 21 7.5v9a2.5 2.5 0 0 1-2.5 2.5H15"/><path d="M3 9.5h18M4.5 17.5h5M7 15v5"/>',

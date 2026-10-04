@@ -36,9 +36,14 @@
     dialog.close();
   }
 
-  // The selected device's, or the one a row's context menu is for.
-  const udid = ui.sheetFor ?? ui.udid;
+  // The selected device's, the one a row's context menu is for, or several
+  // selected in the list (Reset and Remove).
+  const udids = Array.isArray(ui.sheetFor) ? ui.sheetFor : [ui.sheetFor ?? ui.udid];
+  const udid = udids[0];
   const name = ui.sims.find((s) => s.udid === udid)?.name ?? ui.simName;
+  const many = udids.length > 1;
+  const names = udids.map((u) => `“${ui.sims.find((s) => s.udid === u)?.name ?? u}”`);
+  const listed = names.length > 3 ? `${names.slice(0, 3).join(', ')} and ${names.length - 3} more` : `${names.slice(0, -1).join(', ')} and ${names.at(-1)}`;
   let picture = $state(null);
   $effect(() => {
     chromeOf(udid).then((c) => c && thumbnail(c, 64)).then((url) => (picture = url));
@@ -48,12 +53,20 @@
 
   const copy = {
     rename: { title: `Rename “${name}”`, text: 'The new name shows in the device list and to tools that list simulators.', action: 'Rename' },
-    erase: {
-      title: `Reset Content and Settings of “${name}”?`,
-      text: 'All of its apps, data and settings are erased, as on a new device. A running simulator restarts.',
-      action: 'Reset',
-    },
-    remove: { title: `Remove “${name}”?`, text: 'The simulator and everything on it are deleted. This can’t be undone.', action: 'Remove' },
+    erase: many
+      ? {
+          title: `Reset Content and Settings of ${udids.length} Simulators?`,
+          text: `All apps, data and settings on ${listed} are erased, as on new devices. Running ones restart.`,
+          action: 'Reset',
+        }
+      : {
+          title: `Reset Content and Settings of “${name}”?`,
+          text: 'All of its apps, data and settings are erased, as on a new device. A running simulator restarts.',
+          action: 'Reset',
+        },
+    remove: many
+      ? { title: `Remove ${udids.length} Simulators?`, text: `${listed}, with everything on them, are deleted. This can’t be undone.`, action: 'Remove' }
+      : { title: `Remove “${name}”?`, text: 'The simulator and everything on it are deleted. This can’t be undone.', action: 'Remove' },
   }[kind];
 
   async function submit(e) {
@@ -64,7 +77,7 @@
       if (await renameDevice(newName.trim(), udid)) dismiss();
     } else {
       dismiss();
-      await (kind === 'erase' ? eraseDevice(udid) : removeDevice(udid));
+      for (const u of udids) await (kind === 'erase' ? eraseDevice(u) : removeDevice(u));
     }
     busy = false;
   }
