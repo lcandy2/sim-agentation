@@ -51,6 +51,8 @@ export const ui = $state({
   sheet: null, // the … menu's dialog open now: 'rename', 'erase' or 'remove'
   sheetFor: null, // the device it's for when not the selected one (a row's context menu)
   managing: null, // what the … menu is doing to the device: 'Shutting Down…' and so on
+  busy: {},        // by udid, what this page is doing to a device ('Starting…', 'Removing…'), for its row
+  creating: null,  // { name, runtime } while a new simulator is being created, for its row
   reclaiming: false,
   recording: false,
   annotations: [],
@@ -1314,7 +1316,9 @@ export async function startDevice(udid = ui.udid) {
   const sim = ui.sims.find((s) => s.udid === udid);
   if (!sim) return;
   if (ui.udid === sim.udid) ui.starting = true;
+  ui.busy[sim.udid] = 'Starting…';
   const res = await fetch(`/api/sims/${sim.udid}/boot`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' }).catch(() => null);
+  delete ui.busy[sim.udid];
   if (!res?.ok) {
     ui.starting = false;
     flashStatus((await res?.json().catch(() => null))?.error ?? "Couldn't start the simulator");
@@ -1363,12 +1367,16 @@ async function reloadSims() {
   ui.sims = await fetch('/api/sims').then((r) => (r.ok ? r.json() : ui.sims)).catch(() => ui.sims);
 }
 
+/** The list's Refresh: the devices as CoreSimulator has them now. */
+export const refreshDevices = reloadSims;
+
 /** One of the host's simctl verbs on a device (the selected one unless said),
  *  then the list and the stage catch up. */
 async function manage(verb, { udid = ui.udid, method = 'POST', body = {}, doing } = {}) {
   const shown = udid === ui.udid;
   if (shown) ui.managing = doing;
   if (doing && shown) setStatus(doing);
+  if (doing) ui.busy[udid] = doing;
   const res = await fetch(`/api/sims/${udid}${verb ? `/${verb}` : ''}`, {
     method,
     headers: { 'content-type': 'application/json' },
@@ -1378,6 +1386,7 @@ async function manage(verb, { udid = ui.udid, method = 'POST', body = {}, doing 
     ui.managing = null;
     setStatus('');
   }
+  delete ui.busy[udid];
   if (!res?.ok) {
     flashStatus((await res?.json().catch(() => null))?.error ?? "Couldn't change the simulator", 6000);
     return false;
@@ -1415,7 +1424,7 @@ export async function renameDevice(name, udid = ui.udid) {
 export async function eraseDevice(udid = ui.udid) {
   const shown = udid === ui.udid;
   if (shown) stopStream();
-  if (await manage('erase', { udid, doing: 'Erasing…' })) shown && (await reselect(udid));
+  if (await manage('erase', { udid, doing: 'Resetting…' })) shown && (await reselect(udid));
 }
 
 /** Deletes the simulator; if it was shown, shows another (a running one first). */
@@ -1544,6 +1553,9 @@ export const simulatorOptions = () => fetch('/api/sims/new').then((r) => (r.ok ?
 
 /** `simctl create`, then select it; it starts shut down, ready for Start. */
 export async function createSimulator({ name, deviceType, runtime }) {
+  // Its row says so meanwhile: "iOS 26.5" from com.apple.CoreSimulator.SimRuntime.iOS-26-5.
+  const [, os, major, minor] = runtime.match(/\.([A-Za-z]+)-(\d+)-(\d+)$/) ?? [];
+  ui.creating = { name, runtime: os ? `${os} ${major}.${minor}` : '' };
   const res = await fetch('/api/sims', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
@@ -1551,10 +1563,12 @@ export async function createSimulator({ name, deviceType, runtime }) {
   }).catch(() => null);
   const body = await res?.json().catch(() => null);
   if (!res?.ok) {
+    ui.creating = null;
     flashStatus(body?.error ?? "Couldn't create the simulator", 6000);
     return false;
   }
   ui.sims = await fetch('/api/sims').then((r) => (r.ok ? r.json() : ui.sims)).catch(() => ui.sims);
+  ui.creating = null;
   const sim = ui.sims.find((s) => s.udid === body.udid);
   if (sim) await selectDevice(sim);
   return true;

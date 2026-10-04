@@ -1,10 +1,11 @@
 <script>
-  import { ui, setFilter } from '../lib/app.svelte.js';
+  import { ui, setFilter, refreshDevices } from '../lib/app.svelte.js';
   import { icon } from '../lib/icons.js';
   import { blink } from '../lib/blink.js';
   import DeviceRow from './DeviceRow.svelte';
   import NewSimulator from './NewSimulator.svelte';
   import Popover from './Popover.svelte';
+  import ContextMenu from './ContextMenu.svelte';
 
   const FILTERS = [
     { id: 'all', label: 'All Simulators', heading: 'Available', icon: 'devices' },
@@ -34,6 +35,13 @@
       .filter((s) => !query || `${s.name} ${s.runtime}`.toLowerCase().includes(query))
       .sort(byVersionThenName);
   });
+
+  let listAt = $state(null);
+  function listMenu(e) {
+    if (e.target.closest('.device-row')) return;
+    e.preventDefault();
+    listAt = { x: e.clientX, y: e.clientY };
+  }
 </script>
 
 <aside class="sidebar" id="sidebar">
@@ -59,13 +67,26 @@
     <span data-icon="search">{@html icon('search')}</span>
     <input type="search" placeholder="Search" autocomplete="off" spellcheck="false" bind:value={ui.query}>
   </label>
-  <nav class="devices" aria-label="Simulators">
+  <!-- Right-clicked outside a row (rows have their own), the list's menu. -->
+  <nav class="devices" aria-label="Simulators" oncontextmenu={listMenu}>
     <h3>{filter.heading}</h3>
     {#each list as sim (sim.udid)}
       <DeviceRow {sim} version={version(sim.runtime)} />
     {:else}
-      <p class="none">No simulators match.</p>
+      {#if !ui.creating}<p class="none">No simulators match.</p>{/if}
     {/each}
+    {#if ui.creating}
+      <!-- The simulator being created, until it's in the list. -->
+      <div class="device-row creating" aria-busy="true">
+        <span class="thumb">{@html icon('phone')}</span>
+        <span class="text">
+          <span class="name">{ui.creating.name}</span>
+          <span class="kind"><span class="spinner" aria-hidden="true"></span>Creating…</span>
+        </span>
+        <span class="version">{version(ui.creating.runtime)}</span>
+      </div>
+    {/if}
   </nav>
+  {#if listAt}<ContextMenu x={listAt.x} y={listAt.y} groups={[[{ label: 'Refresh', icon: 'refresh', run: refreshDevices }]]} close={() => (listAt = null)} />{/if}
   {#if creating}<NewSimulator close={() => (creating = false)} />{/if}
 </aside>

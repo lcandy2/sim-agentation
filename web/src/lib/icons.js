@@ -6,6 +6,7 @@ const paths = {
   'arrow-up': '<path d="M12 19.5V5M5.5 11.5 12 5l6.5 6.5"/>',
   // A device row's context menu: start, and open in a new tab or window.
   play: '<path d="M8 5.5v13l10-6.5z"/>',
+  refresh: '<path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3"/><path d="M19.5 4.5v4h-4"/>',
   'new-tab': '<rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M3 9.5h18M9 5v4.5"/>',
   'new-window': '<path d="M10 19H5.5A2.5 2.5 0 0 1 3 16.5v-9A2.5 2.5 0 0 1 5.5 5h13A2.5 2.5 0 0 1 21 7.5v9a2.5 2.5 0 0 1-2.5 2.5H15"/><path d="M3 9.5h18M4.5 17.5h5M7 15v5"/>',
   // A selection's chip in the composer, by what it is: an image, a button,

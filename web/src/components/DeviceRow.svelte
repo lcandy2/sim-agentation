@@ -12,6 +12,10 @@
 
   let row = $state(null);
   const selected = $derived(sim.udid === ui.udid);
+  // Busy, its line says with what in place of "Simulator": what this page is
+  // doing to it, else what CoreSimulator says (Xcode or simctl at work).
+  const STATES = { Booting: 'Starting…', 'Shutting Down': 'Shutting Down…', Creating: 'Creating…' };
+  const busy = $derived(ui.busy[sim.udid] ?? STATES[sim.state]);
   $effect(() => {
     if (selected) row?.scrollIntoView({ block: 'nearest' });
   });
@@ -59,6 +63,8 @@
   class:booted={sim.state === 'Booted'}
   class:selected
   class:context-target={menuAt}
+  class:removing={busy === 'Removing…'}
+  aria-busy={!!busy}
   title="{sim.name}, {sim.runtime}{sim.state === 'Booted' ? ', running' : ''}"
   onclick={() => selectDevice(sim)}
   oncontextmenu={contextMenu}
@@ -68,7 +74,7 @@
   </span>
   <span class="text">
     <span class="name">{sim.name}</span>
-    <span class="kind">Simulator</span>
+    <span class="kind">{#if busy}<span class="spinner" aria-hidden="true"></span>{busy}{:else}Simulator{/if}</span>
   </span>
   <span class="version">{version}</span>
 </button>
