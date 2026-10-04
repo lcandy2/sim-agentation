@@ -415,6 +415,38 @@ img { -webkit-user-drag: none; }
 .alert-btn.destructive { background: rgba(245, 47, 50, 0.23); color: #f52f32; } /* Figma: red at 23%, red label */
 .alert-btn:disabled { opacity: 0.5; }
 .alert-btn:focus-visible { outline: none; box-shadow: 0 0 0 3.5px var(--sheet-focus); }
+/* Liquid Glass's prominent button (Figma, Materials page: Liquid Glass -
+   Small, State=Primary), round: the accent under the controls' glass,
+   painted whole by lib/glass.js (this is the fallback), a soft shadow and
+   side hairlines that Linear Burn #e6e6e6. */
+.glass-btn {
+  position: relative;
+  width: 32px;
+  height: 32px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  box-shadow: 0 8px 12px rgba(0, 0, 0, 0.02), 1.25px 0 0 -0.75px rgba(0, 0, 0, 0.098), -1.25px 0 0 -0.75px rgba(0, 0, 0, 0.098);
+  isolation: isolate; /* its light goes over its face, under its symbol */
+}
+.glass-btn svg { width: 18px; height: 18px; stroke-width: 2.2; }
+.glass-btn.glass-on { background: var(--glass-face) center / 100% 100% no-repeat; }
+.glass-btn.glass-on::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: var(--glass-light) center / 100% 100% no-repeat;
+  pointer-events: none;
+}
+.glass-btn:disabled { opacity: 0.4; }
+.glass-btn:focus-visible { outline: none; box-shadow: 0 0 0 3.5px var(--sheet-focus); }
 
 kbd {
   font: 600 11px/1 -apple-system, system-ui, sans-serif;

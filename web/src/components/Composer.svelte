@@ -2,6 +2,7 @@
   import { tick } from 'svelte';
   import { ui, submitComposer, cancelComposer } from '../lib/app.svelte.js';
   import { POINTER, outlinePath } from '../lib/glass.js';
+  import { icon } from '../lib/icons.js';
 
   let form = $state(null);
   let text = $state(null);
@@ -86,7 +87,7 @@
     <div class="composer-row">
       <span class="hint">⌘↩ to add · Esc to cancel</span>
       <button type="button" class="alert-btn" onclick={cancelComposer}>Cancel</button>
-      <button type="submit" class="alert-btn default">Add</button>
+      <button type="submit" class="glass-btn prominent" title="Add (⌘↩)" aria-label="Add" disabled={!comment.trim()}>{@html icon('arrow-up')}</button>
     </div>
   </form>
   {#if place}

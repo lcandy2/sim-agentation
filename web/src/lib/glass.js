@@ -60,6 +60,26 @@ export const MATERIALS = {
       { angle: Math.PI, range: 25.3, hardness: 0.107, factor: 0.092, convergence: 0.348, opposite: 0.541 },
     ],
   },
+  // Liquid Glass's prominent button (Figma, Materials page: Liquid Glass -
+  // Small, Active, State=Primary): white at 94% under the tint, #0088ff,
+  // Linear Burned in (the accent, all but solid), then the controls' Glass
+  // effect and rims. Its light doesn't show on the tint in Figma's render,
+  // so no glares: so it matches that render to a few levels at the rims.
+  prominent: {
+    selector: '.glass-btn.prominent',
+    solid: true, // it sits in the composer's glass, and its fill hides what's behind anyway
+    glass: { frost: 6, refraction: 0.7, depth: 30, dispersion: 0.2, lightAngle: 0, lightIntensity: 0.25 },
+    fills: [
+      { blend: 'normal', gray: 1, opacity: 0.94 },
+      { blend: 'burn', color: [0, 0.5333, 1], opacity: 1 },
+    ],
+    inner: [
+      { blend: 'burn', gray: 0.902, y: 40, blur: 30, spread: -40 },
+      { blend: 'dodge', gray: 0.1569, y: -40, blur: 10, spread: -40 },
+      { blend: 'dodge', gray: 0.1569, y: 40, blur: 10, spread: -40 },
+    ],
+    glares: [],
+  },
   // The Alert (Figma, Alerts page), for every dialog and toast: white at 70%
   // under #bfbfbf at 10% (Lighten and Darken, plain mixes over the light
   // behind), bright rims inside top and bottom, frost 16, depth 30, light 0.25.
@@ -110,18 +130,27 @@ const clamp01 = (v) => Math.min(1, Math.max(0, v));
 const asinSafe = (x) => Math.asin(Math.max(-1, Math.min(1, x)));
 
 // The fills as one affine color transform of the backdrop, for
-// feColorMatrix: normal mixes toward the gray, Linear Dodge adds it,
-// Luminosity moves the color's luminance toward the gray's, keeping its hue.
+// feColorMatrix: normal mixes toward the color, Linear Dodge adds it, Linear
+// Burn adds it less white, Luminosity moves the color's luminance toward the
+// gray's, keeping its hue. A fill is a gray or a color ([r, g, b]).
 const LUMA = [0.3, 0.59, 0.11]; // the blend modes' luminance
 export function fillMatrix(fills) {
+  const { M, b } = fillAffine(fills);
+  const f = (v) => +v.toFixed(5);
+  return [...M.map((row, i) => [...row.map(f), 0, f(b[i])]), [0, 0, 0, 1, 0]].map((r) => r.join(' ')).join('  ');
+}
+
+function fillAffine(fills) {
   let M = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
   let b = [0, 0, 0];
-  for (const { blend, gray, opacity: a } of fills) {
+  for (const { blend, gray, color = [gray, gray, gray], opacity: a } of fills) {
     if (blend === 'normal') {
       M = M.map((row) => row.map((v) => v * (1 - a)));
-      b = b.map((v) => v * (1 - a) + a * gray);
+      b = b.map((v, i) => v * (1 - a) + a * color[i]);
     } else if (blend === 'dodge') {
-      b = b.map((v) => v + a * gray);
+      b = b.map((v, i) => v + a * color[i]);
+    } else if (blend === 'burn') {
+      b = b.map((v, i) => v + a * (color[i] - 1));
     } else if (blend === 'luminosity') {
       const lum = [0, 1, 2].map((j) => LUMA[0] * M[0][j] + LUMA[1] * M[1][j] + LUMA[2] * M[2][j]);
       const lumB = LUMA[0] * b[0] + LUMA[1] * b[1] + LUMA[2] * b[2];
@@ -129,8 +158,22 @@ export function fillMatrix(fills) {
       b = b.map((v) => v + a * (gray - lumB));
     }
   }
-  const f = (v) => +v.toFixed(5);
-  return [...M.map((row, i) => [...row.map(f), 0, f(b[i])]), [0, 0, 0, 1, 0]].map((r) => r.join(' ')).join('  ');
+  return { M, b };
+}
+
+// A solid material's face: its fills over white (they leave next to nothing
+// of what's behind), the inner shadows added and taken away as the filter
+// does. Inside another glass (a backdrop root, so no backdrop to filter)
+// this paints the button instead.
+function solidFace(material, add, burn) {
+  const { M, b } = fillAffine(material.fills);
+  const color = M.map((row, i) => clamp01(row[0] + row[1] + row[2] + b[i]));
+  const out = new ImageData(add.width, add.height);
+  for (let o = 0; o < out.data.length; o += 4) {
+    for (let c = 0; c < 3; c++) out.data[o + c] = Math.round(clamp01(color[c] + add.data[o + c] / 255 - (1 - burn.data[o + c] / 255)) * 255);
+    out.data[o + 3] = 255;
+  }
+  return out;
 }
 
 // The shader's rounded rect with superellipse corners.
@@ -425,6 +468,7 @@ function glassFor(name, width, height, radius, dpr, dark, pointer) {
       const material = MATERIALS[name];
       const { light, map, add, burn } = renderGlass(width, height, radius, dpr, dark, material, pointer);
       const lightURL = URL.createObjectURL(await pngOf(light));
+      if (material.solid) return { lightURL, faceURL: URL.createObjectURL(await pngOf(solidFace(material, add, burn))), filter: null };
       const filter = refracts && !dark
         ? filterFor(material, { map: await dataURLOf(map), add: await dataURLOf(add), burn: await dataURLOf(burn) }, width, height)
         : null;
@@ -444,8 +488,13 @@ async function paint(el, name) {
   // data-pointer="left 64": a popover's pointer, on that edge, centered 64 px down.
   const [side, at] = (el.dataset.pointer ?? '').split(' ');
   const pointer = side ? { side, y: Math.round(Number(at)) } : null;
-  const { lightURL, filter } = await glassFor(name, w, h, radius, devicePixelRatio || 1, dark, pointer);
+  const { lightURL, faceURL, filter } = await glassFor(name, w, h, radius, devicePixelRatio || 1, dark, pointer);
   el.style.setProperty('--glass-light', `url("${lightURL}")`);
+  if (faceURL) {
+    el.style.setProperty('--glass-face', `url("${faceURL}")`);
+    el.classList.add('glass-on');
+    return;
+  }
   // Figma's frost radius as a CSS blur, which takes half: then the filter.
   const backdrop = `blur(${MATERIALS[name].glass.frost / 2}px)${filter ? ` url(#${filter})` : ''}`;
   el.style.setProperty('-webkit-backdrop-filter', backdrop);
