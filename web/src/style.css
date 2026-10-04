@@ -676,6 +676,7 @@ kbd {
   gap: 8px;
   pointer-events: none;
 }
+.banner-slot { display: grid; } /* the glide; the banner in it slides */
 .banner {
   pointer-events: auto;
   touch-action: pan-y; /* a sideways swipe is the banner's (components/Notification.svelte) */
