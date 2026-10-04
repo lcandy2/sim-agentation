@@ -16,7 +16,7 @@ jobs:
     runs-on: macos-26
     env:
       TAG: ${{ github.ref_name }}
-      TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+      HAS_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN != '' }}
     steps:
       - uses: actions/checkout@v5
       - uses: maxim-lobanov/setup-xcode@v1
@@ -40,11 +40,17 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh release create "$TAG" dist/sim-agentation-$TAG-macos-arm64.tar.gz --title "$TAG" --generate-notes
+      - name: Check out the tap
+        if: env.HAS_TAP_TOKEN == 'true'
+        uses: actions/checkout@v5
+        with:
+          repository: lcandy2/homebrew-tap
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          path: tap
       - name: Update the Homebrew formula
-        if: env.TAP_TOKEN != ''
+        if: env.HAS_TAP_TOKEN == 'true'
         run: |
           sha=$(shasum -a 256 dist/sim-agentation-$TAG-macos-arm64.tar.gz | cut -d' ' -f1)
-          git clone "https://x-access-token:$TAP_TOKEN@github.com/lcandy2/homebrew-tap.git" tap
           sed -i '' -E \
             -e "s|^  url \".*\"|  url \"https://github.com/lcandy2/sim-agentation/releases/download/$TAG/sim-agentation-$TAG-macos-arm64.tar.gz\"|" \
             -e "s|^  sha256 \".*\"|  sha256 \"$sha\"|" \
