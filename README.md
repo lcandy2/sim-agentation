@@ -145,7 +145,17 @@ Status changes and replies show up in the browser's inspector.
 
 ## SimAgentationPlus SDK
 
-Add [`sdk/SimAgentationPlus`](sdk/SimAgentationPlus) (iOS 17 and later) to an app you build yourself for exact selections and source locations. Everything compiles out of Release builds.
+Add SimAgentationPlus (iOS 17 and later) to an app you build yourself for exact selections and source locations. Everything compiles out of Release builds.
+
+In Xcode, choose **File > Add Package Dependencies**, enter `https://github.com/lcandy2/sim-agentation`, and add SimAgentationPlus, the package's one library, to your app target. In a `Package.swift`:
+
+```swift
+.package(url: "https://github.com/lcandy2/sim-agentation", from: "0.1.0"),
+// in your target's dependencies:
+.product(name: "SimAgentationPlus", package: "sim-agentation"),
+```
+
+Then start it once and tag the views you want to find:
 
 ```swift
 import SimAgentationPlus
@@ -186,7 +196,7 @@ One Swift binary, built from `host/`, runs everything. It serves the page and it
 | [`host/Sources/SimBridge`](host/Sources/SimBridge) | The simulator bridge: screen capture, encoding, input, accessibility |
 | [`host/Guest/HingeControl`](host/Guest/HingeControl) | The helper that runs inside the simulator for iPhone Duo |
 | [`web/src`](web/src) | The Svelte UI, built by Vite into `web/dist` |
-| [`sdk/SimAgentationPlus`](sdk/SimAgentationPlus) | The optional in-app SDK |
+| [`sdk/SimAgentationPlus`](sdk/SimAgentationPlus) | The optional in-app SDK, packaged by the root [`Package.swift`](Package.swift) |
 | [`examples/DemoApp`](examples/DemoApp) | A sample app that uses the SDK |
 
 Without `pnpm dev`, the page runs `web/dist`; `pnpm build` or `pnpm watch` refreshes it. The dev server leaves a token for the host to pass the page, and the page loads from it only when they match, so nothing else on port 38472 can.

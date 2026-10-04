@@ -14,14 +14,14 @@ let package = Package(
         ),
     ],
     dependencies: [
-        .package(path: "../../../sdk/SimAgentationPlus"),
+        .package(path: "../../.."), // this repository: the SimAgentationPlus SDK
     ],
     targets: [
         // Targets are the basic building blocks of a package, defining a module or a test suite.
         // Targets can depend on other targets in this package and products from dependencies.
         .target(
             name: "DemoAppFeature",
-            dependencies: [.product(name: "SimAgentationPlus", package: "SimAgentationPlus")]
+            dependencies: [.product(name: "SimAgentationPlus", package: "sim-agentation")]
         ),
         .testTarget(
             name: "DemoAppFeatureTests",
