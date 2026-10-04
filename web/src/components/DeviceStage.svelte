@@ -1,10 +1,11 @@
 <script>
   import { onMount, untrack } from 'svelte';
   import {
-    ui, MARGIN, ROTATION, attachStage, onStageResize, startDevice, pressHome, reclaimInput, saveScreenshot, toggleRecording, rotate, isFoldable, POSES, currentPose, setPose, slideHinge, hingeAngle, is3D, toggle3D, pressButton,
+    ui, MARGIN, ROTATION, attachStage, onStageResize, startDevice, pressHome, reclaimInput, saveScreenshot, toggleRecording, rotate, isFoldable, POSES, currentPose, setPose, slideHinge, hingeAngle, is3D, toggle3D, pressButton, maps3D, attachScreen3D,
     onPointerDown, onPointerMove, onPointerUp, onWheel, onScreenKey,
   } from '../lib/app.svelte.js';
   import { icon } from '../lib/icons.js';
+  import { layerSize, layerStyle } from '../lib/screen3d.js';
   import SideButton from './SideButton.svelte';
 
   // The canvas and overlay stay mounted for the page's lifetime: the stream
@@ -116,6 +117,18 @@
     action: ['Camera Control', '<path d="M2.5 6.5h3l1.5-2h4l1.5 2h3v8h-13z"/><circle cx="9" cy="10.2" r="2.4"/>'],
     power: ['Sleep/Wake', '<rect x="4" y="8" width="10" height="7.5" rx="1.5"/><path d="M6 8V5.8a3 3 0 0 1 6 0V8"/>'],
   };
+  // Design Mode on the 3D book: a layer of framebuffer coordinates laid
+  // onto each piece of the screen, the first piece's drawn on and the
+  // others' copies of it, each cut along the hinge.
+  const pieces3D = $derived(in3D && ui.scene && ui.box3d ? maps3D() : []);
+  const layer3D = $derived(pieces3D.length ? layerSize(pieces3D) : { width: 1, height: 1 });
+  const layers3D = $derived(pieces3D.map((piece) => layerStyle(piece, layer3D)));
+  let boxes3D = $state(), floats3D = $state(), mirrorBoxes3D = $state(), mirrorFloats3D = $state();
+  $effect(() => {
+    if (!boxes3D || !floats3D) return;
+    return attachScreen3D({ boxes: boxes3D, floats: floats3D, mirrors: [[mirrorBoxes3D, boxes3D], [mirrorFloats3D, floats3D]] });
+  });
+
   // A key's glyph stays on the stage, however close the book comes.
   const keySpot = (at, length) => Math.min(length - 16, Math.max(16, at * length));
   const glyph = (paths) => `<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths}</svg>`;
@@ -139,6 +152,25 @@
         style:--unrotate="{in3D ? 0 : -angle}deg"
       >
         {#if in3D}
+          <div class="screen3d" style:--unrotate="{-(ROTATION[ui.orientation] ?? 0)}deg">
+            {#each layers3D as layer, i (i)}
+              <div
+                class="piece3d"
+                style:width="{layer3D.width}px"
+                style:height="{layer3D.height}px"
+                style:transform={layer.transform}
+                style:clip-path={layer.clip}
+              >
+                {#if i === 0}
+                  <div class="piece-layer" bind:this={boxes3D}></div>
+                  <div class="piece-layer" bind:this={floats3D}></div>
+                {:else if i === 1}
+                  <div class="piece-layer" bind:this={mirrorBoxes3D}></div>
+                  <div class="piece-layer" bind:this={mirrorFloats3D}></div>
+                {/if}
+              </div>
+            {/each}
+          </div>
           <div class="hw-keys">
             {#each ui.scene.buttons as key (key.id)}
               <button

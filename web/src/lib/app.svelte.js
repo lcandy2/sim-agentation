@@ -9,7 +9,8 @@ import { sampler, warm, containerAround, containersAround, partsWithin } from '.
 import { matchesFrontApp, sdkContainers, sourceFor, viewContext } from './sdk.js';
 import { createDecoder, decodeCapabilities, decodesSmoothly, formatLabel, pickFormat } from './stream.js';
 import { HIDDEN_FPS, createAuto, decide, newFormat, observe, probeFor, probed, restart } from './auto.js';
-import { sdkToPortrait, treeToPortrait, uprightDegrees } from './rotation.js';
+import { isTurned, sdkToPortrait, treeToPortrait, uprightDegrees } from './rotation.js';
+import { pieceMaps, locate, stageBox } from './screen3d.js';
 
 export const storage = {
   get(k) {
@@ -251,6 +252,10 @@ function paintLoop() {
         ui.live = true;
         setStatus(''); // streaming is the normal state; say nothing
       }
+      paint(frame);
+    } else if (is3D()) {
+      // Design Mode in 3D: the host holds the screen and keeps drawing the
+      // book, so it zooms and turns; the frozen still is what's read.
       paint(frame);
     }
   }
@@ -501,65 +506,32 @@ function inputPoint(e) {
   if (is3D()) {
     // The overlay is the rendered frame: through the screen's pieces
     // straight into the lit panel's framebuffer, where touches land.
-    const el = rt.overlay;
-    const hit = locate(ui.scene.pieces, e.offsetX / el.clientWidth, e.offsetY / el.clientHeight);
+    const hit = locate(maps3D(), e.offsetX, e.offsetY);
     return { x: hit.u * width, y: hit.v * height, width, height, inside: hit.inside };
   }
   const { fx, fy } = fraction(e);
   return { x: fx * width, y: fy * height, width, height, inside: true };
 }
 
-/**
- * A frame point (normalized) → the framebuffer point it shows, through
- * whichever of the host's screen pieces it lands on: each a quad with its
- * corners in the framebuffer's order and the part of the buffer it shows.
- * Off every piece it's placed on the first, so a drag that leaves the
- * screen keeps a position. Ported from baguette's ScreenPieces.
- */
-function locate(pieces, px, py) {
-  let fallback = { u: 0, v: 0, inside: false };
-  for (const [i, piece] of pieces.entries()) {
-    const hit = locateInQuad(piece.corners, px, py);
-    const clamp = (x) => Math.max(0, Math.min(1, x));
-    const placed = {
-      u: piece.u[0] + clamp(hit.u) * (piece.u[1] - piece.u[0]),
-      v: piece.v[0] + clamp(hit.v) * (piece.v[1] - piece.v[0]),
-      inside: hit.inside,
-    };
-    if (placed.inside) return placed;
-    if (i === 0) fallback = placed;
+let maps = { scene: null, box: null, maps: [] };
+
+/** The 3D book's screen pieces as maps to and from the stage (see screen3d.js). */
+export function maps3D() {
+  if (maps.scene !== ui.scene || maps.box !== ui.box3d) {
+    maps = { scene: ui.scene, box: ui.box3d, maps: ui.scene && ui.box3d ? pieceMaps(ui.scene.pieces, ui.box3d) : [] };
   }
-  return fallback;
+  return maps.maps;
 }
 
-/** (u, v) in the quad [TL, TR, BR, BL] whose bilinear blend lands on (px, py): baguette's ScreenQuad.locate. */
-function locateInQuad([a, b, c, d], px, py) {
-  const cross = (p, q) => p[0] * q[1] - p[1] * q[0];
-  const e = [b[0] - a[0], b[1] - a[1]];
-  const f = [d[0] - a[0], d[1] - a[1]];
-  const g = [a[0] - b[0] - d[0] + c[0], a[1] - b[1] - d[1] + c[1]];
-  const h = [px - a[0], py - a[1]];
-  const qa = cross(g, f), qb = cross(e, f) + cross(h, g), qc = cross(h, e);
-  let v;
-  if (Math.abs(qa) < 1e-9) {
-    v = Math.abs(qb) < 1e-9 ? 0 : -qc / qb;
-  } else {
-    const disc = qb * qb - 4 * qa * qc;
-    if (disc < 0) return { u: 0.5, v: 0.5, inside: false };
-    const v1 = (-qb + Math.sqrt(disc)) / (2 * qa), v2 = (-qb - Math.sqrt(disc)) / (2 * qa);
-    const ok = (x) => x >= -0.001 && x <= 1.001;
-    v = ok(v1) && !ok(v2) ? v1 : ok(v2) && !ok(v1) ? v2 : Math.abs(v1 - 0.5) <= Math.abs(v2 - 0.5) ? v1 : v2;
-  }
-  const dx = e[0] + v * g[0], dy = e[1] + v * g[1];
-  const u = Math.abs(dx) >= Math.abs(dy) ? (h[0] - v * f[0]) / dx : (h[1] - v * f[1]) / dy;
-  const eps = 0.001; // a click right on the edge isn't lost to rounding
-  return { u, v, inside: u >= -eps && u <= 1 + eps && v >= -eps && v <= 1 + eps };
-}
 
 /** Annotation space = accessibility points. */
 function axPoint(e) {
-  const { fx, fy } = fraction(e);
   const { width, height } = rt.frozen.points;
+  if (is3D()) {
+    const hit = locate(maps3D(), e.offsetX, e.offsetY);
+    return { x: hit.u * width, y: hit.v * height };
+  }
+  const { fx, fy } = fraction(e);
   return { x: fx * width, y: fy * height };
 }
 
@@ -572,7 +544,33 @@ function placeBox(el, rect) {
 }
 
 function clearLayer(selector) {
-  for (const layer of [rt.overlay, rt.float]) layer?.querySelectorAll(selector).forEach((n) => n.remove());
+  for (const layer of [rt.overlay, rt.float, rt.layers3D?.boxes, rt.layers3D?.floats]) layer?.querySelectorAll(selector).forEach((n) => n.remove());
+}
+
+// Design Mode draws its boxes on the screen's layer and its labels and
+// markers on the one above it, in framebuffer coordinates: the flat
+// screen's own, or in 3D the layers laid onto the book (see DeviceStage).
+const boxLayer = () => (is3D() && rt.layers3D?.boxes) || rt.overlay;
+const floatLayer = () => (is3D() && rt.layers3D?.floats) || rt.float;
+
+/**
+ * The 3D book's layers for Design Mode, the first piece's and copies for
+ * the others: what's drawn moves onto them, and back when they go.
+ */
+export function attachScreen3D({ boxes, floats, mirrors }) {
+  rt.layers3D = { boxes, floats };
+  boxes.append(...rt.overlay.querySelectorAll('.hl, .sel'));
+  floats.append(...rt.float.children);
+  const copy = () => mirrors.forEach(([to, from]) => to && (to.innerHTML = from.innerHTML));
+  const observer = new MutationObserver(copy);
+  for (const layer of [boxes, floats]) observer.observe(layer, { subtree: true, childList: true, attributes: true, characterData: true });
+  copy();
+  return () => {
+    observer.disconnect();
+    rt.layers3D = null;
+    rt.overlay?.append(...boxes.children);
+    rt.float?.append(...floats.children);
+  };
 }
 
 // ---------- pointer and keyboard on the screen ----------
@@ -880,7 +878,7 @@ export async function setMode(mode) {
   const was3D = is3D();
   ui.mode = mode;
   closeComposer();
-  syncView(); // annotating shows the screen flat
+  syncView(); // in 3D, the host holds the screen while annotating
 
   if (mode === 'annotate') {
     // Design Mode's annotations show in the inspector: its tab, and the
@@ -918,7 +916,7 @@ export async function setMode(mode) {
       points: { width: ui.chrome.screen.width, height: ui.chrome.screen.height },
       marks: [],
     });
-    paint(bitmap);
+    if (!is3D()) paint(bitmap);
     ui.frozen = true;
     setStatus('Freezing…');
     await new Promise(requestAnimationFrame); // let the frozen frame paint first
@@ -930,7 +928,7 @@ export async function setMode(mode) {
     if (full) {
       f.bitmap.close?.();
       f.bitmap = full;
-      paint(full);
+      if (!is3D()) paint(full);
       f.pixels = sampler(full, f.points.width, f.points.height);
       warm(f.pixels);
     }
@@ -940,8 +938,10 @@ export async function setMode(mode) {
     // A turned interface reports turned coordinates; bring them into the
     // framebuffer's, where the overlay, pixels and touches live.
     const screen = ui.chrome.screen;
-    f.turned = tree?.frame && tree.frame.width > tree.frame.height ? ui.orientation : null;
-    f.tree = treeToPortrait(tree, ui.orientation, screen);
+    // iPhone Duo's unfolded panel lays a landscape interface in a portrait root.
+    const foldable = isFoldable() && ui.orientation.startsWith('landscape');
+    f.turned = isTurned(tree, foldable) ? ui.orientation : null;
+    f.tree = treeToPortrait(tree, ui.orientation, screen, foldable);
     if (f.tree?.frame?.width) f.points = { width: f.tree.frame.width, height: f.tree.frame.height };
     f.sdkAvailable = matchesFrontApp(sdk, tree) ? sdkToPortrait(sdk, ui.orientation, screen) : null;
     applySdk();
@@ -1040,7 +1040,7 @@ function annotateMove(e) {
     if (!rt.drag.box) {
       if (!rt.drag.add) clearPicks();
       rt.drag.color = nextColor();
-      rt.overlay.append((rt.drag.box = selectionBox(rt.drag.color)));
+      boxLayer().append((rt.drag.box = selectionBox(rt.drag.color)));
     }
     placeBox(rt.drag.box, normalize(rt.drag.start, p));
     return;
@@ -1073,7 +1073,7 @@ function annotateUp(e) {
   const color = nextColor();
   const el = selectionBox(color);
   placeBox(el, rect);
-  rt.overlay.append(el);
+  boxLayer().append(el);
   rt.picks.push({ id: ++pickIds, kind: target?.node ? 'element' : 'area', rect, point: target?.node ? p : undefined, label: target?.label ?? 'Area', role: target?.node?.role, color, el });
   openComposer();
 }
@@ -1166,14 +1166,14 @@ function changeLevel(delta) {
 const normalize = (a, b) => ({ x: Math.min(a.x, b.x), y: Math.min(a.y, b.y), width: Math.abs(a.x - b.x), height: Math.abs(a.y - b.y) });
 
 function highlight() {
-  let hl = rt.overlay.querySelector('.hl');
-  let label = rt.float.querySelector('.hl-label');
+  let hl = boxLayer().querySelector('.hl');
+  let label = floatLayer().querySelector('.hl-label');
   const hover = rt.hover;
   const target = hover?.targets[hover.level];
   if (!target) return clearLayer('.hl, .hl-label');
-  if (!hl) rt.overlay.append((hl = Object.assign(document.createElement('div'), { className: 'hl' })));
+  if (!hl) boxLayer().append((hl = Object.assign(document.createElement('div'), { className: 'hl' })));
   // The label sits on the unmasked layer so it stays whole above the top of the screen.
-  if (!label) rt.float.append((label = Object.assign(document.createElement('span'), { className: 'hl-label' })));
+  if (!label) floatLayer().append((label = Object.assign(document.createElement('span'), { className: 'hl-label' })));
   placeBox(hl, target.rect);
   // Anchor at the box corner that is top-left on screen; the label then turns
   // back upright (--unrotate), so it reads level however the device is turned.
@@ -1202,7 +1202,7 @@ function openComposer() {
         label: picks.map((k) => k.label).join(', '),
         parts: picks.map(({ kind, rect, point, label, color }) => ({ kind, rect, point, label, color })),
       };
-  const boxes = picks.map((k) => k.el.getBoundingClientRect());
+  const boxes = picks.map((k) => (is3D() ? stageRect(k.rect) : null) ?? k.el.getBoundingClientRect());
   ui.draft = {
     label: picks.length === 1 ? first.label : `${first.label} and ${picks.length - 1} more`,
     // The composer shows them as chips, each in its color.
@@ -1306,7 +1306,7 @@ export async function submitComposer(comment) {
   const marker = Object.assign(document.createElement('div'), { className: 'marker', textContent: f.marks.length });
   marker.style.left = `${(r.x / f.points.width) * 100}%`;
   marker.style.top = `${(r.y / f.points.height) * 100}%`;
-  rt.float.append(marker);
+  floatLayer().append(marker);
 }
 
 /** The canvas turned a quarter, for landscape screenshots. */
@@ -1411,8 +1411,8 @@ export function setPose(degrees) {
 
 // ---------- 3D ----------
 
-/** Device Hub draws iPhone Duo in 3D; annotating needs the screen as it is, flat. */
-export const wants3D = () => isFoldable() && ui.running && ui.prefer3d && ui.mode === 'interact';
+/** Device Hub draws iPhone Duo in 3D; Design Mode annotates it there too. */
+export const wants3D = () => isFoldable() && ui.running && ui.prefer3d;
 
 /** The 3D book is up: the host loaded the model and said where its screen lands. */
 export const is3D = () => wants3D() && !!ui.scene && !!ui.box3d;
@@ -1422,7 +1422,18 @@ export function toggle3D() {
   ui.prefer3d = !ui.prefer3d;
   storage.set('view-3d', ui.prefer3d ? 'on' : 'off');
   syncView();
+  // Annotating, the flat screen shows the frozen still; the book is the stream.
+  if (rt.frozen && !is3D()) paint(rt.frozen.bitmap);
   tick().then(updateScale);
+}
+
+/** The page box (client px) around a rect in accessibility points, on the 3D book. */
+function stageRect(rect) {
+  const { width, height } = rt.frozen.points;
+  const box = stageBox(maps3D(), { x: rect.x / width, y: rect.y / height, width: rect.width / width, height: rect.height / height });
+  if (!box) return null;
+  const at = rt.overlay.getBoundingClientRect();
+  return { left: at.left + box.left, right: at.left + box.right, top: at.top + box.top, bottom: at.top + box.bottom };
 }
 
 let sentView = '';
@@ -1444,7 +1455,7 @@ export function syncView() {
     if (box.width !== ui.box3d?.width || box.height !== ui.box3d?.height) ui.box3d = box;
     const k = Math.min(window.devicePixelRatio || 1, 2);
     // The book fills the stage to 32 px from its edges, clear of their fade.
-    msg = { type: 'view', mode: '3d', width: Math.round(box.width * k), height: Math.round(box.height * k), background: stageColor(), zoom: ui.zoom3d, margin: 32 * k };
+    msg = { type: 'view', mode: '3d', width: Math.round(box.width * k), height: Math.round(box.height * k), background: stageColor(), zoom: ui.zoom3d, margin: 32 * k, frozen: ui.mode === 'annotate' };
   }
   const key = JSON.stringify(msg);
   if (key === sentView || rt.ws?.readyState !== WebSocket.OPEN) return;

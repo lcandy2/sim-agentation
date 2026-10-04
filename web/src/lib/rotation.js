@@ -9,6 +9,11 @@
 //   interface's top runs along the framebuffer's left edge.
 // - landscape-left (3, counterclockwise): its top runs along the right edge.
 // - The SDK reports window coordinates, i.e. the interface's own points.
+//
+// Measured on iOS 27.1 (iPhone Duo's unfolded panel, Settings): the root
+// frame keeps the panel's portrait size, 669 × 951, while everything in it
+// is in the landscape interface's own points, unscaled (About at x 515,
+// 351 wide).
 
 /** Interface point → framebuffer point. */
 function toPortrait(orientation, screen) {
@@ -35,12 +40,38 @@ function mapFrames(value, point) {
   return out;
 }
 
+/**
+ * The landscape interface the tree's points describe: its root, or for
+ * iPhone Duo's root (portrait, around a landscape interface) the interface
+ * it stands for; null when the points are portrait already (an app or home
+ * screen that doesn't rotate).
+ */
+function landscapeRoot(tree, foldable) {
+  const root = tree?.frame;
+  if (!isRect(root)) return null;
+  if (root.width > root.height) return root;
+  if (!foldable) return null;
+  // The Duo's: past the portrait root's width, below the root's own size
+  // (the app keeps it too), is the landscape interface.
+  let right = 0;
+  (function walk(node) {
+    const f = node?.frame;
+    if (isRect(f) && !(f.width === root.width && f.height === root.height)) right = Math.max(right, f.x + f.width);
+    node?.children?.forEach(walk);
+  })(tree);
+  return right > root.width * 1.05 ? { x: 0, y: 0, width: root.height, height: root.width } : null;
+}
+
+/** Whether the tree describes a turned (landscape) interface; `foldable`
+ *  for iPhone Duo's way of saying so. */
+export const isTurned = (tree, foldable = false) => !!landscapeRoot(tree, foldable);
+
 /** The accessibility tree in framebuffer points. A portrait root (an app
  *  or home screen that doesn't rotate) is already there. */
-export function treeToPortrait(tree, orientation, screen) {
+export function treeToPortrait(tree, orientation, screen, foldable = false) {
   const rotate = toPortrait(orientation, screen);
-  const root = tree?.frame;
-  if (!rotate || !root || root.width <= root.height) return tree;
+  const root = rotate && landscapeRoot(tree, foldable);
+  if (!rotate || !root) return tree;
   const k = root.width / screen.height; // the letterbox scale
   const point = (x, y) => rotate((x - root.x) / k, (y - root.y) / k);
   const mapped = mapFrames(tree, point);

@@ -309,6 +309,12 @@ img { -webkit-user-drag: none; }
   mask-image: var(--fade), linear-gradient(to bottom, transparent, #000 24px, #000 calc(100% - 24px), transparent);
   mask-composite: intersect;
 }
+/* Design Mode on the 3D book: layers in framebuffer coordinates, each laid
+   onto a piece of the screen by a matrix3d from the top-left corner. */
+.screen3d { position: absolute; inset: 0; z-index: 3; pointer-events: none; }
+.piece3d { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+.piece-layer { position: absolute; inset: 0; }
+
 /* Device Hub's keys beside the 3D book: bare glyphs, shown while the
    pointer is on the stage, lit under it. */
 .hw-keys { position: absolute; inset: 0; z-index: 5; pointer-events: none; }

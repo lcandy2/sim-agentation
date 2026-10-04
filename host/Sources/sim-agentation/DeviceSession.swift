@@ -69,6 +69,11 @@ final class DeviceSession: @unchecked Sendable {
     private var scene: DuoScene?
     private var view3D = false
     private var lastOther: IOSurface?
+    /// Design Mode holds the book's screens as they were (the page reads
+    /// the still) while the book is drawn on; `paintOnce` puts the screens
+    /// on it once more first, so what's held is what was frozen.
+    private var screenFrozen = false
+    private var paintOnce = false
     private var poseVersion = 0
     private var lastRender: (key: [UInt64], surface: IOSurface)?
 
@@ -213,6 +218,7 @@ final class DeviceSession: @unchecked Sendable {
         let size = (width: Int(width / 2) * 2, height: Int(height / 2) * 2)
         let background = Self.color(msg["background"] as? String)
         let zoom = (msg["zoom"] as? NSNumber)?.doubleValue ?? 1
+        let frozen = msg["frozen"] as? Bool ?? false
         let margin = (msg["margin"] as? NSNumber)?.doubleValue ?? 0
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
@@ -230,6 +236,8 @@ final class DeviceSession: @unchecked Sendable {
                     self.lock.lock()
                     self.scene = scene
                     self.view3D = true
+                    if fresh || (frozen && !self.screenFrozen) { self.paintOnce = true }
+                    self.screenFrozen = frozen
                     if fresh {
                         self.lastRender = nil
                         self.pendingKeyframe = true
@@ -393,14 +401,19 @@ final class DeviceSession: @unchecked Sendable {
     /// The 3D frame for these panels' surfaces, rendered on the main queue,
     /// or the last one again when neither surface nor the pose changed.
     private func render3D(_ scene: DuoScene, _ surface: IOSurface, _ other: IOSurface?, unfoldedWidth: Int, poseVersion: Int) -> IOSurface? {
-        let ids = [surface, other].map { s in s.map { UInt64(IOSurfaceGetID($0)) << 32 | UInt64(IOSurfaceGetSeed($0)) } ?? 0 }
-        let key = ids + [UInt64(poseVersion)]
-        if let last = lock.withLock({ lastRender }), last.key == key { return last.surface }
+        let (paints, once) = lock.withLock { (!screenFrozen || paintOnce, paintOnce) }
+        let ids = paints ? [surface, other].map { s in s.map { UInt64(IOSurfaceGetID($0)) << 32 | UInt64(IOSurfaceGetSeed($0)) } ?? 0 } : [0, 0]
+        let key = ids + [UInt64(poseVersion), paints ? 1 : 0]
+        if !once, let last = lock.withLock({ lastRender }), last.key == key { return last.surface }
         let unfoldedFirst = IOSurfaceGetWidth(surface) == unfoldedWidth
-        let (unfolded, cover) = unfoldedFirst ? (surface, other) : (other, surface)
+        var unfolded: IOSurface?, cover: IOSurface?
+        if paints { (unfolded, cover) = unfoldedFirst ? (surface, other) : (other, surface) }
         do {
             let rendered = try onMain { try scene.render(unfolded: unfolded, cover: cover) }
-            lock.withLock { lastRender = (key, rendered) }
+            lock.withLock {
+                lastRender = (key, rendered)
+                if once { paintOnce = false }
+            }
             return rendered
         } catch {
             FileHandle.standardError.write(Data("sim-agentation: 3D frame skipped: \(error)\n".utf8))
