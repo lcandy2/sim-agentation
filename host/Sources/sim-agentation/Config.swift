@@ -17,7 +17,7 @@ enum Config {
         return UInt16(number)
     }()
 
-    /// SIM_AGENTATION_HOME, default ~/.sim-agentation: annotations and screenshots.
+    /// SIM_AGENTATION_HOME, default ~/.sim-agentation: annotations (their screenshots are temporary, see Store).
     static let home: String = env("SIM_AGENTATION_HOME") ?? Path.join(homeDirectory, ".sim-agentation")
 
     /// SimAgentationPlus, the optional in-app SDK.
