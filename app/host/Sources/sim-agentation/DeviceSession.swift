@@ -137,7 +137,12 @@ final class DeviceSession: @unchecked Sendable {
                 self.statsTimer?.cancel(); self.statsTimer = nil
                 self.foldable?.stop()
                 self.probing?.timer.cancel(); self.probing = nil
+                let scene = self.scene
+                self.scene = nil
+                self.view3D = false
                 self.lock.unlock()
+                // The next stream of a foldable starts from this one's book.
+                if let scene { DispatchQueue.main.async { MainActor.assumeIsolated { DuoScene.park(scene) } } }
                 Self.liveLock.lock(); Self.live[ObjectIdentifier(self)] = nil; Self.liveLock.unlock()
             }
         )
@@ -227,7 +232,7 @@ final class DeviceSession: @unchecked Sendable {
             MainActor.assumeIsolated {
                 do {
                     let (current, showing) = self.lock.withLock { (self.scene, self.view3D) }
-                    let scene = try current ?? DuoScene(width: size.width, height: size.height, background: background)
+                    let scene = try current ?? DuoScene.make(width: size.width, height: size.height, background: background)
                     // Its `degrees` is the pose drawn, which the page's picker and slider show.
                     scene.onLayout = { [weak self] layout in
                         var message = layout

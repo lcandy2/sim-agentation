@@ -42,7 +42,9 @@ private enum Duo {
 
     /// V68.usdz in the selected Xcode, else the newest that has it (the
     /// Duo needs Xcode 27.1, which needn't be the one selected).
-    static func assetURL() -> URL? {
+    /// Looked up once (it asks xcode-select): a new Xcode needs a new host.
+    static func assetURL() -> URL? { found }
+    private static let found: URL? = {
         var roots: [String] = []
         if let developer = try? run(["xcode-select", "-p"]).trimmingCharacters(in: .whitespacesAndNewlines) {
             roots.append(URL(fileURLWithPath: developer).deletingLastPathComponent().path) // …/Contents
@@ -50,7 +52,7 @@ private enum Duo {
         let apps = (try? FileManager.default.contentsOfDirectory(atPath: "/Applications")) ?? []
         roots += apps.filter { $0.hasPrefix("Xcode") && $0.hasSuffix(".app") }.sorted(by: >).map { "/Applications/\($0)/Contents" }
         return roots.lazy.map { URL(fileURLWithPath: Path.join($0, asset)) }.first { FileManager.default.fileExists(atPath: $0.path) }
-    }
+    }()
 }
 
 // MARK: - pose and projection (plain math)
@@ -295,6 +297,49 @@ final class DuoScene {
     /// Strips across the unfolded screen, finer where it bends (its middle):
     /// each is near enough flat for one homography.
     private static let strips: [Double] = [0, 0.1, 0.2, 0.3, 0.38, 0.43, 0.46, 0.48, 0.5, 0.52, 0.54, 0.57, 0.62, 0.7, 0.8, 0.9, 1]
+
+    // Building one takes about a second (the model 0.5 to 0.7 s, then the
+    // first render setting up the GPU 0.35 s), every time iPhone Duo is
+    // opened. So a stream that ends leaves its scene here for the next, and
+    // the page asking for a foldable's chrome builds one ahead, unless a
+    // stream is drawing the book: building holds the main queue, where
+    // every book is drawn, for that second.
+    private static var spare: DuoScene?
+    private static var building = false
+    private static var inUse = 0
+
+    /// A scene for a stream: the spare if there is one, laid out afresh, else a new one.
+    static func make(width: Int, height: Int, background: CGColor) throws -> DuoScene {
+        let scene = try spare ?? DuoScene(width: width, height: height, background: background)
+        spare = nil
+        scene.layoutDirty = true
+        inUse += 1
+        return scene
+    }
+
+    /// Keeps a scene a stream is done with for the next.
+    static func park(_ scene: DuoScene) {
+        scene.onLayout = nil
+        spare = scene
+        inUse = max(0, inUse - 1)
+    }
+
+    /// Builds the spare ahead, drawn once, on the main queue.
+    nonisolated static func prepare() {
+        DispatchQueue.main.async {
+            MainActor.assumeIsolated {
+                guard spare == nil, !building, inUse == 0 else { return }
+                building = true
+                defer { building = false }
+                guard let scene = try? DuoScene(width: 960, height: 640, background: CGColor(red: 1, green: 1, blue: 1, alpha: 1)) else { return }
+                // Drawn with screens on it: the screens' material is what
+                // the GPU takes longest to set up, at the first frame.
+                let blank = IOSurface(properties: [.width: 64, .height: 64, .bytesPerElement: 4, .pixelFormat: 0x4247_5241 /* BGRA */])
+                _ = try? scene.render(unfolded: blank, cover: blank)
+                if spare == nil { spare = scene }
+            }
+        }
+    }
 
     /// Loads the model from Xcode and sets the stage for `width` × `height`.
     init(width: Int, height: Int, background: CGColor) throws {

@@ -64,16 +64,44 @@ final class Foldable: @unchecked Sendable {
         self.unfolded = unfolded
     }
 
+    /// What each device's hinge last said, across streams, so the next
+    /// stream lights that panel at once rather than in about 0.6 s
+    /// (devicectl's first reading, then simctl for the turn).
+    private struct Remembered { var degrees: Double?; var open: Bool?; var device: Int?; var unfolded: Bool }
+    nonisolated(unsafe) private static var remembered: [String: Remembered] = [:]
+    private static let memory = NSLock()
+
+    private func remember() {
+        let now: Remembered? = lock.withLock {
+            lit.map { Remembered(degrees: degrees, open: open, device: device, unfolded: $0.panel == unfolded) }
+        }
+        guard let now else { return }
+        Self.memory.withLock { Self.remembered[udid] = now }
+    }
+
     /// Calls `onLit` with the lit panel once the hinge first reads (in
     /// about 0.3 s), or the cover after 1.5 s without a reading (how the
     /// device boots), then whenever it changes; `onAngle` with every
-    /// reading (60 a second while it moves).
+    /// reading (60 a second while it moves). A device seen in an earlier
+    /// stream lights the panel it had at once; a first reading that says
+    /// otherwise (folded meanwhile) lights the other, as does the screen
+    /// staying dark while the other shows something (see `swap`).
     func start(onLit: @escaping @Sendable (Lit) -> Void, onAngle: @escaping @Sendable (Double) -> Void) {
+        let last = Self.memory.withLock { Self.remembered[udid] }
         lock.withLock {
             self.onLit = onLit
             self.onAngle = onAngle
+            if let last {
+                degrees = last.degrees
+                open = last.open
+                device = last.device
+            }
         }
         watch()
+        if let last {
+            let panel = last.unfolded ? unfolded : cover
+            DispatchQueue.global().async { [weak self] in self?.light(panel) }
+        }
         DispatchQueue.global().asyncAfter(deadline: .now() + 1.5) { [weak self] in
             guard let self, self.lock.withLock({ self.lit == nil && !self.stopped }) else { return }
             self.light(self.cover)
@@ -152,6 +180,7 @@ final class Foldable: @unchecked Sendable {
             return open != side ? side : nil
         }
         if let crossed { light(crossed ? unfolded : cover) }
+        remember()
     }
 
     /// The panel the hinge chose stayed dark while the other one showed
@@ -178,6 +207,7 @@ final class Foldable: @unchecked Sendable {
             return (made, onLit)
         }
         if let next { next.1?(next.0) }
+        remember()
     }
 
     // MARK: - driving it

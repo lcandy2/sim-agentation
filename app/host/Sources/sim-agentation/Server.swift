@@ -136,7 +136,10 @@ final class AppServer: @unchecked Sendable {
             if path == "/api/sims" { return .respond(Self.json(try await devices())) }
             if path == "/api/sims/new" { return .respond(Self.json(try await deviceOptions())) }
             if part(0) == "api" && part(1) == "sims" && part(3) == "chrome" {
-                return .respond(Self.json(try await chrome.chrome(for: parts[2], panel: req.queryValue("panel"))))
+                let art = try await chrome.chrome(for: parts[2], panel: req.queryValue("panel"))
+                // A foldable in the list: its 3D book is built ahead (see DuoScene.prepare).
+                if (art["panels"]?.arrayValue?.count ?? 0) > 1 { DuoScene.prepare() }
+                return .respond(Self.json(art))
             }
             if part(0) == "api" && part(1) == "sims" && part(3) == "mask.png" {
                 let png = try await chrome.maskImage(udid: parts[2], panel: req.queryValue("panel"))
