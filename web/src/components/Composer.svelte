@@ -93,7 +93,10 @@
     <!-- The outline's shadow, only outside it, drawn after the glass so the
          glass doesn't blur it in. -->
     <svg class="composer-shadow" width={WIDTH + 2 * SHADOW_PAD} height={place.h + 2 * SHADOW_PAD} style:left="-{SHADOW_PAD}px" style:top="-{SHADOW_PAD}px" aria-hidden="true">
-      <filter id="composer-shadow" filterUnits="userSpaceOnUse" x="0" y="0" width={WIDTH + 2 * SHADOW_PAD} height={place.h + 2 * SHADOW_PAD}>
+      <!-- Its region is in the outline's own space, which the translate below
+           moves in by the padding: so it starts that far out, or the shadow
+           above and left of the outline is cut off. -->
+      <filter id="composer-shadow" filterUnits="userSpaceOnUse" x={-SHADOW_PAD} y={-SHADOW_PAD} width={WIDTH + 2 * SHADOW_PAD} height={place.h + 2 * SHADOW_PAD}>
         <feGaussianBlur in="SourceAlpha" stdDeviation="19" />
         <feOffset dy="8" />
         <feComponentTransfer><feFuncA type="linear" slope="0.25" /></feComponentTransfer>
