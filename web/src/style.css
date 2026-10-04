@@ -756,8 +756,10 @@ kbd {
 /* Outlines sit just outside the box (1 pt) so they never cover the text they mark. */
 /* Hover and selection are Design Mode's color, like its button and the
    device's outline: see-through while hovering, solid once selected. */
-/* Hover and selection draw one and the same box; only their colors differ. */
-.hl, .sel { outline: 1.5px solid var(--box-line); outline-offset: 1px; background: var(--box-fill); border-radius: 3px; }
+/* Hover and selection draw one and the same box; only their colors differ.
+   The line sits 0.5 px outside it, so it never covers the text it marks: one
+   device pixel on a Retina screen (a 1x screen can only round it to 1). */
+.hl, .sel { outline: 1.5px solid var(--box-line); outline-offset: 0.5px; background: var(--box-fill); border-radius: 2px; }
 .hl { --box-line: color-mix(in srgb, var(--design) 50%, transparent); --box-fill: color-mix(in srgb, var(--design) 6%, transparent); }
 .hl-label {
   z-index: 1;
