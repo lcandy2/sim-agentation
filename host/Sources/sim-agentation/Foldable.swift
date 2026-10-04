@@ -213,6 +213,9 @@ final class Foldable: @unchecked Sendable {
         }
     }
 
+    /// Whether the lit panel is known yet (and so how it's mounted).
+    var known: Bool { lock.withLock { lit != nil } }
+
     /// Turns the device so the page sees the lit panel turned `orientation`
     /// (the page's names), with Device Hub's rotate: the Purple event that
     /// turns a phone does nothing here.

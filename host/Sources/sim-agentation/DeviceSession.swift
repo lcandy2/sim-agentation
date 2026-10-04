@@ -377,8 +377,10 @@ final class DeviceSession: @unchecked Sendable {
             guard let name = msg["orientation"] as? String else { return }
             if let foldable {
                 // A stream's opening `sync` says what the page shows, but a
-                // foldable's turn is the guest's, sent with the lit panel.
-                guard msg["sync"] as? Bool != true else { return }
+                // foldable's turn is the guest's, sent with the lit panel;
+                // and until that's known, so is how it's mounted (a page
+                // from before `sync` sends it then).
+                guard msg["sync"] as? Bool != true, foldable.known else { return }
                 // Through the guest, as Device Hub's rotate button turns it:
                 // the Purple event that turns a phone does nothing here.
                 guest("orientation_result", ["orientation": name]) { try foldable.turn(to: name) }
