@@ -756,7 +756,7 @@ kbd {
 /* Outlines sit just outside the box (1 pt) so they never cover the text they mark. */
 /* Hover and selection are Design Mode's color, like its button and the
    device's outline: see-through while hovering, solid once selected. */
-/* Hover and selection draw one and the same box; only their colours differ. */
+/* Hover and selection draw one and the same box; only their colors differ. */
 .hl, .sel { outline: 1.5px solid var(--box-line); outline-offset: 1px; background: var(--box-fill); border-radius: 3px; }
 .hl { --box-line: color-mix(in srgb, var(--design) 50%, transparent); --box-fill: color-mix(in srgb, var(--design) 6%, transparent); }
 .hl-label {
