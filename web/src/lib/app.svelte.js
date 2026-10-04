@@ -90,7 +90,8 @@ const rt = {
   pendingTree: null,
   hover: null,       // { point, targets: [{ rect, label, node? }], level }
   drag: null,
-  draft: null,       // { kind, rect, point?, label }
+  draft: null,       // { kind, rect, point?, label, parts? }: what the composer will save
+  picks: [],         // what's selected, each { kind, rect, point?, label, el }
   failed: new Set(), // formats Auto gave up on this session
   auto: createAuto(), // what Auto has learned about the connection and decoder (see auto.js)
   seen: { received: 0, decoded: 0, bytes: 0, at: 0 }, // the page's counts at the host's last report
@@ -867,12 +868,14 @@ export function toggleSdk() {
   rt.overlay?.focus();
 }
 
-// With the composer open, hovering and selecting go on: a new selection
-// takes the current one's place, and the composer, its note kept, moves to it.
+// With the composer open, hovering and selecting go on: a click or a drag
+// takes the selection's place, Shift+click adds an element to it (or takes
+// a selected one away) and Shift+drag adds an area. The composer, its note
+// kept, moves beside whatever is selected.
 function annotateDown(e) {
   if (!rt.frozen) return;
   rt.overlay.setPointerCapture(e.pointerId);
-  rt.drag = { start: axPoint(e), moved: false };
+  rt.drag = { start: axPoint(e), moved: false, add: e.shiftKey, box: null };
 }
 
 function annotateMove(e) {
@@ -885,9 +888,11 @@ function annotateMove(e) {
     rt.drag.moved = true;
     clearLayer('.hl, .hl-label');
     rt.hover = null;
-    let sel = rt.overlay.querySelector('.sel');
-    if (!sel) rt.overlay.append((sel = Object.assign(document.createElement('div'), { className: 'sel' })));
-    placeBox(sel, normalize(rt.drag.start, p));
+    if (!rt.drag.box) {
+      if (!rt.drag.add) clearPicks();
+      rt.overlay.append((rt.drag.box = Object.assign(document.createElement('div'), { className: 'sel' })));
+    }
+    placeBox(rt.drag.box, normalize(rt.drag.start, p));
     return;
   }
   const targets = targetsAt(p);
@@ -900,19 +905,26 @@ function annotateMove(e) {
 function annotateUp(e) {
   if (!rt.drag) return;
   const p = axPoint(e);
-  const { moved, start } = rt.drag;
+  const { moved, start, add, box } = rt.drag;
   rt.drag = null;
   if (moved) {
-    openComposer({ kind: 'area', rect: normalize(start, p), label: 'Area' });
-    return;
+    rt.picks.push({ kind: 'area', rect: normalize(start, p), label: 'Area', el: box });
+    return openComposer();
   }
   const target = rt.hover?.targets[rt.hover.level] ?? targetsAt(p)[0];
   const rect = target ? { ...target.rect } : { x: p.x - 22, y: p.y - 22, width: 44, height: 44 };
-  clearLayer('.hl, .hl-label, .sel');
-  const sel = Object.assign(document.createElement('div'), { className: 'sel' });
-  placeBox(sel, rect);
-  rt.overlay.append(sel);
-  openComposer({ kind: target?.node ? 'element' : 'area', rect, point: target?.node ? p : undefined, label: target?.label ?? 'Area' });
+  clearLayer('.hl, .hl-label');
+  const picked = rt.picks.findIndex((k) => sameRect(k.rect, rect));
+  if (add && picked >= 0) {
+    rt.picks.splice(picked, 1)[0].el.remove();
+    return rt.picks.length ? openComposer() : closeComposer();
+  }
+  if (!add) clearPicks();
+  const el = Object.assign(document.createElement('div'), { className: 'sel' });
+  placeBox(el, rect);
+  rt.overlay.append(el);
+  rt.picks.push({ kind: target?.node ? 'element' : 'area', rect, point: target?.node ? p : undefined, label: target?.label ?? 'Area', el });
+  openComposer();
 }
 
 /** Everything selectable under a point, innermost first: the accessibility
@@ -1025,16 +1037,47 @@ function highlight() {
 
 // ---------- composer ----------
 
-/** Opens the comment popover beside the selection; the popover keeps itself on screen. */
-function openComposer(draft) {
-  rt.draft = draft;
-  const box = rt.overlay.querySelector('.sel').getBoundingClientRect();
-  ui.draft = { label: draft.label, box: { left: box.left, right: box.right, top: box.top, bottom: box.bottom } };
+/** Opens the comment popover beside what's selected, or moves it there; the
+ *  popover keeps itself on screen. Several picked make one annotation: its
+ *  box holds them all, and each goes along as a part. */
+function openComposer() {
+  const picks = rt.picks;
+  const [first] = picks;
+  rt.draft = picks.length === 1
+    ? { kind: first.kind, rect: first.rect, point: first.point, label: first.label }
+    : {
+        kind: 'area',
+        rect: union(picks.map((k) => k.rect)),
+        label: picks.map((k) => k.label).join(', '),
+        parts: picks.map(({ kind, rect, point, label }) => ({ kind, rect, point, label })),
+      };
+  const boxes = picks.map((k) => k.el.getBoundingClientRect());
+  ui.draft = {
+    label: picks.length === 1 ? first.label : `${first.label} and ${picks.length - 1} more`,
+    box: {
+      left: Math.min(...boxes.map((b) => b.left)),
+      right: Math.max(...boxes.map((b) => b.right)),
+      top: Math.min(...boxes.map((b) => b.top)),
+      bottom: Math.max(...boxes.map((b) => b.bottom)),
+    },
+  };
 }
+
+function clearPicks() {
+  for (const k of rt.picks) k.el?.remove();
+  rt.picks = [];
+}
+
+const union = (rects) => {
+  const x = Math.min(...rects.map((r) => r.x));
+  const y = Math.min(...rects.map((r) => r.y));
+  return { x, y, width: Math.max(...rects.map((r) => r.x + r.width)) - x, height: Math.max(...rects.map((r) => r.y + r.height)) - y };
+};
 
 export function closeComposer() {
   rt.draft = null;
   ui.draft = null;
+  clearPicks();
   clearLayer('.sel');
 }
 
@@ -1058,9 +1101,11 @@ export async function submitComposer(comment) {
   fc.drawImage(img, 0, 0);
   fc.strokeStyle = '#ff383c'; // --mark
   fc.lineWidth = Math.max(3, scale * 1.5);
-  // Just outside the box, as on screen, so the line doesn't cover the text.
+  // Just outside each box, as on screen, so the line doesn't cover the text.
   const out = 1 + fc.lineWidth / scale / 2;
-  fc.strokeRect((r.x - out) * scale, (r.y - out) * scale, (r.width + out * 2) * scale, (r.height + out * 2) * scale);
+  for (const b of draft.parts?.map((part) => part.rect) ?? [r]) {
+    fc.strokeRect((b.x - out) * scale, (b.y - out) * scale, (b.width + out * 2) * scale, (b.height + out * 2) * scale);
+  }
 
   // Close-up with some context around the box.
   const pad = 16;
@@ -1080,6 +1125,7 @@ export async function submitComposer(comment) {
     label: draft.label,
     rect: r,
     point: draft.point,
+    parts: draft.parts?.map((part) => ({ ...part, source: f.sdk ? sourceFor(f.sdk, part.rect) : undefined })),
     tree: f.tree,
     app: f.sdk ? { bundleId: f.sdk.bundleId, name: f.sdk.appName } : undefined,
     source: f.sdk ? sourceFor(f.sdk, r) : undefined,

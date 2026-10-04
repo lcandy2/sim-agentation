@@ -12,7 +12,7 @@
   <div class="design-help">
     <h3>Design Mode</h3>
     <p>Click an element or drag a box around anything, then write what should change.</p>
-    <p class="keys"><kbd>↑</kbd> parent <kbd>↓</kbd> back <kbd>esc</kbd> leave</p>
+    <p class="keys"><kbd>⇧</kbd> add <kbd>↑</kbd> parent <kbd>↓</kbd> back <kbd>esc</kbd> leave</p>
   </div>
 {/if}
 {#if newestFirst.length}

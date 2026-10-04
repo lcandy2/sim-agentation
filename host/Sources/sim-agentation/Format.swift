@@ -42,7 +42,8 @@ enum Format {
     /// Strings worth grepping the Swift sources for.
     private static func searchTerms(_ a: JSONObject) -> [String] {
         var terms: [String] = []
-        for n in ([a["target"], a["within"]] + items(a["inside"]).map(Optional.some)) where JS.truthy(n) {
+        let parts = items(a["parts"]).flatMap { [$0["target"], $0["within"]] }
+        for n in ([a["target"], a["within"]] + parts + items(a["inside"]).map(Optional.some)) where JS.truthy(n) {
             for key in ["identifier", "label", "title"] {
                 guard let t = JS.trimmed(n?[key]), !t.isEmpty, JS.length(t) > 1, JS.length(t) < 60 else { continue }
                 if !terms.contains(where: { JS.same($0, t) }) { terms.append(t) }
@@ -86,7 +87,23 @@ enum Format {
             lines.append("- **Views** (innermost first): \(views.map { "`\(JS.string($0))`" }.joined(separator: " › "))")
         }
         let target = a["target"]
-        if JS.same(a["kind"]?.stringValue, "element") && JS.truthy(target) {
+        let parts = items(a["parts"])
+        if parts.count > 1 {
+            // Several picked together: the note is about all of them.
+            lines.append("- **Elements** (\(parts.count), the note is about them together):")
+            for p in parts {
+                if JS.same(p["kind"]?.stringValue, "element") && JS.truthy(p["target"]) {
+                    lines.append("  - \(node(p["target"])) at \(frame(p["target"]?["frame"]))")
+                } else {
+                    let picked = JS.trimmed(p["label"]).flatMap { $0.isEmpty || $0 == "Area" ? nil : $0 }
+                    let within = JS.truthy(p["within"]) ? ", within \(node(p["within"]))" : ""
+                    lines.append("  - Area \(picked.map { "\($0) " } ?? "")at \(frame(p["rect"]))\(within)")
+                }
+                if let s = items(p["source"]).first, JS.truthy(s) {
+                    lines.append("    - source `\(JS.string(s["name"]))` at \(JS.string(s["file"])):\(JS.string(s["line"]))")
+                }
+            }
+        } else if JS.same(a["kind"]?.stringValue, "element") && JS.truthy(target) {
             lines.append("- **Element**: \(node(target)) at \(frame(target?["frame"]))")
             let path = items(a["targetPath"])
             if path.count > 1 { lines.append("- **Path**: \(join(path, " › "))") }
@@ -96,14 +113,15 @@ enum Format {
             if JS.truthy(a["within"]) { lines.append("- **Within**: \(node(a["within"])) at \(frame(a["within"]?["frame"]))") }
         }
         let inside = items(a["inside"]).filter { !strictEquals($0, target) }.prefix(12)
-        if !inside.isEmpty {
+        if !inside.isEmpty && parts.count < 2 {
             lines.append("- **Inside the box**:")
             for n in inside { lines.append("  - \(node(n)) at \(frame(n["frame"]))") }
         }
         let terms = searchTerms(a)
         if !terms.isEmpty { lines.append("- **Search the source for**: \(terms.map { "`\($0)`" }.joined(separator: ", "))") }
-        lines.append("- **Screenshot (box drawn in red)**: \(JS.string(a["images"]?["full"]))")
-        lines.append("- **Close-up of the box**: \(JS.string(a["images"]?["crop"]))")
+        let boxes = parts.count > 1 ? "boxes" : "box"
+        lines.append("- **Screenshot (\(boxes) drawn in red)**: \(JS.string(a["images"]?["full"]))")
+        lines.append("- **Close-up of the \(boxes)**: \(JS.string(a["images"]?["crop"]))")
         for r in items(a["replies"]) { lines.append("- **\(JS.string(r["from"]))**: \(JS.string(r["message"]))") }
         if JS.truthy(a["resolution"]) { lines.append("- **Resolution**: \(JS.string(a["resolution"]))") }
         return lines.joined(separator: "\n")

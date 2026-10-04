@@ -479,10 +479,30 @@ final class AppServer: @unchecked Sendable {
         }
         // An area (a box, or an icon or text run found in the pixels) names the
         // innermost element it sits in, so the agent knows where to look.
-        var within: AX.Entry?
-        if hit == nil, let tree, let x = rect["x"], let y = rect["y"], let w = rect["width"], let h = rect["height"] {
-            within = AX.hitTest(tree, x: JS.number(x) + JS.number(w) / 2, y: JS.number(y) + JS.number(h) / 2)
+        func center(_ r: JSON) -> AX.Entry? {
+            guard let tree, let x = r["x"], let y = r["y"], let w = r["width"], let h = r["height"] else { return nil }
+            return AX.hitTest(tree, x: JS.number(x) + JS.number(w) / 2, y: JS.number(y) + JS.number(h) / 2)
         }
+        // Several picked at once (Shift): the box holds them all, and each part
+        // names its element as a single pick does.
+        let parts: [JSON] = (b["parts"]?.arrayValue ?? []).prefix(20).compactMap { part in
+            guard Self.isRect(part["rect"]), let partRect = part["rect"] else { return nil }
+            var partHit: AX.Entry?
+            if JS.same(part["kind"]?.stringValue, "element"), let tree, let p = part["point"],
+               JS.isFiniteNumber(p["x"]), JS.isFiniteNumber(p["y"]) {
+                partHit = AX.hitTest(tree, x: JS.number(p["x"]), y: JS.number(p["y"]))
+            }
+            let partWithin = partHit == nil ? center(partRect) : nil
+            return .object(JSONObject([
+                "kind": .string(partHit != nil ? "element" : "area"),
+                "rect": partRect,
+                "label": part["label"]?.stringValue.map { .string(JS.trim($0)) } ?? .null,
+                "target": partHit.map { AX.summarize($0.node) } ?? .null,
+                "within": partWithin.map { AX.summarize($0.node) } ?? .null,
+                "source": part["source"]?.arrayValue != nil ? part["source"]! : .array([]),
+            ]))
+        }
+        let within = hit == nil && parts.count < 2 ? center(rect) : nil
         let device = (try? await blocking { Simulators.shared.all() })?.first { $0.udid == udid }
         let id = Store.newId()
         let now = Store.timestamp()
@@ -507,6 +527,7 @@ final class AppServer: @unchecked Sendable {
             "target": hit.map { AX.summarize($0.node) } ?? .null,
             "within": within.map { AX.summarize($0.node) } ?? .null,
             "targetPath": .array((hit?.path.dropFirst() ?? []).map(JSON.string)),
+            "parts": .array(parts.count > 1 ? parts : []),
             "inside": .array(tree.map { AX.nodesInRect($0, rect).prefix(20).map { AX.summarize($0.node) } } ?? []),
             "screen": AX.screenContext(tree),
             "app": b["app"]?.objectValue != nil
