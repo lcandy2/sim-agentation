@@ -110,6 +110,17 @@
   // the stage's size, so the screen is the whole frame, unturned and
   // unmasked, and the keys are glyphs beside it where the host says.
   const in3D = $derived(is3D());
+  // Switching between the book and the flat chrome isn't a turn: the flat
+  // view's angle accumulates (450° after a few turns), and animating it to
+  // or from the book's none spun the device round. Only turns animate.
+  let switching = $state(false);
+  let wasIn3D;
+  $effect.pre(() => {
+    if (in3D === wasIn3D) return;
+    wasIn3D = in3D;
+    switching = true;
+    requestAnimationFrame(() => requestAnimationFrame(() => (switching = false)));
+  });
   const box = $derived(ui.box3d ?? { width: 0, height: 0 });
   const KEYS = {
     'volume-down': ['Volume Down', '<path d="M2.5 6.5h2.8L9 3.5v11L5.3 11.5H2.5z"/><path d="M11.5 9h4"/>'],
@@ -153,6 +164,7 @@
         class="bezel"
         class:annotating={ui.mode === 'annotate'}
         class:in3d={in3D}
+        class:instant={switching}
         style:width={in3D ? `${box.width}px` : chrome && px(chrome.size.width)}
         style:height={in3D ? `${box.height}px` : chrome && px(chrome.size.height)}
         style:transform={in3D ? 'translate(-50%, -50%)' : `translate(-50%, -50%) rotate(${angle}deg)`}

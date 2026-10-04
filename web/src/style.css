@@ -301,6 +301,8 @@ img { -webkit-user-drag: none; }
 /* The 3D book is the whole frame: no screen backing until frames come, and
    its edges fade out, as a codec's color range leaves the backdrop a shade
    off the page's (255 comes back 253). */
+/* Switching between the 3D book and the flat chrome happens at once. */
+.bezel.instant { transition: none; }
 .device.in3d {
   background: none;
   --fade: linear-gradient(to right, transparent, #000 24px, #000 calc(100% - 24px), transparent);
