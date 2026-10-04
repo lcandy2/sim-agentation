@@ -587,8 +587,10 @@ export function onWindowKey(e) {
   }
   if (e.metaKey) return;
   if (e.key === 'Escape' && ui.mode === 'annotate') {
+    // A selection goes first, then Design Mode.
     e.preventDefault();
-    setMode('interact');
+    if (ui.draft) cancelComposer();
+    else setMode('interact');
     return;
   }
   if (ui.mode === 'annotate' && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
