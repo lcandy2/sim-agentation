@@ -1321,6 +1321,39 @@ export async function startDevice() {
   if (ui.udid === sim.udid) await selectDevice(sim);
 }
 
+// ---------- devices changed elsewhere ----------
+
+let lastSims = '';
+
+/**
+ * The device list as CoreSimulator has it now, so devices started, shut
+ * down, created or deleted elsewhere (Xcode, Simulator.app, simctl) show
+ * up, and the stage follows the device on it: shut down, it goes back to
+ * the preview with Start; started, it streams; deleted, another is shown.
+ * Not while this page is starting or changing it (that reselects when
+ * done), nor in Design Mode, whose frozen frame still serves; the next
+ * look after leaving it catches up.
+ */
+async function followSims() {
+  const text = await fetch('/api/sims').then((r) => (r.ok ? r.text() : null)).catch(() => null);
+  if (text === null) return;
+  if (text !== lastSims) {
+    lastSims = text;
+    ui.sims = JSON.parse(text);
+  }
+  if (!ui.udid || ui.starting || ui.managing || ui.mode === 'annotate') return;
+  const sim = ui.sims.find((s) => s.udid === ui.udid);
+  if (!sim) {
+    flashStatus(`${ui.simName} was removed`, 4000);
+    const next = ui.sims.find((s) => s.state === 'Booted') ?? ui.sims[0];
+    if (next) await selectDevice(next);
+    return;
+  }
+  if ((sim.state === 'Booted') === ui.running) return;
+  flashStatus(sim.state === 'Booted' ? `${sim.name} started` : `${sim.name} was shut down`, 4000);
+  await selectDevice(sim);
+}
+
 // ---------- the … menu: shut down, restart, rename, reset, remove ----------
 
 async function reloadSims() {
@@ -1526,7 +1559,10 @@ export function start() {
     loadDevices();
   });
   refresh();
-  const timer = setInterval(refresh, 1500);
+  const timer = setInterval(() => {
+    refresh();
+    followSims();
+  }, 1500);
   return () => {
     clearInterval(timer);
     clearInterval(stats);
