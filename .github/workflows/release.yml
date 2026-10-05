@@ -34,12 +34,17 @@ jobs:
         run: |
           version=$(sed -n 's/.*static let version = "\(.*\)".*/\1/p' app/host/Sources/sim-agentation/Config.swift)
           test "$version" = "$TAG" || { echo "Config.version is $version, the tag is $TAG"; exit 1; }
+      - name: The plugins carry this version
+        run: python3 app/scripts/plugins.py --check
       - name: Package
-        run: app/scripts/package.sh
+        run: |
+          app/scripts/package.sh
+          # What the plugins' launcher checks its download against.
+          cd dist && shasum -a 256 sim-agentation-$TAG-macos-arm64.tar.gz > sim-agentation-$TAG-macos-arm64.tar.gz.sha256
       - name: Publish the release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$TAG" dist/sim-agentation-$TAG-macos-arm64.tar.gz --title "$TAG" --generate-notes
+        run: gh release create "$TAG" dist/sim-agentation-$TAG-macos-arm64.tar.gz dist/sim-agentation-$TAG-macos-arm64.tar.gz.sha256 --title "$TAG" --generate-notes
       - name: Check out the tap
         if: env.HAS_TAP_TOKEN == 'true'
         uses: actions/checkout@v5

@@ -2,7 +2,7 @@
 
 ## Connecting the tools
 
-The MCP server is the `sim-agentation` binary, run with `mcp`. It speaks stdio and starts the web server on port 38470 if it isn't running. Homebrew installs it (`brew install lcandy2/tap/sim-agentation`), and the SimAgentation plugin for Claude Code or Codex configures the server. Without the plugin:
+The MCP server is the `sim-agentation` binary, run with `mcp`. It speaks stdio and starts the web server on port 38470 if it isn't running. The SimAgentation plugin for Claude Code, Codex or Cursor configures the server and downloads the binary the first time it starts; Homebrew installs it too (`brew install lcandy2/tap/sim-agentation`). Without the plugin:
 
 ```sh
 claude mcp add sim-agentation -- sim-agentation mcp
@@ -26,7 +26,7 @@ Adding an MCP server changes the user's configuration, so suggest the command an
 
 | Symptom | What it means |
 |---|---|
-| No `sim_*` tools | The MCP server isn't configured for this client, or failed to start. The plugin's server says "sim-agentation is not installed" when Homebrew hasn't installed it. |
+| No `sim_*` tools | The MCP server isn't configured for this client, or failed to start. The plugin's server says "couldn't be downloaded, and none is installed" when it was offline on first start and no copy is installed. |
 | "Unable to connect" | The web server isn't up and couldn't be started. The user can run `pnpm start` in the SimAgentation repository and open http://localhost:38470. |
 | "another agent session is already working on this annotation" | Another session acknowledged it first. Leave it. |
 | `sim_watch` returns "Nothing new yet" | It timed out (about 100 seconds). Call it again to keep waiting. |

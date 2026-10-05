@@ -39,6 +39,8 @@ Your app needs no SDK. Everything comes from the simulator's accessibility tree,
 
 You need macOS on Apple Silicon with Xcode 26 (27.1 for iPhone Duo).
 
+With an agent, the [plugin](#connect-an-agent) is all you need: it brings SimAgentation along. On its own, install it with Homebrew:
+
 ```sh
 brew install lcandy2/tap/sim-agentation
 sim-agentation serve --open
@@ -113,11 +115,11 @@ Folding and turning go through a small helper that runs inside the simulator and
 
 ## Connect an agent
 
-The MCP server runs over stdio, and starts the web server if it isn't running.
+An agent takes two things from SimAgentation: the MCP server, which hands it your annotations, and two skills that teach it to work through them. The plugin brings both, and SimAgentation itself, to Claude Code, Codex and Cursor; any other agent takes the skills and the server on their own.
 
-### Plugins
+### Claude Code, Codex and Cursor: the plugin
 
-This repository is a plugin marketplace for Claude Code and Codex. The plugin brings the MCP server, which runs the `sim-agentation` Homebrew installed, and the two [skills](#skills).
+This repository is a plugin marketplace for all three.
 
 ```sh
 # Claude Code
@@ -129,19 +131,34 @@ codex plugin marketplace add https://github.com/lcandy2/sim-agentation.git
 codex plugin add sim-agentation@sim-agentation
 ```
 
-Set `SIM_AGENTATION_BIN` to run a build of your own instead.
+In Cursor, add the plugin from this repository as [Cursor's guide](https://cursor.com/docs/plugins#installing-plugins) describes.
 
-### Claude Code
+The first time the plugin's MCP server starts, it downloads the SimAgentation release that matches the plugin (about 2 MB), checks it against the release's SHA-256, and keeps it in `~/Library/Caches/sim-agentation`. An installed copy of the same version, from Homebrew for instance, is used instead, and `SIM_AGENTATION_BIN` points it at a build of your own. The server also starts the page on http://localhost:38470 when it isn't running; open it in your browser.
 
-Without the plugin, add the server yourself:
+### The skills: npx skills
+
+The [skills CLI](https://github.com/vercel-labs/skills) installs them into Claude Code, Codex, Cursor and the other agents it supports:
+
+```sh
+npx skills add lcandy2/sim-agentation                          # both skills
+npx skills add lcandy2/sim-agentation --skill sim-agentation   # one of them
+npx skills add lcandy2/sim-agentation -a claude-code -a codex  # for these agents only
+```
+
+They live in [`skills/`](skills). `sim-agentation` works through annotations: what each line of one tells the agent, how to find code whose label was built at runtime, and when to reply instead of editing. `sim-agentation-sdk` adds the SDK to an app, with a script that adds the package to a plain `.xcodeproj`.
+
+### The MCP server
 
 ```sh
 claude mcp add sim-agentation -- sim-agentation mcp
+codex mcp add sim-agentation -- sim-agentation mcp
 ```
 
-From a source build, the command is `/path/to/Sim-Agentation/app/host/.build/debug/sim-agentation mcp`.
+Any client that runs a stdio MCP server takes the same command. The server starts the web server if it isn't running. From a source build, the command is `/path/to/Sim-Agentation/app/host/.build/debug/sim-agentation mcp`.
 
-To have each annotation land in a conversation as you send it, start or resume it with the server, added as above, as a channel. An idle session takes them too, with no `sim_watch` loop:
+### Annotations as you send them
+
+In Claude Code, each annotation can land in a conversation as you send it: start or resume it with the server, added with `claude mcp add`, as a channel. An idle session takes them too, with no `sim_watch` loop:
 
 ```sh
 claude --dangerously-load-development-channels server:sim-agentation
@@ -152,14 +169,6 @@ claude --resume <session> --dangerously-load-development-channels server:sim-age
 > Channels are a Claude Code research preview. Until a channel is on Anthropic's allowlist it needs this flag and a confirmation at startup, and it needs a claude.ai login or a Console API key. Without the flag the pushes are dropped and the tools work as before.
 
 If several sessions get the same annotation, the first to acknowledge it takes it on, and the others are told to leave it.
-
-### Codex and other clients
-
-```sh
-codex mcp add sim-agentation -- sim-agentation mcp
-```
-
-Any client that runs a stdio MCP server takes the same command.
 
 ### Tools
 
@@ -175,10 +184,6 @@ Any client that runs a stdio MCP server takes the same command.
 
 Status changes and replies show up in the browser's inspector.
 
-### Skills
-
-[`skills/`](skills) holds two agent skills. `sim-agentation` works through annotations: what each line of one tells the agent, how to find code whose label was built at runtime, and when to reply instead of editing. `sim-agentation-sdk` adds the SDK to an app, with a script that adds the package to a plain `.xcodeproj`. The plugins include both; without them, copy a folder into `~/.claude/skills` for Claude Code, or `~/.agents/skills` for Codex.
-
 ## SimAgentationPlus SDK
 
 Add SimAgentationPlus to an app you build yourself for exact selections and source locations. Everything compiles out of Release builds.
@@ -188,7 +193,7 @@ It builds for every Apple platform: iOS and iPadOS 17, Mac Catalyst 17, macOS 14
 In Xcode, choose **File > Add Package Dependencies**, enter `https://github.com/lcandy2/sim-agentation`, and add SimAgentationPlus, the package's one library, to your app target. In a `Package.swift`:
 
 ```swift
-.package(url: "https://github.com/lcandy2/sim-agentation", from: "0.1.1"),
+.package(url: "https://github.com/lcandy2/sim-agentation", from: "0.2.1"),
 // in your target's dependencies:
 .product(name: "SimAgentationPlus", package: "sim-agentation"),
 ```

@@ -1,0 +1,25 @@
+{
+  "name": "sim-agentation",
+  "version": "0.2.1",
+  "description": "Annotate a running iOS simulator in the browser and hand each note to your agent: sim-agentation itself, its MCP server, and skills for working through annotations and adding the SimAgentationPlus SDK.",
+  "author": {
+    "name": "lcandy2",
+    "url": "https://github.com/lcandy2"
+  },
+  "homepage": "https://github.com/lcandy2/sim-agentation",
+  "repository": "https://github.com/lcandy2/sim-agentation",
+  "license": "Apache-2.0",
+  "keywords": [
+    "ios",
+    "simulator",
+    "annotation",
+    "design-review",
+    "swiftui",
+    "uikit",
+    "mcp"
+  ],
+  "displayName": "SimAgentation",
+  "logo": "./app/web/public/icon.svg",
+  "skills": "./skills/",
+  "mcpServers": "./.cursor-plugin/mcp.json"
+}

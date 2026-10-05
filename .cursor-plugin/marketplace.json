@@ -12,8 +12,7 @@
     {
       "name": "sim-agentation",
       "source": "./",
-      "description": "Annotate a running iOS simulator in the browser and hand each note to your agent: sim-agentation itself, its MCP server, and skills for working through annotations and adding the SimAgentationPlus SDK.",
-      "category": "development"
+      "description": "Annotate a running iOS simulator in the browser and hand each note to your agent: sim-agentation itself, its MCP server, and skills for working through annotations and adding the SimAgentationPlus SDK."
     }
   ]
 }
