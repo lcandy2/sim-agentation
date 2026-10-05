@@ -7,7 +7,7 @@
       "prompt": "A channel event for annotation 58c96608 (SDK app): \"The start time gets lost on the right. Make it semibold and tint it with the show's color, on every row in this list.\" Source: ShowRow at DemoAppFeature/ContentView.swift:34.",
       "expected_output": "Acknowledges first, edits ShowRow's time Text (semibold, show.tint) in the component so every row changes, builds, resolves with a one-line summary.",
       "files": [],
-      "fixture": "examples/DemoApp, bundle ID com.example.showtonight"
+      "fixture": "docs/examples/DemoApp, bundle ID com.example.showtonight"
     },
     {
       "id": 2,
@@ -15,7 +15,7 @@
       "prompt": "Go through my pending simulator annotations. (Pending: ba45bd9d, two headings picked together, and 400fb559, on Apple's Settings app.)",
       "expected_output": "Makes 'Before you go' match 'Later tonight' (headline, primary) and resolves ba45bd9d; leaves the Settings note unedited and replies or dismisses with the reason.",
       "files": [],
-      "fixture": "examples/DemoApp, bundle ID com.example.showtonight"
+      "fixture": "docs/examples/DemoApp, bundle ID com.example.showtonight"
     },
     {
       "id": 3,
@@ -23,7 +23,7 @@
       "prompt": "Watch for my simulator annotations and handle them as they come in. (sim_watch returns 95ac1ac9, no SDK: the label 'Sydney Opera House · 8:00 PM' is built by interpolation.)",
       "expected_output": "Finds NextUpCard's interpolated Text, splits the time onto its own line a little bolder, builds, resolves, then calls sim_watch again.",
       "files": [],
-      "fixture": "examples/DemoApp with the SDK removed"
+      "fixture": "docs/examples/DemoApp with the SDK removed"
     }
   ]
 }

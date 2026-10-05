@@ -14,7 +14,7 @@ let package = Package(
         ),
     ],
     dependencies: [
-        .package(path: "../../.."), // this repository: the SimAgentationPlus SDK
+        .package(path: "../../../.."), // this repository: the SimAgentationPlus SDK
     ],
     targets: [
         // Targets are the basic building blocks of a package, defining a module or a test suite.
