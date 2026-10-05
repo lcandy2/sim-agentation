@@ -3,7 +3,7 @@ import Foundation
 /// Settings from the environment.
 enum Config {
     /// This release. The release workflow checks its tag against it.
-    static let version = "0.2.0"
+    static let version = "0.2.1"
 
     static let environment = ProcessInfo.processInfo.environment
 
