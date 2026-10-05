@@ -7,7 +7,7 @@ name: Release
 # commit last, once the download the plugins point at exists.
 #
 # A version tag pushed by hand releases that commit the same way, without
-# the bump. lcandy2/homebrew-tap picks each release up on its own.
+# the bump. Either way, the tap's formula follows (tap.yml).
 
 on:
   workflow_dispatch:
@@ -89,6 +89,14 @@ jobs:
             "dist/sim-agentation-$TAG-macos-arm64.tar.gz" \
             "dist/sim-agentation-$TAG-macos-arm64.tar.gz.sha256" \
             --title "$TAG" --generate-notes
+
+  tap:
+    needs: release
+    if: always() && needs.release.result == 'success'
+    uses: ./.github/workflows/tap.yml
+    with:
+      version: ${{ inputs.version || github.ref_name }}
+    secrets: inherit
 
   main:
     needs: [bump, release]
