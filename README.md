@@ -14,7 +14,7 @@ Annotate a running iOS simulator in your browser, and hand the notes to your cod
 
 [Features](#features) | [Getting started](#getting-started) | [Design Mode](#design-mode) | [Connect an agent](#connect-an-agent) | [SDK](#simagentationplus-sdk) | [Configuration](#configuration)
 
-![Design Mode on an iPhone 17 Pro simulator: the General row is annotated, and a note is being written for the Apple Account card](docs/images/design-mode.jpg)
+![Design Mode on an iPhone 17 Pro simulator: the General row is annotated, and a note is being written for the Apple Account card](assets/images/design-mode.jpg)
 
 </div>
 
@@ -102,7 +102,7 @@ On Auto, resolution, bitrate and frame rate follow too ([`auto.js`](app/web/src/
 
 ### iPhone Duo
 
-<img src="docs/images/iphone-duo.jpg" alt="iPhone Duo half open in 3D, with the Batteries widget selected in Design Mode" width="720">
+<img src="assets/images/iphone-duo.jpg" alt="iPhone Duo half open in 3D, with the Batteries widget selected in Design Mode" width="720">
 
 Xcode 27.1's foldable is drawn as Device Hub draws it: Apple's own model from Xcode, rendered on the Mac with RealityKit and streamed like the screen. The hinge poses the book. The stream follows whichever of its two panels is lit, and touches and the chrome go with it. Under the device sit Device Hub's pose picker (closed, open, flat) and a hinge slider; the cube button shows the lit panel flat in its chrome instead.
 
@@ -210,7 +210,7 @@ UIKit needs less: every view class your app defines is selectable by name, even 
 let card = TicketCardView(show: show).simTag()   // TicketCardView, from TicketViewController.swift:21
 ```
 
-When the app in front has the SDK, parents come from the real view and layer tree instead of pixels, so backgrounds that barely differ from the page still work. Each annotation also gets the app's bundle ID, a `Source` line with the tagged view's file and line, the owning view controller, and the app-defined view classes around the box. Press `S` or click **SDK** while annotating to compare with the pixel-only fallback. [`docs/examples/DemoApp`](docs/examples/DemoApp) is a small app with the SDK in place.
+When the app in front has the SDK, parents come from the real view and layer tree instead of pixels, so backgrounds that barely differ from the page still work. Each annotation also gets the app's bundle ID, a `Source` line with the tagged view's file and line, the owning view controller, and the app-defined view classes around the box. Press `S` or click **SDK** while annotating to compare with the pixel-only fallback. [`assets/examples/DemoApp`](assets/examples/DemoApp) is a small app with the SDK in place.
 
 ## Configuration
 
@@ -234,7 +234,7 @@ One Swift binary, built from `app/host/`, runs everything. It serves the page an
 | [`app/host/Guest/HingeControl`](app/host/Guest/HingeControl) | The helper that runs inside the simulator for iPhone Duo |
 | [`app/web/src`](app/web/src) | The Svelte UI, built by Vite into `app/web/dist` |
 | [`Sources/SimAgentationPlus`](Sources/SimAgentationPlus) | The optional in-app SDK, packaged by the root [`Package.swift`](Package.swift) |
-| [`docs/examples/DemoApp`](docs/examples/DemoApp) | A sample app that uses the SDK |
+| [`assets/examples/DemoApp`](assets/examples/DemoApp) | A sample app that uses the SDK |
 | [`skills`](skills) | Agent skills for working through annotations and for adding the SDK |
 
 Without `pnpm dev`, the page runs `app/web/dist`; `pnpm build` or `pnpm watch` refreshes it. The dev server leaves a token for the host to pass the page, and the page loads from it only when they match, so nothing else on port 38472 can.

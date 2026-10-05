@@ -65,7 +65,7 @@ jobs:
       - name: Build for Mac Catalyst
         run: xcodebuild build -scheme SimAgentationPlus -destination 'generic/platform=macOS,variant=Mac Catalyst' -quiet
       - name: Build the demo app
-        working-directory: docs/examples/DemoApp
+        working-directory: assets/examples/DemoApp
         run: xcodebuild build -workspace DemoApp.xcworkspace -scheme DemoApp -destination 'generic/platform=iOS Simulator' -quiet
 
   plugins:
