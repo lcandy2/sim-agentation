@@ -1,6 +1,6 @@
 {
   "name": "sim-agentation",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "private": true,
   "description": "Annotate a running iOS simulator in the browser and hand the feedback to coding agents over MCP.",
   "type": "module",

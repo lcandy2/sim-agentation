@@ -1,6 +1,6 @@
 {
   "name": "sim-agentation",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Annotate a running iOS simulator in the browser and hand each note to your agent: sim-agentation itself, its MCP server, and skills for working through annotations and adding the SimAgentationPlus SDK.",
   "author": {
     "name": "lcandy2",
@@ -23,7 +23,7 @@
       "command": "/bin/sh",
       "args": [
         "-c",
-        "v=0.2.1\n[ -n \"$SIM_AGENTATION_BIN\" ] && exec \"$SIM_AGENTATION_BIN\" mcp\ncache=\"$HOME/Library/Caches/sim-agentation/release/$v\"\nown=\"$cache/sim-agentation-$v/bin/sim-agentation\"\n[ -x \"$own\" ] && exec \"$own\" mcp\nfound=\nfor b in \"$(command -v sim-agentation 2>/dev/null)\" /opt/homebrew/bin/sim-agentation /usr/local/bin/sim-agentation; do\n  [ -n \"$b\" ] && [ -x \"$b\" ] || continue\n  [ \"$(\"$b\" version 2>/dev/null)\" = \"$v\" ] && exec \"$b\" mcp\n  [ -n \"$found\" ] || found=$b\ndone\nbase=$SIM_AGENTATION_RELEASES\n[ -n \"$base\" ] || base=https://github.com/lcandy2/sim-agentation/releases/download\ntarball=\"sim-agentation-$v-macos-arm64.tar.gz\"\npart=$(mktemp -d)\nif mkdir -p \"$cache\" &&\n  curl -fsSL \"$base/$v/$tarball\" -o \"$part/$tarball\" &&\n  curl -fsSL \"$base/$v/$tarball.sha256\" -o \"$part/$tarball.sha256\" &&\n  (cd \"$part\" && shasum -a 256 -c \"$tarball.sha256\" >/dev/null) &&\n  tar -xzf \"$part/$tarball\" -C \"$part\" &&\n  mv \"$part/sim-agentation-$v\" \"$cache/\" 2>/dev/null; [ -x \"$own\" ]; then\n  exec \"$own\" mcp\nfi\n[ -n \"$found\" ] && exec \"$found\" mcp\necho \"sim-agentation $v couldn't be downloaded, and none is installed: brew install lcandy2/tap/sim-agentation\" >&2\nexit 1"
+        "v=0.2.2\n[ -n \"$SIM_AGENTATION_BIN\" ] && exec \"$SIM_AGENTATION_BIN\" mcp\ncache=\"$HOME/Library/Caches/sim-agentation/release/$v\"\nown=\"$cache/sim-agentation-$v/bin/sim-agentation\"\n[ -x \"$own\" ] && exec \"$own\" mcp\nfound=\nfor b in \"$(command -v sim-agentation 2>/dev/null)\" /opt/homebrew/bin/sim-agentation /usr/local/bin/sim-agentation; do\n  [ -n \"$b\" ] && [ -x \"$b\" ] || continue\n  [ \"$(\"$b\" version 2>/dev/null)\" = \"$v\" ] && exec \"$b\" mcp\n  [ -n \"$found\" ] || found=$b\ndone\nbase=$SIM_AGENTATION_RELEASES\n[ -n \"$base\" ] || base=https://github.com/lcandy2/sim-agentation/releases/download\ntarball=\"sim-agentation-$v-macos-arm64.tar.gz\"\npart=$(mktemp -d)\nif mkdir -p \"$cache\" &&\n  curl -fsSL \"$base/$v/$tarball\" -o \"$part/$tarball\" &&\n  curl -fsSL \"$base/$v/$tarball.sha256\" -o \"$part/$tarball.sha256\" &&\n  (cd \"$part\" && shasum -a 256 -c \"$tarball.sha256\" >/dev/null) &&\n  tar -xzf \"$part/$tarball\" -C \"$part\" &&\n  mv \"$part/sim-agentation-$v\" \"$cache/\" 2>/dev/null; [ -x \"$own\" ]; then\n  exec \"$own\" mcp\nfi\n[ -n \"$found\" ] && exec \"$found\" mcp\necho \"sim-agentation $v couldn't be downloaded, and none is installed: brew install lcandy2/tap/sim-agentation\" >&2\nexit 1"
       ]
     }
   }
