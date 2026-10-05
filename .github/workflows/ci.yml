@@ -59,7 +59,7 @@ jobs:
             for debug in -DDEBUG ""; do
               echo "${pair#*:} ${debug:-release}"
               xcrun -sdk "${pair%%:*}" swiftc -swift-version 6 -module-name SimAgentationPlus \
-                -parse-as-library -target "${pair#*:}" $debug -typecheck *.swift
+                -parse-as-library -target "${pair#*:}" $debug -typecheck ./*.swift
             done
           done
       - name: Build for Mac Catalyst

@@ -56,7 +56,7 @@ pnpm build    # the UI into app/web/dist, then the Swift binary
 pnpm start    # app/host/.build/debug/sim-agentation serve --open
 ```
 
-`app/scripts/package.sh` builds the release tarball the formula installs.
+`app/scripts/package.sh` builds the release tarball the formula and the plugins install. To release, run the Release workflow in the Actions tab with the new version: it sets the version everywhere, publishes the release, and the tap and the plugins follow.
 
 The page opens on http://localhost:38470. Pick a simulator on the left; one that isn't running shows a **Start** button, and nothing boots until you press it.
 

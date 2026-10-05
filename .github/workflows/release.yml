@@ -1,24 +1,64 @@
 name: Release
 
-# A version tag (0.2.0, no "v": the SDK's Swift package uses the same tags)
-# builds the Mac side, attaches the tarball to a GitHub release, and points
-# the Homebrew formula in lcandy2/homebrew-tap at it.
+# Run it from the Actions tab with a version (0.2.2, no "v": the SDK's Swift
+# package uses the same tags). It sets Config.version and the plugin
+# manifests, tags that commit, builds the Mac side, and publishes the
+# release with the tarball and its .sha256. main moves to the release
+# commit last, once the download the plugins point at exists.
+#
+# A version tag pushed by hand releases that commit the same way, without
+# the bump. lcandy2/homebrew-tap picks each release up on its own.
 
 on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version to release, like 0.2.2
+        required: true
+        type: string
   push:
     tags: ['[0-9]+.[0-9]+.[0-9]+']
 
 permissions:
   contents: write
 
+concurrency:
+  group: release
+
 jobs:
-  release:
-    runs-on: macos-26
+  bump:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
     env:
-      TAG: ${{ github.ref_name }}
-      HAS_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN != '' }}
+      VERSION: ${{ inputs.version }}
     steps:
       - uses: actions/checkout@v5
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Set the version and tag it
+        run: |
+          echo "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$' || { echo "Not a version: $VERSION"; exit 1; }
+          if git rev-parse -q --verify "refs/tags/$VERSION" > /dev/null; then echo "$VERSION is tagged already"; exit 1; fi
+          sed -i -E "s/static let version = \"[^\"]+\"/static let version = \"$VERSION\"/" app/host/Sources/sim-agentation/Config.swift
+          python3 app/scripts/plugins.py
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "$VERSION"
+          git tag "$VERSION"
+          # The tag alone for now: main follows once the release exists.
+          git push origin "$VERSION"
+
+  release:
+    needs: bump
+    if: always() && (needs.bump.result == 'success' || needs.bump.result == 'skipped')
+    runs-on: macos-26
+    env:
+      TAG: ${{ inputs.version || github.ref_name }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.version || github.ref_name }}
       - uses: maxim-lobanov/setup-xcode@v1
         with:
           xcode-version: latest-stable
@@ -40,28 +80,33 @@ jobs:
         run: |
           app/scripts/package.sh
           # What the plugins' launcher checks its download against.
-          cd dist && shasum -a 256 sim-agentation-$TAG-macos-arm64.tar.gz > sim-agentation-$TAG-macos-arm64.tar.gz.sha256
+          cd dist && shasum -a 256 "sim-agentation-$TAG-macos-arm64.tar.gz" > "sim-agentation-$TAG-macos-arm64.tar.gz.sha256"
       - name: Publish the release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$TAG" dist/sim-agentation-$TAG-macos-arm64.tar.gz dist/sim-agentation-$TAG-macos-arm64.tar.gz.sha256 --title "$TAG" --generate-notes
-      - name: Check out the tap
-        if: env.HAS_TAP_TOKEN == 'true'
-        uses: actions/checkout@v5
-        with:
-          repository: lcandy2/homebrew-tap
-          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
-          path: tap
-      - name: Update the Homebrew formula
-        if: env.HAS_TAP_TOKEN == 'true'
         run: |
-          sha=$(shasum -a 256 dist/sim-agentation-$TAG-macos-arm64.tar.gz | cut -d' ' -f1)
-          sed -i '' -E \
-            -e "s|^  url \".*\"|  url \"https://github.com/lcandy2/sim-agentation/releases/download/$TAG/sim-agentation-$TAG-macos-arm64.tar.gz\"|" \
-            -e "s|^  sha256 \".*\"|  sha256 \"$sha\"|" \
-            tap/Formula/sim-agentation.rb
-          cd tap
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -am "sim-agentation $TAG"
-          git push
+          gh release create "$TAG" \
+            "dist/sim-agentation-$TAG-macos-arm64.tar.gz" \
+            "dist/sim-agentation-$TAG-macos-arm64.tar.gz.sha256" \
+            --title "$TAG" --generate-notes
+
+  main:
+    needs: [bump, release]
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ inputs.version }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Move main to the release commit
+        run: |
+          git fetch origin tag "$VERSION"
+          # Fast-forward only: if main moved during the release, merge by hand.
+          git merge --ff-only "$VERSION" || {
+            echo "main moved while $VERSION was released; merge the tag into main by hand."
+            exit 1
+          }
+          git push origin HEAD:main
