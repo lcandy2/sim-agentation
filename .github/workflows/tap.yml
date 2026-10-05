@@ -1,9 +1,9 @@
 name: Tap
 
-# Points the formula in lcandy2/homebrew-tap at a release. The release
-# workflow calls it right after publishing; run it by hand to redo one.
-# It writes to the tap as the "lcandy2's homebrew tap" GitHub App, with a
-# token minted for this run alone and scoped to that one repository.
+# Points the formula in lcandy2/homebrew-tap at a release, through the
+# tap's own bump workflow (it writes as the tap's GitHub App). The release
+# workflow calls it once the release is published; run it by hand to redo
+# one.
 
 on:
   workflow_call:
@@ -23,40 +23,9 @@ permissions:
 
 jobs:
   formula:
-    runs-on: ubuntu-latest
-    env:
-      TAG: ${{ inputs.version }}
-    steps:
-      - name: The version is a release
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          echo "$TAG" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$' || { echo "Not a version: $TAG"; exit 1; }
-          gh release view "$TAG" --repo lcandy2/sim-agentation > /dev/null
-      - uses: actions/create-github-app-token@v2
-        id: app
-        with:
-          app-id: ${{ vars.RELEASE_APP_ID }}
-          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
-          owner: lcandy2
-          repositories: homebrew-tap
-      - uses: actions/checkout@v5
-        with:
-          repository: lcandy2/homebrew-tap
-          token: ${{ steps.app.outputs.token }}
-      - name: Point the formula at the release
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          asset="sim-agentation-$TAG-macos-arm64.tar.gz"
-          gh release download "$TAG" --repo lcandy2/sim-agentation --pattern "$asset" --dir "$RUNNER_TEMP"
-          sha=$(sha256sum "$RUNNER_TEMP/$asset" | cut -d' ' -f1)
-          sed -i -E \
-            -e "s|^  url \".*\"|  url \"https://github.com/lcandy2/sim-agentation/releases/download/$TAG/$asset\"|" \
-            -e "s|^  sha256 \".*\"|  sha256 \"$sha\"|" \
-            Formula/sim-agentation.rb
-          if git diff --quiet; then echo "The formula is at $TAG already"; exit 0; fi
-          git config user.name "lcandy2-s-homebrew-tap[bot]"
-          git config user.email "338305349+lcandy2-s-homebrew-tap[bot]@users.noreply.github.com"
-          git commit -am "sim-agentation $TAG"
-          git push
+    uses: lcandy2/homebrew-tap/.github/workflows/bump.yml@main
+    with:
+      formula: sim-agentation
+      url: https://github.com/lcandy2/sim-agentation/releases/download/${{ inputs.version }}/sim-agentation-${{ inputs.version }}-macos-arm64.tar.gz
+    secrets:
+      app-private-key: ${{ secrets.HOMEBREW_TAP_APP_PRIVATE_KEY }}
