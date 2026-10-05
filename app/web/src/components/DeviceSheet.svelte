@@ -2,8 +2,9 @@
   import { onMount } from 'svelte';
   import { ui, renameDevice, eraseDevice, removeDevice, chromeOf } from '../lib/app.svelte.js';
   import { thumbnail } from '../lib/thumbnail.js';
+  import { showSheet, sheetDismiss } from '../lib/sheet.js';
 
-  // The … menu's dialogs, as macOS's sheet (see NewSimulator for the
+  // The … menu's dialogs, as macOS's sheet (lib/sheet.js for the
   // measured motion), in macOS 27's Alert (Figma, Alerts page) with the
   // device's picture as its icon: Rename asks for a name, Reset and Remove
   // confirm.
@@ -11,30 +12,11 @@
 
   let dialog = $state(null);
   let field = $state(null);
-  let closing = false;
-  const still = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const DIM = 'rgba(0, 0, 0, 0.2)';
   onMount(() => {
-    dialog.showModal();
+    showSheet(dialog);
     field?.select();
-    if (still()) return;
-    dialog.animate([{ transform: 'translateY(-32px)' }, { transform: 'none' }], { duration: 260, easing: 'cubic-bezier(0.42, 0, 0.58, 1)' });
-    dialog.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 140 });
-    dialog.animate([{ background: 'transparent' }, { background: DIM }], { duration: 270, pseudoElement: '::backdrop' });
   });
-  async function dismiss() {
-    if (closing) return;
-    closing = true;
-    if (!still()) {
-      const out = { duration: 230, fill: 'forwards' };
-      await Promise.all([
-        dialog.animate([{ transform: 'none' }, { transform: 'translateY(-30px)' }], { ...out, easing: 'cubic-bezier(0.42, 0, 1, 1)' }).finished,
-        dialog.animate([{ opacity: 1 }, { opacity: 0 }], out).finished,
-        dialog.animate([{ background: DIM }, { background: 'transparent' }], { duration: 270, fill: 'forwards', pseudoElement: '::backdrop' }).finished,
-      ]);
-    }
-    dialog.close();
-  }
+  const dismiss = sheetDismiss(() => dialog);
 
   // The selected device's, the one a row's context menu is for, or several
   // selected in the list (Reset and Remove).

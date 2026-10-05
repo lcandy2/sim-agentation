@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { ui, simulatorOptions, createSimulator, chromeOf } from '../lib/app.svelte.js';
   import { thumbnail } from '../lib/thumbnail.js';
+  import { showSheet, sheetDismiss } from '../lib/sheet.js';
   import { icon } from '../lib/icons.js';
 
   // `simctl create` from the sidebar's + button, as macOS 27's Alert (Figma,
@@ -9,34 +10,10 @@
   let { close } = $props();
 
   let dialog = $state(null);
-  let closing = false;
 
-  // macOS's own sheet, measured from a 60 fps recording on macOS 26: it
-  // slides 32 pt down into place (ease-in-out, 260 ms) while fading in over
-  // the first 140 ms, and leaves 30 pt up, fading (ease-in, 230 ms); the
-  // window behind dims and clears over 270 ms.
-  const still = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const DIM = 'rgba(0, 0, 0, 0.2)';
-  onMount(() => {
-    dialog.showModal();
-    if (still()) return;
-    dialog.animate([{ transform: 'translateY(-32px)' }, { transform: 'none' }], { duration: 260, easing: 'cubic-bezier(0.42, 0, 0.58, 1)' });
-    dialog.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 140 });
-    dialog.animate([{ background: 'transparent' }, { background: DIM }], { duration: 270, pseudoElement: '::backdrop' });
-  });
-  async function dismiss() {
-    if (closing) return;
-    closing = true;
-    if (!still()) {
-      const out = { duration: 230, fill: 'forwards' };
-      await Promise.all([
-        dialog.animate([{ transform: 'none' }, { transform: 'translateY(-30px)' }], { ...out, easing: 'cubic-bezier(0.42, 0, 1, 1)' }).finished,
-        dialog.animate([{ opacity: 1 }, { opacity: 0 }], out).finished,
-        dialog.animate([{ background: DIM }, { background: 'transparent' }], { duration: 270, fill: 'forwards', pseudoElement: '::backdrop' }).finished,
-      ]);
-    }
-    dialog.close();
-  }
+  // As macOS's sheet (lib/sheet.js).
+  onMount(() => showSheet(dialog));
+  const dismiss = sheetDismiss(() => dialog);
 
   let options = $state(null);
   let runtime = $state('');

@@ -146,6 +146,17 @@ final class Store: @unchecked Sendable {
         return true
     }
 
+    /// Deletes every annotation and its screenshots (the page's Delete All).
+    func clearAll() throws {
+        let all: [JSONObject] = try locked {
+            let all = annotations
+            annotations = []
+            try save()
+            return all
+        }
+        for a in all { deleteImages(of: a) }
+    }
+
     func clearFinished() throws {
         let finished: [JSONObject] = try locked {
             let open = { (a: JSONObject) in

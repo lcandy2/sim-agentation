@@ -1521,6 +1521,16 @@ export async function deleteAnnotation(id) {
   return true;
 }
 
+/** Deletes every annotation, and the markers on the frozen screen with them. */
+export async function deleteAllAnnotations() {
+  const res = await fetch('/api/annotations', { method: 'DELETE' }).catch(() => null);
+  if (!res?.ok) return flashStatus("Couldn't delete the annotations");
+  if (rt.editing) closeComposer();
+  for (const mark of rt.frozen?.marks.splice(0) ?? []) mark.el.remove();
+  ui.annotations = [];
+  refresh();
+}
+
 export async function clearDone() {
   await fetch('/api/annotations/finished', { method: 'DELETE' });
   refresh();

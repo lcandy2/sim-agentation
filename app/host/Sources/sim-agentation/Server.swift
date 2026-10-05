@@ -219,6 +219,10 @@ final class AppServer: @unchecked Sendable {
             if path == "/api/annotations" && req.method == "POST" {
                 return .respond(Self.json(try await createAnnotation(try Self.parseBody(req.body)), status: 201))
             }
+            if path == "/api/annotations" && req.method == "DELETE" {
+                try store.clearAll()
+                return .respond(Self.json(JSONObject(["ok": .bool(true)])))
+            }
             if path == "/api/annotations/finished" && req.method == "DELETE" {
                 try store.clearFinished()
                 return .respond(Self.json(JSONObject(["ok": .bool(true)])))
