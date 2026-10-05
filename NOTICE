@@ -1,0 +1,42 @@
+SimAgentation
+Copyright 2026 lcandy2
+
+Licensed under the Apache License, Version 2.0 (the "License"); you may not
+use the files in this project except in compliance with the License. A copy
+of the License is in the LICENSE file at the root of this repository and at
+http://www.apache.org/licenses/LICENSE-2.0.
+
+--------------------------------------------------------------------------------
+
+This product includes software adapted from baguette
+(https://github.com/tddworks/baguette) by tddworks, licensed under the Apache
+License, Version 2.0: the simulator code in app/host/Sources/SimBridge, the
+iPhone Duo support in app/host/Sources/sim-agentation (Foldable.swift,
+Guest.swift, Device3D.swift) and the guest helper in app/host/Guest. Its
+license is in app/host/Sources/SimBridge/LICENSE-baguette.
+
+This product includes software adapted from sim-use
+(https://github.com/lycorp-jp/sim-use) by LY Corporation, licensed under the
+Apache License, Version 2.0: CollapsedChildrenRecovery.swift in
+app/host/Sources/SimBridge. Its license is in
+app/host/Sources/SimBridge/LICENSE-sim-use, and its NOTICE reads:
+
+    sim-use
+    Copyright 2026 LY Corporation
+
+    This product includes software developed at LY Corporation.
+
+    This product is derived from AXe (https://github.com/cameroncooke/AXe),
+    Copyright (c) 2025 Cameron Cooke, originally licensed under the MIT
+    License. The fork was cut from AXe v1.6.0 in April 2026 and has since been
+    substantially modified by LY Corporation. The relicensing of this
+    derivative work under the Apache License, Version 2.0 is permitted by the
+    sublicensing grant of the MIT License.
+
+    This product includes software developed by Facebook idb
+    (https://github.com/facebook/idb), Copyright (c) Meta Platforms, Inc. and
+    affiliates, licensed under the MIT License.
+
+Restarting a stale accessibility bridge follows the approach of idb
+(https://github.com/facebook/idb), Copyright (c) Meta Platforms, Inc. and
+affiliates, licensed under the MIT License.

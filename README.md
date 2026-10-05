@@ -11,6 +11,7 @@ Annotate a running iOS simulator in your browser, and hand the notes to your cod
 ![Swift 6](https://img.shields.io/badge/Swift-6-f05138?style=flat-square&logo=swift&logoColor=white)
 ![Svelte 5](https://img.shields.io/badge/Svelte-5-ff3e00?style=flat-square&logo=svelte&logoColor=white)
 ![MCP](https://img.shields.io/badge/MCP-stdio-6e56cf?style=flat-square)
+![Apache 2.0](https://img.shields.io/badge/license-Apache_2.0-d22128?style=flat-square)
 
 [Features](#features) | [Getting started](#getting-started) | [Design Mode](#design-mode) | [Connect an agent](#connect-an-agent) | [SDK](#simagentationplus-sdk) | [Configuration](#configuration)
 
@@ -245,5 +246,7 @@ Without `pnpm dev`, the page runs `app/web/dist`; `pnpm build` or `pnpm watch` r
 - Content without accessibility data, such as custom Canvas or Metal drawing, can only be annotated with a box.
 
 ## Credits
+
+SimAgentation is released under the [Apache License 2.0](LICENSE). [NOTICE](NOTICE) names the work it adapts.
 
 The simulator code in `app/host/Sources/SimBridge` is adapted from [baguette](https://github.com/tddworks/baguette) by tddworks, under the Apache License 2.0 (`app/host/Sources/SimBridge/LICENSE-baguette`), and so is the iPhone Duo support (`Foldable.swift`, `Guest.swift` and `Device3D.swift` in `app/host/Sources/sim-agentation`, and the guest helper in `app/host/Guest/HingeControl`). The streaming pipeline follows baguette's. Recovering collapsed accessibility children (`CollapsedChildrenRecovery.swift`) is adapted from [sim-use](https://github.com/lycorp-jp/sim-use) by LY Corporation, under the Apache License 2.0 (`app/host/Sources/SimBridge/LICENSE-sim-use`), and restarting a stale accessibility bridge follows [idb](https://github.com/facebook/idb). Each adapted file notes what changed.

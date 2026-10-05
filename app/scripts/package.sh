@@ -20,6 +20,7 @@ cp app/host/.build/release/sim-agentation "$stage/bin/"
 cp -R app/web/dist "$stage/web/dist"
 cp app/web/index.html "$stage/web/"          # what the binary looks for to find web/
 cp -R app/host/Guest/HingeControl "$stage/host/Guest/"
+cp LICENSE NOTICE "$stage/"
 cp app/host/Sources/SimBridge/LICENSE-* "$stage/licenses/"
 
 tarball="dist/$name-macos-arm64.tar.gz"
