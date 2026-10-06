@@ -2,6 +2,15 @@
 
 <img src="app/web/public/icon.svg" alt="" height="80">
 
+<!-- AirBuild sponsor — light + dark for GitHub -->
+<a href="https://air.build">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/sponsored-by-airbuild-dark.svg">
+    <img src="assets/sponsored-by-airbuild.svg" alt="Sponsored by AirBuild" height="40">
+  </picture>
+</a>
+
+
 # SimAgentation
 
 Annotate a running iOS simulator in your browser, and hand the notes to your coding agent.
@@ -14,15 +23,6 @@ Annotate a running iOS simulator in your browser, and hand the notes to your cod
 ![Apache 2.0](https://img.shields.io/badge/license-Apache_2.0-d22128?style=flat-square)
 
 [Features](#features) | [Getting started](#getting-started) | [Design Mode](#design-mode) | [Connect an agent](#connect-an-agent) | [SDK](#simagentationplus-sdk) | [Configuration](#configuration)
-
-<!-- AirBuild sponsor — light + dark for GitHub -->
-<a href="https://air.build">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="assets/sponsored-by-airbuild-dark.svg">
-    <img src="assets/sponsored-by-airbuild.svg" alt="Sponsored by AirBuild" height="40">
-  </picture>
-</a>
-
 
 ![Design Mode on an iPhone 17 Pro simulator: the General row is annotated, and a note is being written for the Apple Account card](assets/images/design-mode.jpg)
 
