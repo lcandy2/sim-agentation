@@ -11,6 +11,14 @@ You're setting up SimAgentation for the user. It streams their iOS simulator to 
 
 Before you run anything that installs software or changes the user's agent configuration, say what you're about to run and wait for their go-ahead.
 
+## Read these first
+
+Once it's set up, you're the one the user's notes go to, so read how SimAgentation works before installing it. Fetch these the way you fetched this page:
+
+- [README.md](https://raw.githubusercontent.com/lcandy2/sim-agentation/main/README.md): what SimAgentation does, the ways to install it, and how the user annotates.
+- [skills/sim-agentation/SKILL.md](https://raw.githubusercontent.com/lcandy2/sim-agentation/main/skills/sim-agentation/SKILL.md): how you'll work through the user's annotations, from reading one and finding its code to resolving it.
+- [skills/sim-agentation-sdk/SKILL.md](https://raw.githubusercontent.com/lcandy2/sim-agentation/main/skills/sim-agentation-sdk/SKILL.md): adding the SimAgentationPlus SDK to an app, for step 4.
+
 ## 1. Check the Mac
 
 Run these and read the results:
@@ -83,11 +91,11 @@ Without Homebrew (`brew` not found), point the user to https://brew.sh rather th
 - In the new session: the `sim_*` tools are there, and `sim_get_pending` answers "No pending annotations."
 - The MCP server starts the page on http://localhost:38470 when it isn't running; `sim-agentation serve --open` starts it and opens the browser. The user picks a simulator on the left and presses **Start** if it isn't running.
 
-If a step fails, [skills/sim-agentation/references/setup.md](skills/sim-agentation/references/setup.md) lists what each error means.
+If a step fails, [skills/sim-agentation/references/setup.md](https://raw.githubusercontent.com/lcandy2/sim-agentation/main/skills/sim-agentation/references/setup.md) lists what each error means.
 
 ## 4. Optional: exact source locations
 
-If the user builds their own iOS app and it's in your workspace, annotations can carry the Swift file and line of each tagged view. The `sim-agentation-sdk` skill adds the SimAgentationPlus SDK to their project. It edits the project, so offer it and let the user decide.
+If the user builds their own iOS app and it's in your workspace, annotations can carry the Swift file and line of each tagged view. The `sim-agentation-sdk` skill, which you read above, adds the SimAgentationPlus SDK to their project. It edits the project, so offer it and let the user decide.
 
 ## 5. Tell the user how to use it
 
@@ -97,4 +105,4 @@ Keep it to a few lines:
 2. Press ⇧⌘D for Design Mode. Click an element or drag a box, write what should change, and press ⌘↩.
 3. Ask you to "go through my simulator annotations", or to "watch for my annotations" and fix them as they arrive.
 
-The [README](README.md) covers the rest.
+For everything else, point them to the [README](https://github.com/lcandy2/sim-agentation#readme).
