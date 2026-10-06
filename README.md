@@ -2,6 +2,10 @@
 
 <img src="app/web/public/icon.svg" alt="" height="80">
 
+# SimAgentation
+
+Annotate a running iOS simulator in your browser, and hand the notes to your coding agent.
+
 <!-- AirBuild sponsor — light + dark for GitHub -->
 <a href="https://air.build">
   <picture>
@@ -9,11 +13,6 @@
     <img src="assets/sponsored-by-airbuild.svg" alt="Sponsored by AirBuild" height="40">
   </picture>
 </a>
-
-
-# SimAgentation
-
-Annotate a running iOS simulator in your browser, and hand the notes to your coding agent.
 
 ![macOS on Apple Silicon](https://img.shields.io/badge/macOS-Apple_Silicon-000?style=flat-square&logo=apple)
 ![Xcode 26](https://img.shields.io/badge/Xcode-26-147efb?style=flat-square&logo=xcode&logoColor=white)
