@@ -23,7 +23,7 @@ Annotate a running iOS simulator in your browser, and hand the notes to your cod
 > Let your agent set it up. Paste this into Claude Code, Codex, Cursor or any other coding agent:
 >
 > ```
-> Set up SimAgentation for me by following https://raw.githubusercontent.com/lcandy2/sim-agentation/main/SETUP.md
+> Set up SimAgentation for me by following https://github.com/lcandy2/sim-agentation/raw/refs/heads/main/SETUP.md
 > ```
 
 SimAgentation is [Agentation](https://agentation.com) for iOS. Freeze the simulator's screen, click an element or drag a box around anything, and write what should change. Your agent gets the element, the screen it is on, strings to search the source for, and two screenshots: the whole screen with the box drawn in red, and a close-up of the box.

@@ -4,7 +4,7 @@
 > This page is written for an AI coding agent. Paste this into Claude Code, Codex, Cursor or any other agent, and it does the rest:
 >
 > ```
-> Set up SimAgentation for me by following https://raw.githubusercontent.com/lcandy2/sim-agentation/main/SETUP.md
+> Set up SimAgentation for me by following https://github.com/lcandy2/sim-agentation/raw/refs/heads/main/SETUP.md
 > ```
 
 You're setting up SimAgentation for the user. It streams their iOS simulator to the browser, where they click elements or draw boxes and write what should change; each note reaches you through an MCP server, with screenshots and strings to search the source for. Work through the steps in order.
@@ -15,9 +15,9 @@ Before you run anything that installs software or changes the user's agent confi
 
 Once it's set up, you're the one the user's notes go to, so read how SimAgentation works before installing it. Fetch these the way you fetched this page:
 
-- [README.md](https://raw.githubusercontent.com/lcandy2/sim-agentation/main/README.md): what SimAgentation does, the ways to install it, and how the user annotates.
-- [skills/sim-agentation/SKILL.md](https://raw.githubusercontent.com/lcandy2/sim-agentation/main/skills/sim-agentation/SKILL.md): how you'll work through the user's annotations, from reading one and finding its code to resolving it.
-- [skills/sim-agentation-sdk/SKILL.md](https://raw.githubusercontent.com/lcandy2/sim-agentation/main/skills/sim-agentation-sdk/SKILL.md): adding the SimAgentationPlus SDK to an app, for step 4.
+- [README.md](https://github.com/lcandy2/sim-agentation/raw/refs/heads/main/README.md): what SimAgentation does, the ways to install it, and how the user annotates.
+- [skills/sim-agentation/SKILL.md](https://github.com/lcandy2/sim-agentation/raw/refs/heads/main/skills/sim-agentation/SKILL.md): how you'll work through the user's annotations, from reading one and finding its code to resolving it.
+- [skills/sim-agentation-sdk/SKILL.md](https://github.com/lcandy2/sim-agentation/raw/refs/heads/main/skills/sim-agentation-sdk/SKILL.md): adding the SimAgentationPlus SDK to an app, for step 4.
 
 ## 1. Check the Mac
 
@@ -91,7 +91,7 @@ Without Homebrew (`brew` not found), point the user to https://brew.sh rather th
 - In the new session: the `sim_*` tools are there, and `sim_get_pending` answers "No pending annotations."
 - The MCP server starts the page on http://localhost:38470 when it isn't running; `sim-agentation serve --open` starts it and opens the browser. The user picks a simulator on the left and presses **Start** if it isn't running.
 
-If a step fails, [skills/sim-agentation/references/setup.md](https://raw.githubusercontent.com/lcandy2/sim-agentation/main/skills/sim-agentation/references/setup.md) lists what each error means.
+If a step fails, [skills/sim-agentation/references/setup.md](https://github.com/lcandy2/sim-agentation/raw/refs/heads/main/skills/sim-agentation/references/setup.md) lists what each error means.
 
 ## 4. Optional: exact source locations
 
