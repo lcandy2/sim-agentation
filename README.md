@@ -2,6 +2,15 @@
 
 <img src="app/web/public/icon.svg" alt="" height="80">
 
+<!-- AirBuild sponsor — light + dark for GitHub -->
+<a href="https://air.build">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/sponsored-by-airbuild-dark.svg">
+    <img src="assets/sponsored-by-airbuild.svg" alt="Sponsored by AirBuild" height="40">
+  </picture>
+</a>
+
+
 # SimAgentation
 
 Annotate a running iOS simulator in your browser, and hand the notes to your coding agent.
