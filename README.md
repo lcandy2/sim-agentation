@@ -15,7 +15,13 @@ Annotate a running iOS simulator in your browser, and hand the notes to your cod
 
 [Features](#features) | [Getting started](#getting-started) | [Design Mode](#design-mode) | [Connect an agent](#connect-an-agent) | [SDK](#simagentationplus-sdk) | [Configuration](#configuration)
 
-[![Sponsored by AirBuild](assets/sponsored-by-airbuild.svg)](https://air.build)
+<!-- AirBuild sponsor — light + dark for GitHub -->
+<a href="https://air.build">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/sponsored-by-airbuild-dark.svg">
+    <img src="assets/sponsored-by-airbuild.svg" alt="Sponsored by AirBuild" height="40">
+  </picture>
+</a>
 
 
 ![Design Mode on an iPhone 17 Pro simulator: the General row is annotated, and a note is being written for the Apple Account card](assets/images/design-mode.jpg)
