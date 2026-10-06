@@ -19,6 +19,13 @@ Annotate a running iOS simulator in your browser, and hand the notes to your cod
 
 </div>
 
+> [!TIP]
+> Let your agent set it up. Paste this into Claude Code, Codex, Cursor or any other coding agent:
+>
+> ```
+> Set up SimAgentation for me by following https://raw.githubusercontent.com/lcandy2/sim-agentation/main/SETUP.md
+> ```
+
 SimAgentation is [Agentation](https://agentation.com) for iOS. Freeze the simulator's screen, click an element or drag a box around anything, and write what should change. Your agent gets the element, the screen it is on, strings to search the source for, and two screenshots: the whole screen with the box drawn in red, and a close-up of the box.
 
 Your app needs no SDK. Everything comes from the simulator's accessibility tree, so it works with any app on any booted simulator, Apple's own included.
@@ -37,7 +44,7 @@ Your app needs no SDK. Everything comes from the simulator's accessibility tree,
 
 ## Getting started
 
-You need macOS on Apple Silicon with Xcode 26 (27.1 for iPhone Duo).
+You need macOS on Apple Silicon with Xcode 26 (27.1 for iPhone Duo). [SETUP.md](SETUP.md) walks an agent through everything below; the prompt at the top of this page hands it over.
 
 With an agent, the [plugin](#connect-an-agent) is all you need: it brings SimAgentation along. On its own, install it with Homebrew:
 
