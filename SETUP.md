@@ -9,7 +9,7 @@
 
 You're setting up SimAgentation for the user. It streams their iOS simulator to the browser, where they click elements or draw boxes and write what should change; each note reaches you through an MCP server, with screenshots and strings to search the source for. Work through the steps in order.
 
-Before you run anything that installs software or changes the user's agent configuration, say what you're about to run and wait for their go-ahead. Everything here can be undone; the last section says how.
+Before you run anything that installs software or changes the user's agent configuration, say what you're about to run and wait for their go-ahead.
 
 ## 1. Check the Mac
 
@@ -98,21 +98,3 @@ Keep it to a few lines:
 3. Ask you to "go through my simulator annotations", or to "watch for my annotations" and fix them as they arrive.
 
 The [README](README.md) covers the rest.
-
-## Undoing it
-
-```sh
-# Claude Code
-claude plugin uninstall sim-agentation@sim-agentation
-claude plugin marketplace remove sim-agentation
-
-# Codex
-codex plugin remove sim-agentation@sim-agentation
-codex plugin marketplace remove sim-agentation
-
-# Homebrew and the skills
-brew uninstall sim-agentation && brew untap lcandy2/tap
-npx skills remove sim-agentation sim-agentation-sdk
-```
-
-What's left is the plugin's downloaded copy in `~/Library/Caches/sim-agentation`, and annotations with their screenshots in `sim-agentation` under the temporary directory, which the Mac clears when it restarts. Delete the cache folder too if the user wants nothing left behind.
