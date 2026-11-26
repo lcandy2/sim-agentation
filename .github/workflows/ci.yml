@@ -31,6 +31,8 @@ jobs:
       - run: app/host/.build/debug/sim-agentation version
       - name: Host unit tests
         run: swift test --package-path app/host
+      - name: Web UI unit tests
+        run: pnpm test
       - name: Package (release build)
         run: app/scripts/package.sh
       - uses: actions/upload-artifact@v4
