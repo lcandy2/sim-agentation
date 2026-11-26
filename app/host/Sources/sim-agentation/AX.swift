@@ -84,18 +84,66 @@ enum AX {
         return best
     }
 
-    /// Nodes that sit mostly inside a box, smallest first.
+    /// What a box centred on (x, y) sits in: the nearest named control
+    /// holding the innermost element there, or that element when no control
+    /// holds it. In the app's automation tree the innermost element is
+    /// usually a control's own text run or image. Nodes carry no identity,
+    /// so an ancestor is a node whose path starts the hit's path.
+    static func within(_ tree: JSONObject, x: Double, y: Double) -> Entry? {
+        guard let hit = hitTest(tree, x: x, y: y) else { return nil }
+        if actionable(.object(hit.node)) { return hit }
+        var best: Entry?
+        for entry in flatten(tree) where entry.depth < hit.depth && (best?.depth ?? -1) < entry.depth {
+            guard visible(entry), actionable(.object(entry.node)), contains(entry.node["frame"], x, y),
+                  hit.path.starts(with: entry.path)
+            else { continue }
+            best = entry
+        }
+        return best ?? hit
+    }
+
+    /// Roles a user acts on. Their label names what is drawn inside them.
+    private static let controlRoles: Set<String> = [
+        "AXButton", "AXRadioButton", "AXCheckBox", "AXSwitch", "AXPopUpButton", "AXMenuButton", "AXMenuItem",
+        "AXLink", "AXCell", "AXSlider", "AXIncrementor", "AXTextField", "AXSecureTextField", "AXSearchField",
+        "AXTextArea", "AXComboBox", "AXDisclosureTriangle",
+    ]
+
+    private static func named(_ node: JSON?) -> Bool {
+        !(JS.trimmed(node?["label"]) ?? "").isEmpty || JS.truthy(node?["identifier"])
+    }
+
+    /// A control the agent can search for: a control role with a label or identifier.
+    static func actionable(_ node: JSON?) -> Bool {
+        controlRoles.contains(JS.string(node?["role"])) && named(node)
+    }
+
+    /// How much a node in a box tells the agent, best first: named controls,
+    /// other named elements, images, then unnamed wrappers. In the app's
+    /// automation tree a control's images, text runs and wrappers come with
+    /// it and outnumber the controls.
+    static func rank(_ node: JSON?) -> Int {
+        if actionable(node) { return 0 }
+        if !named(node) { return 3 }
+        return JS.same(node?["role"]?.stringValue, "AXImage") ? 2 : 1
+    }
+
+    /// Nodes that sit mostly inside a box, best first by `rank`, smallest
+    /// first within a rank. The server keeps the first 20 for the note.
+    /// ax.js sorts by size alone; its one caller re-sorts by position.
     static func nodesInRect(_ tree: JSONObject, _ rect: JSON) -> [Entry] {
         flatten(tree)
             .filter(visible)
             .filter { intersection($0.node["frame"], rect) >= area($0.node["frame"]) * 0.6 }
+            .map { (entry: $0, rank: rank(.object($0.node))) }
             .enumerated()
             .sorted { lhs, rhs in
                 // Array.prototype.sort is stable.
-                let a = area(lhs.element.node["frame"]), b = area(rhs.element.node["frame"])
+                if lhs.element.rank != rhs.element.rank { return lhs.element.rank < rhs.element.rank }
+                let a = area(lhs.element.entry.node["frame"]), b = area(rhs.element.entry.node["frame"])
                 return a != b ? a < b : lhs.offset < rhs.offset
             }
-            .map(\.element)
+            .map(\.element.entry)
     }
 
     private static let statusBar = 54.0 // pt; clock, battery and signal live above this

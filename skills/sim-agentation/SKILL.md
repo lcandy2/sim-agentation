@@ -45,9 +45,9 @@ What each line tells you, and how far to trust it:
 | **Source** | SDK only. The view type, and the file and line where `.simTag()` was written. That is usually where the view is *used*, so the type's own `body` may be elsewhere: search `struct ItemRow` or `class ItemRow`. The path is `Module/File.swift`; look for the file under that module's sources. `inside` lines name the tagged views around it. |
 | **View controller**, **Views** | SDK only. App-defined UIKit classes around the box, innermost first. |
 | **Element** | The accessibility element clicked: role (`StaticText` is a `Text` or label, `Button`, `Image`, `Cell`), label, `id=` identifier, `value=`, and its frame in points. **Path** gives its ancestors. |
-| **Area**, **Within** | A box rather than an element; **Within** is the innermost element under the box's center. |
+| **Area**, **Within** | A box rather than an element; **Within** is the control under the box's center (the nearest one holding the innermost element there), or that innermost element when no control holds it. |
 | **Elements** (n) | Several picked together. The note is about all of them at once. Each has a box color that matches the screenshot, and its own source line when the SDK knows it. |
-| **Inside the box** | The elements the box covers. |
+| **Inside the box** | The elements the box covers, at most 12 lines: controls first, then other named elements, images, and unnamed groups, smallest first within each. A control's line ends with `showing …`, naming up to three of the text runs and images drawn in it (`and N more` counts the rest); those don't get lines of their own. A last `and N more` line counts what didn't fit. |
 | **Search the source for** | Labels and identifiers from the accessibility tree. A starting point; see below for why they often don't match the source as written. With several elements picked, this can include text from whatever lies between them. |
 | **Screenshot**, **Close-up** | Absolute paths to JPEGs: the whole screen with the box drawn on it, and the box up close. |
 | **agent** / **human** lines | Earlier replies on this note. Read them before starting; they may settle a question or change the request. |

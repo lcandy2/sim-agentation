@@ -1,0 +1,1168 @@
+{
+  "children" : [
+    {
+      "children" : [
+        {
+          "children" : [
+            {
+              "children" : [
+                {
+                  "children" : [
+                    {
+                      "children" : [
+                        {
+                          "children" : [
+                            {
+                              "children" : [
+                                {
+                                  "children" : [
+
+                                  ],
+                                  "enabled" : true,
+                                  "focused" : false,
+                                  "frame" : {
+                                    "height" : 36,
+                                    "width" : 43,
+                                    "x" : 20,
+                                    "y" : 66
+                                  },
+                                  "help" : null,
+                                  "hidden" : false,
+                                  "identifier" : null,
+                                  "label" : "Settings",
+                                  "role" : "AXButton",
+                                  "subrole" : null,
+                                  "title" : null,
+                                  "value" : null
+                                },
+                                {
+                                  "children" : [
+
+                                  ],
+                                  "enabled" : true,
+                                  "focused" : false,
+                                  "frame" : {
+                                    "height" : 36,
+                                    "width" : 43.666666666666657,
+                                    "x" : 79,
+                                    "y" : 66
+                                  },
+                                  "help" : null,
+                                  "hidden" : false,
+                                  "identifier" : null,
+                                  "label" : "Debug",
+                                  "role" : "AXButton",
+                                  "subrole" : null,
+                                  "title" : null,
+                                  "value" : null
+                                },
+                                {
+                                  "children" : [
+                                    {
+                                      "children" : [
+                                        {
+                                          "children" : [
+                                            {
+                                              "children" : [
+                                                {
+                                                  "children" : [
+                                                    {
+                                                      "children" : [
+
+                                                      ],
+                                                      "enabled" : true,
+                                                      "focused" : false,
+                                                      "frame" : {
+                                                        "height" : 20.333333333333329,
+                                                        "width" : 78.666666666666629,
+                                                        "x" : 153.33333333333337,
+                                                        "y" : 65.333333333333343
+                                                      },
+                                                      "help" : null,
+                                                      "hidden" : false,
+                                                      "identifier" : null,
+                                                      "label" : "Touchpad",
+                                                      "role" : "AXStaticText",
+                                                      "subrole" : null,
+                                                      "title" : null,
+                                                      "value" : null
+                                                    },
+                                                    {
+                                                      "children" : [
+
+                                                      ],
+                                                      "enabled" : true,
+                                                      "focused" : false,
+                                                      "frame" : {
+                                                        "height" : 14.333333969116211,
+                                                        "width" : 16,
+                                                        "x" : 143.00000000000003,
+                                                        "y" : 87
+                                                      },
+                                                      "help" : null,
+                                                      "hidden" : false,
+                                                      "identifier" : "exclamationmark.triangle",
+                                                      "label" : "Warning",
+                                                      "role" : "AXImage",
+                                                      "subrole" : null,
+                                                      "title" : null,
+                                                      "value" : null
+                                                    },
+                                                    {
+                                                      "children" : [
+
+                                                      ],
+                                                      "enabled" : true,
+                                                      "focused" : false,
+                                                      "frame" : {
+                                                        "height" : 14.333333333333329,
+                                                        "width" : 101.66666666666666,
+                                                        "x" : 168.50000000000003,
+                                                        "y" : 87
+                                                      },
+                                                      "help" : null,
+                                                      "hidden" : false,
+                                                      "identifier" : null,
+                                                      "label" : "Bluetooth keyboard unsupported",
+                                                      "role" : "AXStaticText",
+                                                      "subrole" : null,
+                                                      "title" : null,
+                                                      "value" : null
+                                                    },
+                                                    {
+                                                      "children" : [
+
+                                                      ],
+                                                      "enabled" : true,
+                                                      "focused" : false,
+                                                      "frame" : {
+                                                        "height" : 15.333333969116211,
+                                                        "width" : 15.333333969116239,
+                                                        "x" : 241.33333333333334,
+                                                        "y" : 68
+                                                      },
+                                                      "help" : null,
+                                                      "hidden" : false,
+                                                      "identifier" : "chevron.down.circle.fill",
+                                                      "label" : "Go Down",
+                                                      "role" : "AXImage",
+                                                      "subrole" : null,
+                                                      "title" : null,
+                                                      "value" : null
+                                                    }
+                                                  ],
+                                                  "enabled" : true,
+                                                  "focused" : false,
+                                                  "frame" : {
+                                                    "height" : 36,
+                                                    "width" : 127.16665649414062,
+                                                    "x" : 143,
+                                                    "y" : 65.333335876464844
+                                                  },
+                                                  "help" : null,
+                                                  "hidden" : false,
+                                                  "identifier" : null,
+                                                  "label" : "Touchpad",
+                                                  "role" : "AXGenericElement",
+                                                  "subrole" : null,
+                                                  "title" : null,
+                                                  "value" : "Bluetooth keyboard unsupported"
+                                                }
+                                              ],
+                                              "enabled" : true,
+                                              "focused" : false,
+                                              "frame" : {
+                                                "height" : 36,
+                                                "width" : 134,
+                                                "x" : 138.66666666666669,
+                                                "y" : 66
+                                              },
+                                              "help" : null,
+                                              "hidden" : false,
+                                              "identifier" : null,
+                                              "label" : null,
+                                              "role" : "AXButton",
+                                              "subrole" : null,
+                                              "title" : null,
+                                              "value" : null
+                                            }
+                                          ],
+                                          "enabled" : true,
+                                          "focused" : false,
+                                          "frame" : {
+                                            "height" : 36,
+                                            "width" : 134,
+                                            "x" : 138.66666666666669,
+                                            "y" : 66
+                                          },
+                                          "help" : null,
+                                          "hidden" : false,
+                                          "identifier" : "titleMenu",
+                                          "label" : "Touchpad",
+                                          "role" : "AXPopUpButton",
+                                          "subrole" : null,
+                                          "title" : null,
+                                          "value" : "Bluetooth keyboard unsupported"
+                                        }
+                                      ],
+                                      "enabled" : true,
+                                      "focused" : false,
+                                      "frame" : {
+                                        "height" : 36,
+                                        "width" : 134,
+                                        "x" : 138.66666666666669,
+                                        "y" : 66
+                                      },
+                                      "help" : null,
+                                      "hidden" : false,
+                                      "identifier" : null,
+                                      "label" : null,
+                                      "role" : "AXGroup",
+                                      "subrole" : null,
+                                      "title" : null,
+                                      "value" : null
+                                    }
+                                  ],
+                                  "enabled" : true,
+                                  "focused" : false,
+                                  "frame" : {
+                                    "height" : 36,
+                                    "width" : 134,
+                                    "x" : 138.66666666666669,
+                                    "y" : 66
+                                  },
+                                  "help" : null,
+                                  "hidden" : false,
+                                  "identifier" : null,
+                                  "label" : "Touchpad",
+                                  "role" : "AXHeading",
+                                  "subrole" : null,
+                                  "title" : null,
+                                  "value" : null
+                                },
+                                {
+                                  "children" : [
+                                    {
+                                      "children" : [
+                                        {
+                                          "children" : [
+                                            {
+                                              "children" : [
+                                                {
+                                                  "children" : [
+
+                                                  ],
+                                                  "enabled" : true,
+                                                  "focused" : false,
+                                                  "frame" : {
+                                                    "height" : 23.333333969116211,
+                                                    "width" : 32.666667938232422,
+                                                    "x" : 295.33333333333331,
+                                                    "y" : 72.333333333333329
+                                                  },
+                                                  "help" : null,
+                                                  "hidden" : false,
+                                                  "identifier" : "desktopcomputer.trianglebadge.exclamationmark",
+                                                  "label" : "Desktop Computer With An Exclamation Mark Triangle Badge",
+                                                  "role" : "AXImage",
+                                                  "subrole" : null,
+                                                  "title" : null,
+                                                  "value" : null
+                                                }
+                                              ],
+                                              "enabled" : true,
+                                              "focused" : false,
+                                              "frame" : {
+                                                "height" : 36,
+                                                "width" : 35,
+                                                "x" : 290.66666666666669,
+                                                "y" : 66
+                                              },
+                                              "help" : null,
+                                              "hidden" : false,
+                                              "identifier" : null,
+                                              "label" : null,
+                                              "role" : "AXButton",
+                                              "subrole" : null,
+                                              "title" : null,
+                                              "value" : null
+                                            }
+                                          ],
+                                          "enabled" : true,
+                                          "focused" : false,
+                                          "frame" : {
+                                            "height" : 36,
+                                            "width" : 35,
+                                            "x" : 290.66666666666669,
+                                            "y" : 66
+                                          },
+                                          "help" : null,
+                                          "hidden" : false,
+                                          "identifier" : null,
+                                          "label" : "Host: No Host",
+                                          "role" : "AXPopUpButton",
+                                          "subrole" : null,
+                                          "title" : null,
+                                          "value" : "Bluetooth keyboard unsupported"
+                                        }
+                                      ],
+                                      "enabled" : true,
+                                      "focused" : false,
+                                      "frame" : {
+                                        "height" : 36,
+                                        "width" : 36,
+                                        "x" : 290,
+                                        "y" : 66
+                                      },
+                                      "help" : null,
+                                      "hidden" : false,
+                                      "identifier" : null,
+                                      "label" : null,
+                                      "role" : "AXGroup",
+                                      "subrole" : null,
+                                      "title" : null,
+                                      "value" : null
+                                    }
+                                  ],
+                                  "enabled" : true,
+                                  "focused" : false,
+                                  "frame" : {
+                                    "height" : 36,
+                                    "width" : 36,
+                                    "x" : 290,
+                                    "y" : 66
+                                  },
+                                  "help" : null,
+                                  "hidden" : false,
+                                  "identifier" : null,
+                                  "label" : null,
+                                  "role" : "AXGroup",
+                                  "subrole" : null,
+                                  "title" : null,
+                                  "value" : null
+                                },
+                                {
+                                  "children" : [
+
+                                  ],
+                                  "enabled" : true,
+                                  "focused" : false,
+                                  "frame" : {
+                                    "height" : 36,
+                                    "width" : 36,
+                                    "x" : 346,
+                                    "y" : 66
+                                  },
+                                  "help" : null,
+                                  "hidden" : false,
+                                  "identifier" : "record",
+                                  "label" : "Record",
+                                  "role" : "AXButton",
+                                  "subrole" : null,
+                                  "title" : null,
+                                  "value" : null
+                                }
+                              ],
+                              "enabled" : true,
+                              "focused" : false,
+                              "frame" : {
+                                "height" : 54,
+                                "width" : 402,
+                                "x" : 0,
+                                "y" : 62
+                              },
+                              "help" : null,
+                              "hidden" : false,
+                              "identifier" : "Touchpad",
+                              "label" : null,
+                              "role" : "AXGroup",
+                              "subrole" : null,
+                              "title" : null,
+                              "value" : null
+                            },
+                            {
+                              "children" : [
+                                {
+                                  "children" : [
+                                    {
+                                      "children" : [
+                                        {
+                                          "children" : [
+                                            {
+                                              "children" : [
+
+                                              ],
+                                              "enabled" : true,
+                                              "focused" : false,
+                                              "frame" : {
+                                                "height" : 19.333328247070312,
+                                                "width" : 360,
+                                                "x" : 17.666666030883789,
+                                                "y" : 116
+                                              },
+                                              "help" : null,
+                                              "hidden" : false,
+                                              "identifier" : null,
+                                              "label" : "This device can't act as a Bluetooth keyboard.",
+                                              "role" : "AXStaticText",
+                                              "subrole" : null,
+                                              "title" : null,
+                                              "value" : null
+                                            },
+                                            {
+                                              "children" : [
+
+                                              ],
+                                              "enabled" : true,
+                                              "focused" : false,
+                                              "frame" : {
+                                                "height" : 15.000000000000014,
+                                                "width" : 16.666667938232425,
+                                                "x" : 17.666666666666668,
+                                                "y" : 117.99999999999999
+                                              },
+                                              "help" : null,
+                                              "hidden" : false,
+                                              "identifier" : "exclamationmark.triangle",
+                                              "label" : "Warning",
+                                              "role" : "AXImage",
+                                              "subrole" : null,
+                                              "title" : null,
+                                              "value" : null
+                                            },
+                                            {
+                                              "children" : [
+
+                                              ],
+                                              "enabled" : true,
+                                              "focused" : false,
+                                              "frame" : {
+                                                "height" : 594.66666666666652,
+                                                "width" : 307,
+                                                "x" : 16,
+                                                "y" : 151.33333333333331
+                                              },
+                                              "help" : "Tap to click, two-finger tap to right-click, two fingers to scroll, tap then hold to drag.",
+                                              "hidden" : false,
+                                              "identifier" : null,
+                                              "label" : "Touchpad",
+                                              "role" : "AXGenericElement",
+                                              "subrole" : null,
+                                              "title" : null,
+                                              "value" : null
+                                            },
+                                            {
+                                              "children" : [
+                                                {
+                                                  "children" : [
+
+                                                  ],
+                                                  "enabled" : true,
+                                                  "focused" : false,
+                                                  "frame" : {
+                                                    "height" : 16.666667938232422,
+                                                    "width" : 10.333333969116211,
+                                                    "x" : 353.33333333333331,
+                                                    "y" : 431.99999999999994
+                                                  },
+                                                  "help" : null,
+                                                  "hidden" : false,
+                                                  "identifier" : "arrow.up.and.down",
+                                                  "label" : "Up And Down Arrows",
+                                                  "role" : "AXImage",
+                                                  "subrole" : null,
+                                                  "title" : null,
+                                                  "value" : null
+                                                },
+                                                {
+                                                  "children" : [
+
+                                                  ],
+                                                  "enabled" : true,
+                                                  "focused" : false,
+                                                  "frame" : {
+                                                    "height" : 14.333333333333314,
+                                                    "width" : 32,
+                                                    "x" : 342.5,
+                                                    "y" : 452.125
+                                                  },
+                                                  "help" : null,
+                                                  "hidden" : false,
+                                                  "identifier" : null,
+                                                  "label" : "Scroll",
+                                                  "role" : "AXStaticText",
+                                                  "subrole" : null,
+                                                  "title" : null,
+                                                  "value" : null
+                                                }
+                                              ],
+                                              "enabled" : true,
+                                              "focused" : false,
+                                              "frame" : {
+                                                "height" : 595.16668701171875,
+                                                "width" : 55,
+                                                "x" : 331,
+                                                "y" : 150.83332824707031
+                                              },
+                                              "help" : null,
+                                              "hidden" : false,
+                                              "identifier" : null,
+                                              "label" : "Scroll",
+                                              "role" : "AXStaticText",
+                                              "subrole" : null,
+                                              "title" : null,
+                                              "value" : "0 steps"
+                                            },
+                                            {
+                                              "children" : [
+
+                                              ],
+                                              "enabled" : true,
+                                              "focused" : false,
+                                              "frame" : {
+                                                "height" : 595.16668701171875,
+                                                "width" : 55,
+                                                "x" : 331,
+                                                "y" : 150.83332824707031
+                                              },
+                                              "help" : null,
+                                              "hidden" : false,
+                                              "identifier" : null,
+                                              "label" : "Scroll",
+                                              "role" : "AXSlider",
+                                              "subrole" : null,
+                                              "title" : null,
+                                              "value" : "0 steps"
+                                            },
+                                            {
+                                              "children" : [
+
+                                              ],
+                                              "enabled" : true,
+                                              "focused" : false,
+                                              "frame" : {
+                                                "height" : 20.333333333333314,
+                                                "width" : 78.666666666666657,
+                                                "x" : 232.33333333333334,
+                                                "y" : 163.33333333333337
+                                              },
+                                              "help" : null,
+                                              "hidden" : false,
+                                              "identifier" : null,
+                                              "label" : "Touchpad",
+                                              "role" : "AXStaticText",
+                                              "subrole" : null,
+                                              "title" : null,
+                                              "value" : null
+                                            },
+                                            {
+                                              "children" : [
+
+                                              ],
+                                              "enabled" : true,
+                                              "focused" : false,
+                                              "frame" : {
+                                                "height" : 61.333333333333371,
+                                                "width" : 257.33333333333331,
+                                                "x" : 28,
+                                                "y" : 672.58333333333326
+                                              },
+                                              "help" : null,
+                                              "hidden" : false,
+                                              "identifier" : null,
+                                              "label" : "Tap to click, two-finger tap to right-click, two fingers to scroll, tap then hold to drag.",
+                                              "role" : "AXStaticText",
+                                              "subrole" : null,
+                                              "title" : null,
+                                              "value" : null
+                                            },
+                                            {
+                                              "children" : [
+                                                {
+                                                  "children" : [
+                                                    {
+                                                      "children" : [
+
+                                                      ],
+                                                      "enabled" : true,
+                                                      "focused" : false,
+                                                      "frame" : {
+                                                        "height" : 17.333333969116211,
+                                                        "width" : 17,
+                                                        "x" : 66.666666666666657,
+                                                        "y" : 776
+                                                      },
+                                                      "help" : null,
+                                                      "hidden" : false,
+                                                      "identifier" : "cursorarrow.click",
+                                                      "label" : "Cursor Arrow With A Click Indicator",
+                                                      "role" : "AXImage",
+                                                      "subrole" : null,
+                                                      "title" : null,
+                                                      "value" : null
+                                                    },
+                                                    {
+                                                      "children" : [
+
+                                                      ],
+                                                      "enabled" : true,
+                                                      "focused" : false,
+                                                      "frame" : {
+                                                        "height" : 14.333333333333371,
+                                                        "width" : 28,
+                                                        "x" : 61,
+                                                        "y" : 796.79166666666663
+                                                      },
+                                                      "help" : null,
+                                                      "hidden" : false,
+                                                      "identifier" : null,
+                                                      "label" : "Click",
+                                                      "role" : "AXStaticText",
+                                                      "subrole" : null,
+                                                      "title" : null,
+                                                      "value" : null
+                                                    }
+                                                  ],
+                                                  "enabled" : true,
+                                                  "focused" : false,
+                                                  "frame" : {
+                                                    "height" : 78,
+                                                    "width" : 118,
+                                                    "x" : 16,
+                                                    "y" : 754
+                                                  },
+                                                  "help" : null,
+                                                  "hidden" : false,
+                                                  "identifier" : null,
+                                                  "label" : "Click",
+                                                  "role" : "AXStaticText",
+                                                  "subrole" : null,
+                                                  "title" : null,
+                                                  "value" : null
+                                                },
+                                                {
+                                                  "children" : [
+
+                                                  ],
+                                                  "enabled" : true,
+                                                  "focused" : false,
+                                                  "frame" : {
+                                                    "height" : 0,
+                                                    "width" : 0,
+                                                    "x" : 0,
+                                                    "y" : 0
+                                                  },
+                                                  "help" : null,
+                                                  "hidden" : false,
+                                                  "identifier" : null,
+                                                  "label" : null,
+                                                  "role" : "AXGroup",
+                                                  "subrole" : null,
+                                                  "title" : null,
+                                                  "value" : null
+                                                }
+                                              ],
+                                              "enabled" : true,
+                                              "focused" : false,
+                                              "frame" : {
+                                                "height" : 78,
+                                                "width" : 118,
+                                                "x" : 16,
+                                                "y" : 754
+                                              },
+                                              "help" : null,
+                                              "hidden" : false,
+                                              "identifier" : null,
+                                              "label" : "Left click",
+                                              "role" : "AXButton",
+                                              "subrole" : null,
+                                              "title" : null,
+                                              "value" : null
+                                            },
+                                            {
+                                              "children" : [
+                                                {
+                                                  "children" : [
+                                                    {
+                                                      "children" : [
+
+                                                      ],
+                                                      "enabled" : true,
+                                                      "focused" : false,
+                                                      "frame" : {
+                                                        "height" : 16.333333969116211,
+                                                        "width" : 11.333333969116211,
+                                                        "x" : 195.33333333333334,
+                                                        "y" : 776.66666666666663
+                                                      },
+                                                      "help" : null,
+                                                      "hidden" : false,
+                                                      "identifier" : "lock",
+                                                      "label" : "Lock",
+                                                      "role" : "AXImage",
+                                                      "subrole" : null,
+                                                      "title" : null,
+                                                      "value" : null
+                                                    },
+                                                    {
+                                                      "children" : [
+
+                                                      ],
+                                                      "enabled" : true,
+                                                      "focused" : false,
+                                                      "frame" : {
+                                                        "height" : 14.333333333333371,
+                                                        "width" : 57.666666666666657,
+                                                        "x" : 172.16666666666666,
+                                                        "y" : 796.29166666666663
+                                                      },
+                                                      "help" : null,
+                                                      "hidden" : false,
+                                                      "identifier" : null,
+                                                      "label" : "Drag Lock",
+                                                      "role" : "AXStaticText",
+                                                      "subrole" : null,
+                                                      "title" : null,
+                                                      "value" : null
+                                                    }
+                                                  ],
+                                                  "enabled" : true,
+                                                  "focused" : false,
+                                                  "frame" : {
+                                                    "height" : 78,
+                                                    "width" : 118,
+                                                    "x" : 142,
+                                                    "y" : 754
+                                                  },
+                                                  "help" : null,
+                                                  "hidden" : false,
+                                                  "identifier" : null,
+                                                  "label" : "Drag Lock",
+                                                  "role" : "AXStaticText",
+                                                  "subrole" : null,
+                                                  "title" : null,
+                                                  "value" : null
+                                                },
+                                                {
+                                                  "children" : [
+
+                                                  ],
+                                                  "enabled" : true,
+                                                  "focused" : false,
+                                                  "frame" : {
+                                                    "height" : 0,
+                                                    "width" : 0,
+                                                    "x" : 0,
+                                                    "y" : 0
+                                                  },
+                                                  "help" : null,
+                                                  "hidden" : false,
+                                                  "identifier" : null,
+                                                  "label" : null,
+                                                  "role" : "AXGroup",
+                                                  "subrole" : null,
+                                                  "title" : null,
+                                                  "value" : null
+                                                }
+                                              ],
+                                              "enabled" : true,
+                                              "focused" : false,
+                                              "frame" : {
+                                                "height" : 78,
+                                                "width" : 118,
+                                                "x" : 142,
+                                                "y" : 754
+                                              },
+                                              "help" : "Double-tap to turn on or off.",
+                                              "hidden" : false,
+                                              "identifier" : null,
+                                              "label" : "Drag Lock",
+                                              "role" : "AXButton",
+                                              "subrole" : null,
+                                              "title" : null,
+                                              "value" : "Off"
+                                            },
+                                            {
+                                              "children" : [
+                                                {
+                                                  "children" : [
+                                                    {
+                                                      "children" : [
+
+                                                      ],
+                                                      "enabled" : true,
+                                                      "focused" : false,
+                                                      "frame" : {
+                                                        "height" : 20.666667938232422,
+                                                        "width" : 18,
+                                                        "x" : 316.33333333333331,
+                                                        "y" : 774.33333333333337
+                                                      },
+                                                      "help" : null,
+                                                      "hidden" : false,
+                                                      "identifier" : "contextualmenu.and.cursorarrow",
+                                                      "label" : "Contextual Menu With A Cursor Arrow",
+                                                      "role" : "AXImage",
+                                                      "subrole" : null,
+                                                      "title" : null,
+                                                      "value" : null
+                                                    },
+                                                    {
+                                                      "children" : [
+
+                                                      ],
+                                                      "enabled" : true,
+                                                      "focused" : false,
+                                                      "frame" : {
+                                                        "height" : 14.333333333333371,
+                                                        "width" : 61,
+                                                        "x" : 296.5,
+                                                        "y" : 798.45833333333337
+                                                      },
+                                                      "help" : null,
+                                                      "hidden" : false,
+                                                      "identifier" : null,
+                                                      "label" : "Right Click",
+                                                      "role" : "AXStaticText",
+                                                      "subrole" : null,
+                                                      "title" : null,
+                                                      "value" : null
+                                                    }
+                                                  ],
+                                                  "enabled" : true,
+                                                  "focused" : false,
+                                                  "frame" : {
+                                                    "height" : 78,
+                                                    "width" : 118,
+                                                    "x" : 268,
+                                                    "y" : 754
+                                                  },
+                                                  "help" : null,
+                                                  "hidden" : false,
+                                                  "identifier" : null,
+                                                  "label" : "Right Click",
+                                                  "role" : "AXStaticText",
+                                                  "subrole" : null,
+                                                  "title" : null,
+                                                  "value" : null
+                                                },
+                                                {
+                                                  "children" : [
+
+                                                  ],
+                                                  "enabled" : true,
+                                                  "focused" : false,
+                                                  "frame" : {
+                                                    "height" : 0,
+                                                    "width" : 0,
+                                                    "x" : 0,
+                                                    "y" : 0
+                                                  },
+                                                  "help" : null,
+                                                  "hidden" : false,
+                                                  "identifier" : null,
+                                                  "label" : null,
+                                                  "role" : "AXGroup",
+                                                  "subrole" : null,
+                                                  "title" : null,
+                                                  "value" : null
+                                                }
+                                              ],
+                                              "enabled" : true,
+                                              "focused" : false,
+                                              "frame" : {
+                                                "height" : 78,
+                                                "width" : 118,
+                                                "x" : 268,
+                                                "y" : 754
+                                              },
+                                              "help" : null,
+                                              "hidden" : false,
+                                              "identifier" : null,
+                                              "label" : "Right Click",
+                                              "role" : "AXButton",
+                                              "subrole" : null,
+                                              "title" : null,
+                                              "value" : null
+                                            }
+                                          ],
+                                          "enabled" : true,
+                                          "focused" : false,
+                                          "frame" : {
+                                            "height" : 874,
+                                            "width" : 402,
+                                            "x" : 0,
+                                            "y" : 0
+                                          },
+                                          "help" : null,
+                                          "hidden" : false,
+                                          "identifier" : null,
+                                          "label" : null,
+                                          "role" : "AXGroup",
+                                          "subrole" : null,
+                                          "title" : null,
+                                          "value" : null
+                                        }
+                                      ],
+                                      "enabled" : true,
+                                      "focused" : false,
+                                      "frame" : {
+                                        "height" : 874,
+                                        "width" : 402,
+                                        "x" : 0,
+                                        "y" : 0
+                                      },
+                                      "help" : null,
+                                      "hidden" : false,
+                                      "identifier" : null,
+                                      "label" : null,
+                                      "role" : "AXGroup",
+                                      "subrole" : null,
+                                      "title" : null,
+                                      "value" : null
+                                    }
+                                  ],
+                                  "enabled" : true,
+                                  "focused" : false,
+                                  "frame" : {
+                                    "height" : 874,
+                                    "width" : 402,
+                                    "x" : 0,
+                                    "y" : 0
+                                  },
+                                  "help" : null,
+                                  "hidden" : false,
+                                  "identifier" : null,
+                                  "label" : null,
+                                  "role" : "AXGroup",
+                                  "subrole" : null,
+                                  "title" : null,
+                                  "value" : null
+                                }
+                              ],
+                              "enabled" : true,
+                              "focused" : false,
+                              "frame" : {
+                                "height" : 874,
+                                "width" : 402,
+                                "x" : 0,
+                                "y" : 0
+                              },
+                              "help" : null,
+                              "hidden" : false,
+                              "identifier" : null,
+                              "label" : null,
+                              "role" : "AXGroup",
+                              "subrole" : null,
+                              "title" : null,
+                              "value" : null
+                            },
+                            {
+                              "children" : [
+                                {
+                                  "children" : [
+
+                                  ],
+                                  "enabled" : true,
+                                  "focused" : false,
+                                  "frame" : {
+                                    "height" : 874,
+                                    "width" : 402,
+                                    "x" : 0,
+                                    "y" : 0
+                                  },
+                                  "help" : null,
+                                  "hidden" : false,
+                                  "identifier" : null,
+                                  "label" : null,
+                                  "role" : "AXGroup",
+                                  "subrole" : null,
+                                  "title" : null,
+                                  "value" : null
+                                }
+                              ],
+                              "enabled" : true,
+                              "focused" : false,
+                              "frame" : {
+                                "height" : 874,
+                                "width" : 402,
+                                "x" : 0,
+                                "y" : 0
+                              },
+                              "help" : null,
+                              "hidden" : false,
+                              "identifier" : "Toolbar",
+                              "label" : "Toolbar",
+                              "role" : "AXGroup",
+                              "subrole" : null,
+                              "title" : null,
+                              "value" : null
+                            }
+                          ],
+                          "enabled" : true,
+                          "focused" : false,
+                          "frame" : {
+                            "height" : 874,
+                            "width" : 402,
+                            "x" : 0,
+                            "y" : 0
+                          },
+                          "help" : null,
+                          "hidden" : false,
+                          "identifier" : null,
+                          "label" : null,
+                          "role" : "AXGroup",
+                          "subrole" : null,
+                          "title" : null,
+                          "value" : null
+                        },
+                        {
+                          "children" : [
+
+                          ],
+                          "enabled" : true,
+                          "focused" : false,
+                          "frame" : {
+                            "height" : 778,
+                            "width" : 402,
+                            "x" : 0,
+                            "y" : 62
+                          },
+                          "help" : null,
+                          "hidden" : false,
+                          "identifier" : null,
+                          "label" : null,
+                          "role" : "AXGroup",
+                          "subrole" : null,
+                          "title" : null,
+                          "value" : null
+                        },
+                        {
+                          "children" : [
+
+                          ],
+                          "enabled" : true,
+                          "focused" : false,
+                          "frame" : {
+                            "height" : 778,
+                            "width" : 402,
+                            "x" : 0,
+                            "y" : 62
+                          },
+                          "help" : null,
+                          "hidden" : false,
+                          "identifier" : null,
+                          "label" : null,
+                          "role" : "AXGroup",
+                          "subrole" : null,
+                          "title" : null,
+                          "value" : null
+                        }
+                      ],
+                      "enabled" : true,
+                      "focused" : false,
+                      "frame" : {
+                        "height" : 874,
+                        "width" : 402,
+                        "x" : 0,
+                        "y" : 0
+                      },
+                      "help" : null,
+                      "hidden" : false,
+                      "identifier" : null,
+                      "label" : null,
+                      "role" : "AXGroup",
+                      "subrole" : null,
+                      "title" : null,
+                      "value" : null
+                    }
+                  ],
+                  "enabled" : true,
+                  "focused" : false,
+                  "frame" : {
+                    "height" : 874,
+                    "width" : 402,
+                    "x" : 0,
+                    "y" : 0
+                  },
+                  "help" : null,
+                  "hidden" : false,
+                  "identifier" : null,
+                  "label" : null,
+                  "role" : "AXGroup",
+                  "subrole" : null,
+                  "title" : null,
+                  "value" : null
+                }
+              ],
+              "enabled" : true,
+              "focused" : false,
+              "frame" : {
+                "height" : 874,
+                "width" : 402,
+                "x" : 0,
+                "y" : 0
+              },
+              "help" : null,
+              "hidden" : false,
+              "identifier" : null,
+              "label" : null,
+              "role" : "AXGroup",
+              "subrole" : null,
+              "title" : null,
+              "value" : null
+            }
+          ],
+          "enabled" : true,
+          "focused" : false,
+          "frame" : {
+            "height" : 874,
+            "width" : 402,
+            "x" : 0,
+            "y" : 0
+          },
+          "help" : null,
+          "hidden" : false,
+          "identifier" : null,
+          "label" : null,
+          "role" : "AXGroup",
+          "subrole" : null,
+          "title" : null,
+          "value" : null
+        }
+      ],
+      "enabled" : true,
+      "focused" : false,
+      "frame" : {
+        "height" : 874,
+        "width" : 402,
+        "x" : 0,
+        "y" : 0
+      },
+      "help" : null,
+      "hidden" : false,
+      "identifier" : null,
+      "label" : null,
+      "role" : "AXGroup",
+      "subrole" : null,
+      "title" : null,
+      "value" : null
+    }
+  ],
+  "enabled" : true,
+  "focused" : false,
+  "frame" : {
+    "height" : 874,
+    "width" : 402,
+    "x" : 0,
+    "y" : 0
+  },
+  "help" : null,
+  "hidden" : false,
+  "identifier" : null,
+  "label" : "Peri Keys",
+  "role" : "AXApplication",
+  "subrole" : null,
+  "title" : null,
+  "value" : null
+}

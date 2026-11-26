@@ -29,6 +29,12 @@ let package = Package(
             name: "sim-agentation",
             dependencies: ["SimBridge"]
         ),
+        // No simulator or server: trees are describe_ui output saved from Peri Keys.
+        .testTarget(
+            name: "sim-agentationTests",
+            dependencies: ["sim-agentation"],
+            resources: [.copy("Fixtures")]
+        ),
         // No simulator: requests are stand-in objects with the same keys.
         .testTarget(
             name: "SimBridgeTests",
