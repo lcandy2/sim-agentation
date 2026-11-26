@@ -46,10 +46,6 @@ function visible(entry) {
   return entry.depth > 0 && !node.hidden && node.frame && area(node.frame) > 0;
 }
 
-// Smallest visible node under a point: what a click targets. Nodes that
-// cover most of the screen are window-level wrappers, not targets. `screen`
-// is the screen size in points; the tree's root can't be trusted for it,
-// because the simulator now reports the application element as 0×0.
 /**
  * Whether the tree is SpringBoard's (the home screen and its other
  * screens): its application element has no name, where an app's carries
@@ -62,15 +58,44 @@ export function isSpringBoard(tree) {
 /** A home-screen widget, one element over its whole card: its value says "Widget" ("Widget, Stack" in a Smart Stack). */
 export const isWidget = (node) => typeof node?.value === 'string' && node.value.split(/,\s*/).includes('Widget');
 
+// Roles a person would call a control. The full tree draws a control's text
+// and icon as children of it, and a click on them means the control.
+const CONTROLS = new Set([
+  'AXButton', 'AXPopUpButton', 'AXMenuButton', 'AXRadioButton', 'AXCheckBox', 'AXSwitch', 'AXToggle',
+  'AXLink', 'AXMenuItem', 'AXTab', 'AXCell', 'AXSlider', 'AXIncrementor', 'AXTextField', 'AXTextArea',
+  'AXSearchField', 'AXComboBox', 'AXDisclosureTriangle',
+]);
+const isControl = (node) => CONTROLS.has(node.role) || isWidget(node);
+const named = (node) => !!(node.label?.trim() || node.title?.trim() || node.identifier);
+
+// What a click targets: the smallest visible node under a point, or, when
+// that is the text or icon inside a control, the nearest control around it.
+// An unnamed control right inside another is the outer one's part (a
+// pop-up button's button), so the outer one is named. Plain text outside
+// any control stays the text. Nodes that cover most of the screen are
+// window-level wrappers, not targets. `screen` is the screen size in
+// points; the tree's root can't be trusted for it, because the simulator
+// now reports the application element as 0×0.
 export function hitTest(tree, x, y, screen = tree.frame) {
   const limit = screen && area(screen) > 0 ? area(screen) * 0.6 : Infinity;
-  let best = null;
-  for (const entry of flatten(tree)) {
-    if (!visible(entry) || !contains(entry.node.frame, x, y)) continue;
-    if (area(entry.node.frame) > limit) continue;
-    if (!best || area(entry.node.frame) <= area(best.node.frame)) best = entry;
+  const entries = flatten(tree);
+  const target = (e) => visible(e) && area(e.node.frame) <= limit;
+  let best = -1;
+  entries.forEach((entry, i) => {
+    if (!target(entry) || !contains(entry.node.frame, x, y)) return;
+    if (best < 0 || area(entry.node.frame) <= area(entries[best].node.frame)) best = i;
+  });
+  if (best < 0) return null;
+  // The hit and its ancestors, innermost first: in the depth-first list each
+  // ancestor is the nearest entry before it one level up.
+  const chain = [entries[best]];
+  for (let i = best - 1; i >= 0 && chain.at(-1).depth > 1; i--) {
+    if (entries[i].depth === chain.at(-1).depth - 1) chain.push(entries[i]);
   }
-  return best;
+  let at = chain.findIndex((e) => target(e) && isControl(e.node));
+  if (at < 0) return chain[0];
+  while (!named(chain[at].node) && chain[at + 1] && target(chain[at + 1]) && isControl(chain[at + 1].node)) at++;
+  return chain[at];
 }
 
 // Nodes that sit mostly inside a box, smallest first.

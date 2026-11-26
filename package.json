@@ -9,7 +9,8 @@
     "dev": "vite",
     "watch": "vite build --watch",
     "start": "app/host/.build/debug/sim-agentation serve --open",
-    "mcp": "app/host/.build/debug/sim-agentation mcp"
+    "mcp": "app/host/.build/debug/sim-agentation mcp",
+    "test": "node --test app/web/test/"
   },
   "license": "Apache-2.0",
   "devDependencies": {

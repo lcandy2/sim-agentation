@@ -34,5 +34,11 @@ let package = Package(
             name: "SimBridgeTests",
             dependencies: ["SimBridge"]
         ),
+        // Trees saved from a simulator, as the host emits them.
+        .testTarget(
+            name: "sim-agentationTests",
+            dependencies: ["sim-agentation"],
+            resources: [.copy("Fixtures")]
+        ),
     ]
 )

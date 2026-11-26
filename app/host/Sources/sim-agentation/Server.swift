@@ -528,7 +528,8 @@ final class AppServer: @unchecked Sendable {
             hit = AX.hitTest(tree, x: JS.number(point["x"]), y: JS.number(point["y"]))
         }
         // An area (a box, or an icon or text run found in the pixels) names the
-        // innermost element it sits in, so the agent knows where to look.
+        // element under its center, as a click there would, so the agent knows
+        // where to look.
         func center(_ r: JSON) -> AX.Entry? {
             guard let tree, let x = r["x"], let y = r["y"], let w = r["width"], let h = r["height"] else { return nil }
             return AX.hitTest(tree, x: JS.number(x) + JS.number(w) / 2, y: JS.number(y) + JS.number(h) / 2)
