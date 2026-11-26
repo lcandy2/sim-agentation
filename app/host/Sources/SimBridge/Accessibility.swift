@@ -15,7 +15,8 @@ import ObjectiveC
 /// private AccessibilityPlatformTranslation framework, the same path the
 /// Accessibility Inspector uses. Frames come back in screen points.
 public enum Accessibility {
-    /// The whole tree as JSON. Elements still missing from
+    /// The whole tree as JSON. When it comes back flat (the VoiceOver tree,
+    /// on a runtime that ignores the client type), elements missing from
     /// `accessibilityChildren` are recovered by probing.
     public static func describe(udid: String) -> [String: Any]? {
         if let tree = describeOnce(udid: udid) { return tree }
