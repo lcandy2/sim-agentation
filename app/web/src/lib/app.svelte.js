@@ -9,7 +9,7 @@ import { sampler, warm, containerAround, containersAround, partsWithin } from '.
 import { matchesFrontApp, sdkContainers, sourceFor, viewContext } from './sdk.js';
 import { createDecoder, decodeCapabilities, decodesSmoothly, formatLabel, pickFormat } from './stream.js';
 import { HIDDEN_FPS, createAuto, decide, newFormat, observe, probeFor, probed, restart } from './auto.js';
-import { isTurned, sdkToPortrait, treeToPortrait, uprightDegrees } from './rotation.js';
+import { isTurned, sdkToPortrait, treeToPortrait, uprightDegrees, withinCover } from './rotation.js';
 import { pieceMaps, locate, stageBox, facing, labelMatrix } from './screen3d.js';
 
 export const storage = {
@@ -1027,22 +1027,6 @@ async function freeze() {
   if (f.tree?.frame?.width) f.points = { width: f.tree.frame.width, height: f.tree.frame.height };
   f.sdkAvailable = matchesFrontApp(sdk, tree) ? sdkToPortrait(sdk, ui.orientation, screen) : null;
   applySdk();
-}
-
-/**
- * Whether every element of a tree lies on iPhone Duo's cover (its root
- * aside, which can say either panel's size): the cover's screen does,
- * while the unfolded panel's spreads past it (the home screen's widgets
- * below, Settings' sidebar across).
- */
-function withinCover(tree, cover) {
-  let within = true;
-  (function walk(node, root) {
-    const f = node?.frame;
-    if (!root && f && (f.x + f.width > cover.width + 2 || f.y + f.height > cover.height + 2)) within = false;
-    for (const child of node?.children ?? []) walk(child, false);
-  })(tree, true);
-  return within;
 }
 
 /** Lets the screen go live again, Design Mode's boxes and markers cleared. */
