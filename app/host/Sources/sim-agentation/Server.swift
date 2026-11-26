@@ -533,9 +533,10 @@ final class AppServer: @unchecked Sendable {
     /// What a note names, from the page's picks. The page hit-tests
     /// (web/src/lib/ax.js) and sends each picked node as its position in
     /// `AX.flatten(tree)`: `target` for an element it picked, `within` for
-    /// the node a click at an area's center picks. A request without them (an
-    /// API client's, a script's), or with one the tree doesn't hold, names
-    /// nothing, and its note has the rect alone.
+    /// the node a click at an area's center picks. A request without a tree
+    /// (an API client's, a script's), or with a reference the tree doesn't
+    /// hold, names nothing, and its note has the rect alone. A request with a
+    /// tree but no references is turned away first (`fromAnOutdatedPage`).
     static func picks(_ b: JSONObject, tree: JSONObject?) -> JSONObject {
         let entries = tree.map(AX.flatten) ?? []
         func element(_ pick: JSON?) -> AX.Entry? {
