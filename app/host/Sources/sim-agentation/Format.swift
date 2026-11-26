@@ -79,7 +79,10 @@ enum Format {
                 let label = JS.trimmed(m["label"]) ?? ""
                 return (!label.isEmpty && !JS.same(label, JS.trimmed(n["label"])))
                     || (JS.truthy(m["identifier"]) && !strictEquals(m["identifier"], n["identifier"]))
-            }.map(node)
+            }.map(node).reduce(into: [String]()) { seen, name in
+                // The automation tree can hold the same text run twice in one control.
+                if !seen.contains(name) { seen.append(name) }
+            }
             let named = shown.count > shownPerControl
                 ? shown.prefix(shownPerControl) + ["\(shown.count - shownPerControl) more"]
                 : shown

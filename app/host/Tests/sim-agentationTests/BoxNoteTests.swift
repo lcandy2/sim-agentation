@@ -123,4 +123,17 @@ private let bar = rect(0, 60, 402, 57)
         ]))
         #expect(inside(note) == ["Button \"Row\" at (0, 0) 100×20pt, showing StaticText \"a\", StaticText \"b\", Image \"c\" and 2 more"])
     }
+
+    @Test func aControlNamesTextItDrawsTwiceOnce() {
+        func n(_ role: String, _ label: String, _ x: Double, _ w: Double) -> JSON {
+            .object(JSONObject(["role": .string(role), "label": .string(label), "frame": rect(x, 0, w, 20)]))
+        }
+        let note = Format.toMarkdown(JSONObject([
+            "kind": .string("area"),
+            "rect": rect(0, 0, 100, 20),
+            "inside": .array([n("AXStaticText", "Click", 30, 40), n("AXStaticText", "Click", 30, 40), n("AXImage", "Arrow", 0, 20),
+                              n("AXButton", "Left click", 0, 100)]),
+        ]))
+        #expect(inside(note) == ["Button \"Left click\" at (0, 0) 100×20pt, showing StaticText \"Click\" and Image \"Arrow\""])
+    }
 }
