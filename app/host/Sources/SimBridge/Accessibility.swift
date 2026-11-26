@@ -17,8 +17,8 @@ import ObjectiveC
 public enum Accessibility {
     /// The whole tree as JSON. When it comes back flat (the VoiceOver tree,
     /// on a runtime that ignores the client type), elements missing from
-    /// `accessibilityChildren` are recovered by probing; when it comes back
-    /// nested, only the status bar's, which SpringBoard draws over the app.
+    /// `accessibilityChildren` are recovered by probing. A nested tree is
+    /// complete apart from SpringBoard's status bar, and is not probed.
     public static func describe(udid: String) -> [String: Any]? {
         if let tree = describeOnce(udid: udid) { return tree }
         guard remediateStaleHierarchy(udid: udid) else { return nil }

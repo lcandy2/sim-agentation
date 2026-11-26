@@ -1,5 +1,4 @@
 import Foundation
-import SimBridge
 
 /// Accessibility-tree helpers with the same semantics as the browser's
 /// web/src/lib/ax.js. Frames are in
@@ -167,7 +166,7 @@ enum AX {
         return (nodes, found.count)
     }
 
-    private static let statusBar = CollapsedChildrenRecovery.statusBarHeight // clock, battery and signal live above this
+    private static let statusBar = 54.0 // pt; clock, battery and signal live above this
 
     /// Best guess at which screen this is: app name plus headings and
     /// navigation titles near the top.
