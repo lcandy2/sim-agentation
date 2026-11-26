@@ -61,6 +61,19 @@ test('a named control is its own target', () => {
   assert.equal(describe(hit('current', 358, 300)), 'Slider "Scroll"');
 });
 
+test("the Scroll strip's icon and label name the slider beside them", () => {
+  // The current build draws them inside a StaticText with the Slider's frame,
+  // next to the Slider; the old build gives the icon the Slider's frame.
+  for (const [x, y] of [[358, 440], [358, 459]]) {
+    const picked = hitTest(trees.current, x, y, screen);
+    assert.equal(describe(picked.node), 'Slider "Scroll"');
+    assert.equal(flatten(trees.current)[picked.index].node, picked.node);
+    assert.notEqual(picked.leaf.node, picked.node);
+  }
+  assert.equal(describe(hitTest(trees.current, 358, 440, screen).leaf.node), 'Image "Up And Down Arrows"');
+  assert.equal(describe(hit('old', 358, 440)), 'Slider "Scroll"');
+});
+
 test('a widget is one target', () => {
   const frame = (x, y, width, height) => ({ x, y, width, height });
   const tree = {

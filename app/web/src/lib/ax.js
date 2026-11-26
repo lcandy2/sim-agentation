@@ -76,11 +76,18 @@ const CONTROLS = new Set([
 const isControl = (node) => CONTROLS.has(node.role) || isWidget(node);
 const named = (node) => !!nameOf(node);
 
+// Frames that are the same to within half a point.
+const sameFrame = (a, b) => ['x', 'y', 'width', 'height'].every((k) => Math.abs(a[k] - b[k]) <= 0.5);
+
 // What a click targets: the smallest visible node under a point, or, when
 // that is the text or icon inside a control, the nearest control around it.
 // An unnamed control right inside another is the outer one's part (a
-// pop-up button's button), so the outer one is named. Plain text outside
-// any control stays the text. `index` is the target's position in
+// pop-up button's button), so the outer one is named. SwiftUI can also put
+// a control's text and icon in an element beside the control, with exactly
+// its frame (Peri's Scroll strip: a StaticText holding the arrow and the
+// label, next to its Slider); with no control around the hit, the control
+// beside the nearest such element is named. Plain text outside any control
+// stays the text. `index` is the target's position in
 // `flatten(tree)`, and `leaf` the smallest node itself, for the SDK's tags
 // on the text or icon inside a control. Nodes that cover most of the screen
 // are window-level wrappers, not targets. `screen` is the screen size in
@@ -100,9 +107,18 @@ export function hitTest(tree, x, y, screen = tree.frame) {
   const chain = [best];
   for (let p = entries[best].parent; p >= 0 && entries[p].depth > 0; p = entries[p].parent) chain.push(p);
   const control = (i) => target(entries[i]) && isControl(entries[i].node);
-  let at = Math.max(0, chain.findIndex(control));
+  const picked = (index) => ({ ...entries[index], index, leaf: entries[best] });
+  let at = chain.findIndex(control);
+  if (at < 0) {
+    for (const i of chain) {
+      const { parent, node } = entries[i];
+      const twin = entries.findIndex((e, j) => j !== i && e.parent === parent && control(j) && sameFrame(e.node.frame, node.frame));
+      if (twin >= 0) return picked(twin);
+    }
+    at = 0;
+  }
   while (!named(entries[chain[at]].node) && at + 1 < chain.length && control(chain[at + 1])) at++;
-  return { ...entries[chain[at]], index: chain[at], leaf: entries[best] };
+  return picked(chain[at]);
 }
 
 /**
