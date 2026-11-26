@@ -274,7 +274,7 @@ final class AppServer: @unchecked Sendable {
             return .respond(Self.notFound)
         } catch {
             let bad = error is BadRequest || error is BodySyntaxError
-            return .respond(Self.json(JSONObject(["error": .string(Self.message(error))]), status: error is Store.Taken ? 409 : bad ? 400 : 500))
+            return .respond(Self.json(JSONObject(["error": .string(Self.message(error))]), status: error is Store.Taken || error is OutdatedPage ? 409 : bad ? 400 : 500))
         }
     }
 
@@ -511,6 +511,25 @@ final class AppServer: @unchecked Sendable {
         return ["x", "y", "width", "height"].allSatisfy { JS.isFiniteNumber(r?[$0]) }
     }
 
+    /// A page loaded from an older server, still open after this one took
+    /// its port, keeps its old script: it sends the tree but names no pick by
+    /// position. Its note would name nothing, so it is turned away (409) and
+    /// the page shows the message.
+    struct OutdatedPage: Error, CustomStringConvertible {
+        let description = "This page is out of date. Reload it, then make the note again."
+    }
+
+    /// Whether a note's body comes from an outdated page: it has a tree, and
+    /// a pick (the note, or each of its parts) with neither `target` nor
+    /// `within`. The page always sends one, `within` null when nothing is
+    /// there.
+    static func fromAnOutdatedPage(_ b: JSONObject) -> Bool {
+        guard b["tree"]?.objectValue != nil else { return false }
+        let parts = b["parts"]?.arrayValue ?? []
+        let picks = parts.isEmpty ? [JSON.object(b)] : parts
+        return picks.contains { $0["target"] == nil && $0["within"] == nil }
+    }
+
     /// What a note names, from the page's picks. The page hit-tests
     /// (web/src/lib/ax.js) and sends each picked node as its position in
     /// `AX.flatten(tree)`: `target` for an element it picked, `within` for
@@ -557,6 +576,7 @@ final class AppServer: @unchecked Sendable {
         guard let full = b["full"]?.stringValue, let crop = b["crop"]?.stringValue else {
             throw BadRequest("full and crop images are required")
         }
+        if Self.fromAnOutdatedPage(b) { throw OutdatedPage() }
         let rect = b["rect"]!
         let tree = b["tree"]?.objectValue
         let picked = Self.picks(b, tree: tree)

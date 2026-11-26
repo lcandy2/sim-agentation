@@ -120,7 +120,9 @@ test('a box over the whole screen is within the element at its centre', () => {
   assert.equal(describe(node('old', within('old', screen))), 'GenericElement "Touchpad"');
 });
 
+// The page always sends `within` for a box, null for nothing, so the
+// server can tell its notes from an out-of-date page's (PickTests.swift).
 test('a box with no tree, or nothing under its centre, is within nothing', () => {
-  assert.deepEqual(refs(undefined, screen, { kind: 'area', rect: bar }), { within: undefined });
-  assert.equal(within('old', { x: -100, y: -100, width: 10, height: 10 }), undefined);
+  assert.deepEqual(refs(undefined, screen, { kind: 'area', rect: bar }), { within: null });
+  assert.equal(within('old', { x: -100, y: -100, width: 10, height: 10 }), null);
 });

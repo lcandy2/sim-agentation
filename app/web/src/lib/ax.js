@@ -126,12 +126,13 @@ export function hitTest(tree, x, y, screen = tree.frame) {
  * `flatten(tree)`: an element pick's own node (`target`, the `index` its
  * hitTest gave), else the node a click at the centre of its box picks
  * (`within`), so the agent knows where to look. Without a tree, or with
- * nothing there, it names none.
+ * nothing there, `within` is null: the page always sends one of the two,
+ * and the server turns away a pick with neither as an out-of-date page's.
  */
 export function refs(tree, screen, { kind, rect, target }) {
   if (kind === 'element') return { target };
   const hit = tree ? hitTest(tree, rect.x + rect.width / 2, rect.y + rect.height / 2, screen) : null;
-  return { within: hit?.index };
+  return { within: hit?.index ?? null };
 }
 
 // Nodes that sit mostly inside a box, smallest first.

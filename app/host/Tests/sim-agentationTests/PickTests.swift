@@ -65,6 +65,36 @@ private func index(_ tree: JSONObject, _ match: (JSONObject) -> Bool) throws -> 
         }
     }
 
+    /// The page names each pick by `target` or `within` (null for nothing
+    /// there). A page loaded from an older server, still open after it
+    /// restarts, sends a tree with neither, and the server turns it away
+    /// rather than save notes that name nothing.
+    @Test func aTreeWithoutReferencesIsFromAnOutdatedPage() throws {
+        let tree = JSON.object(try Peri.tree("peri-title-menu"))
+        let point = JSON.object(JSONObject(["x": .number(190), "y": .number(75)]))
+        let area = JSON.object(JSONObject(["kind": .string("area"), "rect": rect(346, 66, 36, 36)]))
+        let element = JSON.object(JSONObject(["kind": .string("element"), "rect": rect(291, 66, 35, 36), "point": point]))
+        for body in [
+            JSONObject(["kind": .string("element"), "point": point, "tree": tree]),
+            JSONObject(["kind": .string("area"), "tree": tree]),
+            JSONObject(["kind": .string("area"), "tree": tree, "parts": .array([element, area])]),
+        ] {
+            #expect(AppServer.fromAnOutdatedPage(body))
+        }
+        let within = JSON.object(JSONObject(["kind": .string("area"), "rect": rect(346, 66, 36, 36), "within": .null]))
+        let target = JSON.object(JSONObject(["kind": .string("element"), "rect": rect(291, 66, 35, 36), "target": .number(3)]))
+        for body in [
+            JSONObject(["kind": .string("element"), "target": .number(12), "tree": tree]),
+            JSONObject(["kind": .string("area"), "within": .null, "tree": tree]),
+            JSONObject(["kind": .string("area"), "within": .number(12), "tree": tree]),
+            JSONObject(["kind": .string("area"), "tree": tree, "parts": .array([target, within])]),
+            // With no tree there is nothing to name, from any page.
+            JSONObject(["kind": .string("element"), "point": point]),
+        ] {
+            #expect(!AppServer.fromAnOutdatedPage(body))
+        }
+    }
+
     @Test func aBadReferenceNamesNothing() throws {
         let tree = try Peri.tree("peri-title-menu")
         let count = Double(AX.flatten(tree).count)
