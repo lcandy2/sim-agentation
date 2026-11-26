@@ -70,8 +70,8 @@ enum AX {
     /// text and icon as children of it, and a click on them means the control.
     private static let controls: Set<String> = [
         "AXButton", "AXPopUpButton", "AXMenuButton", "AXRadioButton", "AXCheckBox", "AXSwitch", "AXToggle",
-        "AXLink", "AXMenuItem", "AXTab", "AXCell", "AXSlider", "AXIncrementor", "AXTextField", "AXTextArea",
-        "AXSearchField", "AXComboBox", "AXDisclosureTriangle",
+        "AXLink", "AXMenuItem", "AXTab", "AXCell", "AXSlider", "AXIncrementor", "AXTextField", "AXSecureTextField",
+        "AXTextArea", "AXSearchField", "AXComboBox", "AXDisclosureTriangle",
     ]
 
     /// A home-screen widget, one element over its whole card: its value says
@@ -121,18 +121,39 @@ enum AX {
         return chain[at]
     }
 
-    /// Nodes that sit mostly inside a box, smallest first.
+    /// A control the agent can search for: a control (or widget) with a
+    /// label, title or identifier.
+    static func actionable(_ node: JSON?) -> Bool {
+        guard let node = node?.objectValue else { return false }
+        return isControl(node) && named(node)
+    }
+
+    /// How much a node in a box tells the agent, best first: named controls,
+    /// other named elements, images, then unnamed wrappers. In the app's
+    /// automation tree a control's images, text runs and wrappers come with
+    /// it and outnumber the controls.
+    static func rank(_ node: JSON?) -> Int {
+        if actionable(node) { return 0 }
+        guard let object = node?.objectValue, named(object) else { return 3 }
+        return JS.same(node?["role"]?.stringValue, "AXImage") ? 2 : 1
+    }
+
+    /// Nodes that sit mostly inside a box, best first by `rank`, smallest
+    /// first within a rank. The server keeps the first 20 for the note.
+    /// ax.js sorts by size alone; its one caller re-sorts by position.
     static func nodesInRect(_ tree: JSONObject, _ rect: JSON) -> [Entry] {
         flatten(tree)
             .filter(visible)
             .filter { intersection($0.node["frame"], rect) >= area($0.node["frame"]) * 0.6 }
+            .map { (entry: $0, rank: rank(.object($0.node))) }
             .enumerated()
             .sorted { lhs, rhs in
                 // Array.prototype.sort is stable.
-                let a = area(lhs.element.node["frame"]), b = area(rhs.element.node["frame"])
+                if lhs.element.rank != rhs.element.rank { return lhs.element.rank < rhs.element.rank }
+                let a = area(lhs.element.entry.node["frame"]), b = area(rhs.element.entry.node["frame"])
                 return a != b ? a < b : lhs.offset < rhs.offset
             }
-            .map(\.element)
+            .map(\.element.entry)
     }
 
     private static let statusBar = 54.0 // pt; clock, battery and signal live above this

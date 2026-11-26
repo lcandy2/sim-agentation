@@ -62,8 +62,8 @@ export const isWidget = (node) => typeof node?.value === 'string' && node.value.
 // and icon as children of it, and a click on them means the control.
 const CONTROLS = new Set([
   'AXButton', 'AXPopUpButton', 'AXMenuButton', 'AXRadioButton', 'AXCheckBox', 'AXSwitch', 'AXToggle',
-  'AXLink', 'AXMenuItem', 'AXTab', 'AXCell', 'AXSlider', 'AXIncrementor', 'AXTextField', 'AXTextArea',
-  'AXSearchField', 'AXComboBox', 'AXDisclosureTriangle',
+  'AXLink', 'AXMenuItem', 'AXTab', 'AXCell', 'AXSlider', 'AXIncrementor', 'AXTextField', 'AXSecureTextField',
+  'AXTextArea', 'AXSearchField', 'AXComboBox', 'AXDisclosureTriangle',
 ]);
 const isControl = (node) => CONTROLS.has(node.role) || isWidget(node);
 const named = (node) => !!(node.label?.trim() || node.title?.trim() || node.identifier);

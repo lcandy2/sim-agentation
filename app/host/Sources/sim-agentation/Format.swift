@@ -39,6 +39,56 @@ enum Format {
         values.map { $0.isNull ? "" : JS.string($0) }.joined(separator: separator)
     }
 
+    /// Lines listed under "Inside the box"; the rest are counted.
+    private static let insideLines = 12
+    /// What a control's line names of the things drawn in it; the rest are counted.
+    private static let shownPerControl = 3
+
+    /// "a", "a and b", "a, b and c".
+    private static func list(_ items: [String]) -> String {
+        guard let last = items.last, items.count > 1 else { return items.joined() }
+        return items.dropLast().joined(separator: ", ") + " and " + last
+    }
+
+    /// What the box holds, one line each: named controls first, then other
+    /// named elements, images and unnamed wrappers (`AX.rank`), smallest
+    /// first within each. Whatever sits mostly in a listed control goes on
+    /// that control's line, so a bar's icons, text runs and wrapper groups
+    /// don't push its controls off the list. Of the controls it overlaps, the
+    /// one covering most of it holds it (a neighbour can overlap a tab's
+    /// icon too), then the smallest (the inner of nested controls).
+    private static func inside(_ a: JSONObject, besides target: JSON?) -> [String] {
+        // Stable, so notes stored smallest first come out the same as new ones.
+        let all = items(a["inside"]).filter { !strictEquals($0, target) }
+            .enumerated()
+            .sorted { AX.rank($0.element) != AX.rank($1.element) ? AX.rank($0.element) < AX.rank($1.element) : $0.offset < $1.offset }
+            .map(\.element)
+        let controls = all.indices.filter { AX.actionable(all[$0]) }
+        func area(_ i: Int) -> Double { AX.area(all[i]["frame"]) }
+        let holder: [Int?] = all.indices.map { i in
+            guard !AX.actionable(all[i]) else { return nil }
+            func shared(_ j: Int) -> Double { AX.intersection(all[i]["frame"], all[j]["frame"]) }
+            return controls
+                .filter { j in area(j) >= area(i) && shared(j) >= area(i) * 0.6 }
+                .min { shared($0) != shared($1) ? shared($0) > shared($1) : area($0) < area($1) }
+        }
+        var lines: [String] = []
+        for (j, n) in all.enumerated() where holder[j] == nil {
+            // Only what adds a name the control's own line doesn't print.
+            let shown = all.indices.filter { holder[$0] == j }.map { all[$0] }.filter { m in
+                let label = JS.trimmed(m["label"]) ?? ""
+                return (!label.isEmpty && !JS.same(label, JS.trimmed(n["label"])))
+                    || (JS.truthy(m["identifier"]) && !strictEquals(m["identifier"], n["identifier"]))
+            }.map(node)
+            let named = shown.count > shownPerControl
+                ? shown.prefix(shownPerControl) + ["\(shown.count - shownPerControl) more"]
+                : shown
+            lines.append("\(node(n)) at \(frame(n["frame"]))" + (named.isEmpty ? "" : ", showing \(list(Array(named)))"))
+        }
+        guard lines.count > insideLines else { return lines }
+        return lines.prefix(insideLines) + ["and \(lines.count - insideLines) more"]
+    }
+
     /// Strings worth grepping the Swift sources for. With several picked
     /// together, the box spans everything between them, so what it covers
     /// isn't part of the note: only the picks themselves count.
@@ -117,10 +167,10 @@ enum Format {
             lines.append("- **Area**: \(picked.map { "\($0) at " } ?? "")\(frame(a["rect"]))")
             if JS.truthy(a["within"]) { lines.append("- **Within**: \(node(a["within"])) at \(frame(a["within"]?["frame"]))") }
         }
-        let inside = items(a["inside"]).filter { !strictEquals($0, target) }.prefix(12)
+        let inside = inside(a, besides: target)
         if !inside.isEmpty && parts.count < 2 {
             lines.append("- **Inside the box**:")
-            for n in inside { lines.append("  - \(node(n)) at \(frame(n["frame"]))") }
+            for line in inside { lines.append("  - \(line)") }
         }
         let terms = searchTerms(a)
         if !terms.isEmpty { lines.append("- **Search the source for**: \(terms.map { "`\($0)`" }.joined(separator: ", "))") }

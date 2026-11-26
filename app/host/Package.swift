@@ -36,7 +36,8 @@ let package = Package(
             dependencies: ["SimBridge"],
             resources: [.copy("Fixtures")]
         ),
-        // Trees saved from a simulator, as the host emits them.
+        // No simulator or server: trees are describe_ui output saved from a
+        // simulator, as the host emits them.
         .testTarget(
             name: "sim-agentationTests",
             dependencies: ["sim-agentation"],
