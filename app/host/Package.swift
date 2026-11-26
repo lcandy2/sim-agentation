@@ -29,5 +29,10 @@ let package = Package(
             name: "sim-agentation",
             dependencies: ["SimBridge"]
         ),
+        // No simulator: requests are stand-in objects with the same keys.
+        .testTarget(
+            name: "SimBridgeTests",
+            dependencies: ["SimBridge"]
+        ),
     ]
 )

@@ -4,7 +4,8 @@
 // AXElementReader and AXFrameTransform into one file; nodes are emitted as
 // JSON-ready dictionaries; the fixed-grid hit-test sweep is replaced by
 // sim-use's CollapsedChildrenRecovery; a stale hierarchy is remediated the
-// way idb does it (see `remediateStaleHierarchy`).
+// way idb does it (see `remediateStaleHierarchy`); requests ask for the
+// automation tree (see `AXClientType`).
 
 import CoreGraphics
 import Foundation
@@ -14,8 +15,8 @@ import ObjectiveC
 /// private AccessibilityPlatformTranslation framework, the same path the
 /// Accessibility Inspector uses. Frames come back in screen points.
 public enum Accessibility {
-    /// The whole tree as JSON, with collapsed children recovered by probing
-    /// (SwiftUI often leaves elements out of `accessibilityChildren`).
+    /// The whole tree as JSON. Elements still missing from
+    /// `accessibilityChildren` are recovered by probing.
     public static func describe(udid: String) -> [String: Any]? {
         if let tree = describeOnce(udid: udid) { return tree }
         guard remediateStaleHierarchy(udid: udid) else { return nil }
@@ -254,6 +255,7 @@ private final class TokenDispatcher: NSObject, @unchecked Sendable {
             box.value = response
             group.leave()
         }
+        AXClientType.apply(to: request)
         unsafeBitCast(imp, to: Fn.self)(device, sel, request, DispatchQueue(label: "sim-agentation.ax"), done as Any)
         guard group.wait(timeout: .now() + timeout) == .success else {
             log("accessibility request timed out after \(timeout)s")
@@ -264,6 +266,28 @@ private final class TokenDispatcher: NSObject, @unchecked Sendable {
 
     static func emptyResponse() -> AnyObject {
         NSClassFromString("AXPTranslatorResponse").flatMap { callClassObject($0, "emptyResponse") } ?? NSNull()
+    }
+}
+
+/// The client a translator request claims to come from, which decides which
+/// tree the app serves. AXPTranslator leaves it at 0 (no client), and the app
+/// then serves its VoiceOver tree: labelled leaves flattened onto the
+/// application, with a SwiftUI navigation bar, tab group or toolbar left as
+/// one childless group. 2 (application) gets the automation tree, which keeps
+/// that nesting and every control in it; idb and AXe send 2 as well. The point
+/// hit-test (request type 6) keeps the translator's own client type, as in
+/// idb, whose notes say overriding it changes the guest's hit-test mode.
+enum AXClientType {
+    static let application = 2
+    static let pointHitTestRequest = 6
+
+    static func apply(to request: AnyObject) {
+        guard let request = request as? NSObject,
+              request.responds(to: NSSelectorFromString("requestType")),
+              request.responds(to: NSSelectorFromString("setClientType:")),
+              (request.value(forKey: "requestType") as? NSNumber)?.intValue != pointHitTestRequest
+        else { return }
+        request.setValue(NSNumber(value: application), forKey: "clientType")
     }
 }
 
