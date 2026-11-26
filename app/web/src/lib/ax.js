@@ -1,5 +1,8 @@
-// Accessibility-tree helpers shared by the browser UI and the server.
-// Frames are in device points, the same space as describe_ui output.
+// Accessibility-tree helpers for the browser UI. Frames are in device
+// points, the same space as describe_ui output. Clicks are picked here
+// alone: a saved note names each picked node by its position in
+// `flatten(tree)` (`refs`), and the server finds it there in the tree the
+// page sends, its AX.flatten walking the tree in the same order.
 
 // Trees never change once fetched, so flatten each one once.
 const flattened = new WeakMap();
@@ -64,6 +67,7 @@ export const isWidget = (node) => typeof node?.value === 'string' && node.value.
 
 // Roles a person would call a control. The full tree draws a control's text
 // and icon as children of it, and a click on them means the control.
+// AX.swift keeps the same set to rank a box note's nodes, controls first.
 const CONTROLS = new Set([
   'AXButton', 'AXPopUpButton', 'AXMenuButton', 'AXRadioButton', 'AXCheckBox', 'AXSwitch', 'AXToggle',
   'AXLink', 'AXMenuItem', 'AXTab', 'AXCell', 'AXSlider', 'AXIncrementor', 'AXTextField', 'AXSecureTextField',
@@ -76,11 +80,12 @@ const named = (node) => !!nameOf(node);
 // that is the text or icon inside a control, the nearest control around it.
 // An unnamed control right inside another is the outer one's part (a
 // pop-up button's button), so the outer one is named. Plain text outside
-// any control stays the text. `leaf` is the smallest node itself, for the
-// SDK's tags on the text or icon inside a control. Nodes that cover most of
-// the screen are window-level wrappers, not targets. `screen` is the screen
-// size in points; the tree's root can't be trusted for it, because the
-// simulator now reports the application element as 0×0.
+// any control stays the text. `index` is the target's position in
+// `flatten(tree)`, and `leaf` the smallest node itself, for the SDK's tags
+// on the text or icon inside a control. Nodes that cover most of the screen
+// are window-level wrappers, not targets. `screen` is the screen size in
+// points; the tree's root can't be trusted for it, because the simulator
+// now reports the application element as 0×0.
 export function hitTest(tree, x, y, screen = tree.frame) {
   const limit = screen && area(screen) > 0 ? area(screen) * 0.6 : Infinity;
   const entries = flatten(tree);
@@ -91,12 +96,26 @@ export function hitTest(tree, x, y, screen = tree.frame) {
     if (best < 0 || area(entry.node.frame) <= area(entries[best].node.frame)) best = i;
   });
   if (best < 0) return null;
-  // The hit and its ancestors below the root, innermost first.
-  const chain = [entries[best]];
-  for (let p = entries[best].parent; p >= 0 && entries[p].depth > 0; p = entries[p].parent) chain.push(entries[p]);
-  let at = Math.max(0, chain.findIndex((e) => target(e) && isControl(e.node)));
-  while (!named(chain[at].node) && chain[at + 1] && target(chain[at + 1]) && isControl(chain[at + 1].node)) at++;
-  return { ...chain[at], leaf: chain[0] };
+  // The hit and its ancestors below the root, innermost first, as positions in `entries`.
+  const chain = [best];
+  for (let p = entries[best].parent; p >= 0 && entries[p].depth > 0; p = entries[p].parent) chain.push(p);
+  const control = (i) => target(entries[i]) && isControl(entries[i].node);
+  let at = Math.max(0, chain.findIndex(control));
+  while (!named(entries[chain[at]].node) && at + 1 < chain.length && control(chain[at + 1])) at++;
+  return { ...entries[chain[at]], index: chain[at], leaf: entries[best] };
+}
+
+/**
+ * What a pick sends the server to name its node by, a position in
+ * `flatten(tree)`: an element pick's own node (`target`, the `index` its
+ * hitTest gave), else the node a click at the centre of its box picks
+ * (`within`), so the agent knows where to look. Without a tree, or with
+ * nothing there, it names none.
+ */
+export function refs(tree, screen, { kind, rect, target }) {
+  if (kind === 'element') return { target };
+  const hit = tree ? hitTest(tree, rect.x + rect.width / 2, rect.y + rect.height / 2, screen) : null;
+  return { within: hit?.index };
 }
 
 // Nodes that sit mostly inside a box, smallest first.

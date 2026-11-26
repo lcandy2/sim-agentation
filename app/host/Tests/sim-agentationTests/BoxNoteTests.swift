@@ -13,9 +13,11 @@ private func rect(_ x: Double, _ y: Double, _ w: Double, _ h: Double) -> JSON {
     .object(JSONObject(["x": .number(x), "y": .number(y), "width": .number(w), "height": .number(h)]))
 }
 
-/// A box note as the server builds one from a tree.
-private func boxNote(_ tree: JSONObject, _ box: JSON, keep: Int = AX.insideKept) -> String {
-    let x = JS.number(box["x"]) + JS.number(box["width"]) / 2, y = JS.number(box["y"]) + JS.number(box["height"]) / 2
+/// A box note as the server builds one from a tree. `within` is the
+/// position the page sends for the node under the box's centre, which
+/// ax.test.js checks the page gives for that box.
+private func boxNote(_ tree: JSONObject, _ box: JSON, within: Double? = nil, keep: Int = AX.insideKept) -> String {
+    let picked = AppServer.picks(JSONObject(["kind": .string("area"), "within": within.map(JSON.number) ?? .null]), tree: tree)
     let inside = AX.inside(tree, box, keep: keep)
     return Format.toMarkdown(JSONObject([
         "id": .string("box"),
@@ -23,7 +25,7 @@ private func boxNote(_ tree: JSONObject, _ box: JSON, keep: Int = AX.insideKept)
         "comment": .string("Note"),
         "kind": .string("area"),
         "rect": box,
-        "within": AX.hitTest(tree, x: x, y: y).map { AX.summarize($0.node) } ?? .null,
+        "within": picked["within"]!,
         "inside": .array(inside.nodes),
         "insideTotal": .number(Double(inside.total)),
     ]))
@@ -44,7 +46,7 @@ private let bar = rect(0, 60, 402, 57)
 
 @Suite struct BoxNoteTests {
     @Test func aBarOfTabsListsEveryControlWithItsIcon() throws {
-        let note = boxNote(try Peri.tree("peri-tabs"), bar)
+        let note = boxNote(try Peri.tree("peri-tabs"), bar, within: 18)
         // Each tab's image is on its tab's line, named when it adds a name;
         // the unnamed groups around the controls add nothing.
         #expect(inside(note) == [
@@ -64,7 +66,7 @@ private let bar = rect(0, 60, 402, 57)
     }
 
     @Test func aBarWithATitleMenuListsThePopUpsAndButtons() throws {
-        let note = boxNote(try Peri.tree("peri-title-menu"), bar)
+        let note = boxNote(try Peri.tree("peri-title-menu"), bar, within: 12)
         // The pop-ups' inner buttons, text runs and images are on their lines,
         // less the text that repeats the title menu's value; the two unnamed
         // groups around the Host pop-up add nothing.
@@ -123,7 +125,7 @@ private let bar = rect(0, 60, 402, 57)
     /// Settings' floating search field sits over the Screen Time row; it and
     /// its icon are not the row's.
     @Test func aFieldDrawnOverARowKeepsItsOwnLine() throws {
-        let note = boxNote(try Peri.tree("settings"), rect(20, 800, 362, 44))
+        let note = boxNote(try Peri.tree("settings"), rect(20, 800, 362, 44), within: 126)
         #expect(line(note, "- **Within**: ") == "- **Within**: TextField value=\"Search\" at (28, 808) 346×28pt")
         #expect(inside(note) == [
             "Button \"Dictate\" at (342, 811) 17×22pt",

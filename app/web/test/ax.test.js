@@ -1,16 +1,19 @@
-// The browser's hitTest on the trees the host's tests use
-// (app/host/Tests/sim-agentationTests/HitTestTests.swift), so a click names
-// the same element on both sides. Run with `pnpm test`.
+// What a click picks (hitTest) and what a pick sends the server to name
+// its node by (refs), on Peri Keys and Settings on an iPhone 18 Pro
+// (402×874 pt). Run with `pnpm test`.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
-import { describe, hitTest } from '../src/lib/ax.js';
+import { describe, flatten, hitTest, refs } from '../src/lib/ax.js';
 
 const fixtures = new URL('../../host/Tests/Fixtures/', import.meta.url);
+const fixture = (name) => JSON.parse(readFileSync(new URL(`${name}.json`, fixtures)));
 const trees = {
-  current: JSON.parse(readFileSync(new URL('peri-title-menu.json', fixtures))),
-  old: JSON.parse(readFileSync(new URL('peri-tabs.json', fixtures))),
+  current: fixture('peri-title-menu'),
+  old: fixture('peri-tabs'),
+  settings: fixture('settings'),
 };
+const screen = { x: 0, y: 0, width: 402, height: 874 };
 const hit = (tree, x, y) => hitTest(trees[tree], x, y).node;
 
 test("the title menu's text names the pop-up", () => {
@@ -68,4 +71,43 @@ test('a widget is one target', () => {
     ],
   };
   assert.equal(describe(hitTest(tree, 50, 100).node), 'Group "Weather"');
+});
+
+test("a pick's index is its node's position in the flattened tree", () => {
+  const picked = hitTest(trees.current, 190, 75, screen);
+  assert.equal(flatten(trees.current)[picked.index].node, picked.node);
+  // PickTests.swift resolves this position to the title menu.
+  assert.equal(picked.index, 12);
+  assert.deepEqual(refs(trees.current, screen, { kind: 'element', rect: picked.node.frame, target: picked.index }), { target: 12 });
+});
+
+// Within: what a click at the centre of the box picks, by position.
+// BoxNoteTests.swift saves these boxes with the positions checked here.
+const within = (tree, rect) => refs(trees[tree], screen, { kind: 'area', rect }).within;
+const node = (tree, index) => flatten(trees[tree])[index].node;
+const bar = { x: 0, y: 60, width: 402, height: 57 };
+
+test('a box over a bar of tabs is within the tab at its centre', () => {
+  assert.equal(within('old', bar), 18);
+  assert.equal(describe(node('old', 18)), 'RadioButton "Air Pointer"');
+});
+
+test('a box over the title bar is within the title menu', () => {
+  assert.equal(within('current', bar), 12);
+  assert.equal(node('current', 12).identifier, 'titleMenu');
+});
+
+test("a box over Settings' floating search field is within the field", () => {
+  assert.equal(within('settings', { x: 20, y: 800, width: 362, height: 44 }), 126);
+  assert.equal(node('settings', 126).role, 'AXTextField');
+  assert.equal(node('settings', 126).value, 'Search');
+});
+
+test('a box over the whole screen is within the element at its centre', () => {
+  assert.equal(describe(node('old', within('old', screen))), 'GenericElement "Touchpad"');
+});
+
+test('a box with no tree, or nothing under its centre, is within nothing', () => {
+  assert.deepEqual(refs(undefined, screen, { kind: 'area', rect: bar }), { within: undefined });
+  assert.equal(within('old', { x: -100, y: -100, width: 10, height: 10 }), undefined);
 });

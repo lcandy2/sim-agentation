@@ -511,39 +511,24 @@ final class AppServer: @unchecked Sendable {
         return ["x", "y", "width", "height"].allSatisfy { JS.isFiniteNumber(r?[$0]) }
     }
 
-    private func createAnnotation(_ body: JSON) async throws -> JSONObject {
-        guard let b = body.objectValue else { throw BadRequest("expected a JSON object") }
-        guard let comment = b["comment"]?.stringValue, !JS.trim(comment).isEmpty else { throw BadRequest("comment is required") }
-        guard let udid = b["udid"]?.stringValue, Self.isRect(b["rect"]) else { throw BadRequest("udid and rect are required") }
-        guard let full = b["full"]?.stringValue, let crop = b["crop"]?.stringValue else {
-            throw BadRequest("full and crop images are required")
+    /// What a note names, from the page's picks. The page hit-tests
+    /// (web/src/lib/ax.js) and sends each picked node as its position in
+    /// `AX.flatten(tree)`: `target` for an element it picked, `within` for
+    /// the node a click at an area's center picks. A request without them (an
+    /// API client's, a script's), or with one the tree doesn't hold, names
+    /// nothing, and its note has the rect alone.
+    static func picks(_ b: JSONObject, tree: JSONObject?) -> JSONObject {
+        let entries = tree.map(AX.flatten) ?? []
+        func element(_ pick: JSON?) -> AX.Entry? {
+            JS.same(pick?["kind"]?.stringValue, "element") ? AX.entry(pick?["target"], in: entries) : nil
         }
-        let rect = b["rect"]!
-        let tree = b["tree"]?.objectValue
-        let point = b["point"]?.objectValue != nil && JS.isFiniteNumber(b["point"]?["x"]) && JS.isFiniteNumber(b["point"]?["y"])
-            ? b["point"] : nil
-
-        var hit: AX.Entry?
-        if JS.same(b["kind"]?.stringValue, "element"), let point, let tree {
-            hit = AX.hitTest(tree, x: JS.number(point["x"]), y: JS.number(point["y"]))
-        }
-        // An area (a box, or an icon or text run found in the pixels) names the
-        // element under its center, as a click there would, so the agent knows
-        // where to look.
-        func center(_ r: JSON) -> AX.Entry? {
-            guard let tree, let x = r["x"], let y = r["y"], let w = r["width"], let h = r["height"] else { return nil }
-            return AX.hitTest(tree, x: JS.number(x) + JS.number(w) / 2, y: JS.number(y) + JS.number(h) / 2)
-        }
+        let hit = element(.object(b))
         // Several picked at once (Shift): the box holds them all, and each part
         // names its element as a single pick does.
         let parts: [JSON] = (b["parts"]?.arrayValue ?? []).prefix(20).compactMap { part in
-            guard Self.isRect(part["rect"]), let partRect = part["rect"] else { return nil }
-            var partHit: AX.Entry?
-            if JS.same(part["kind"]?.stringValue, "element"), let tree, let p = part["point"],
-               JS.isFiniteNumber(p["x"]), JS.isFiniteNumber(p["y"]) {
-                partHit = AX.hitTest(tree, x: JS.number(p["x"]), y: JS.number(p["y"]))
-            }
-            let partWithin = partHit == nil ? center(partRect) : nil
+            guard isRect(part["rect"]), let partRect = part["rect"] else { return nil }
+            let partHit = element(part)
+            let partWithin = partHit == nil ? AX.entry(part["within"], in: entries) : nil
             return .object(JSONObject([
                 "kind": .string(partHit != nil ? "element" : "area"),
                 "rect": partRect,
@@ -555,7 +540,26 @@ final class AppServer: @unchecked Sendable {
                 "source": part["source"]?.arrayValue != nil ? part["source"]! : .array([]),
             ]))
         }
-        let within = hit == nil && parts.count < 2 ? center(rect) : nil
+        let within = hit == nil && parts.count < 2 ? AX.entry(b["within"], in: entries) : nil
+        return JSONObject([
+            "kind": .string(hit != nil ? "element" : "area"),
+            "target": hit.map { AX.summarize($0.node) } ?? .null,
+            "within": within.map { AX.summarize($0.node) } ?? .null,
+            "targetPath": .array((hit?.path.dropFirst() ?? []).map(JSON.string)),
+            "parts": .array(parts.count > 1 ? parts : []),
+        ])
+    }
+
+    private func createAnnotation(_ body: JSON) async throws -> JSONObject {
+        guard let b = body.objectValue else { throw BadRequest("expected a JSON object") }
+        guard let comment = b["comment"]?.stringValue, !JS.trim(comment).isEmpty else { throw BadRequest("comment is required") }
+        guard let udid = b["udid"]?.stringValue, Self.isRect(b["rect"]) else { throw BadRequest("udid and rect are required") }
+        guard let full = b["full"]?.stringValue, let crop = b["crop"]?.stringValue else {
+            throw BadRequest("full and crop images are required")
+        }
+        let rect = b["rect"]!
+        let tree = b["tree"]?.objectValue
+        let picked = Self.picks(b, tree: tree)
         let inside = tree.map { AX.inside($0, rect) }
         let device = (try? await blocking { Simulators.shared.all() })?.first { $0.udid == udid }
         let id = Store.newId()
@@ -570,7 +574,7 @@ final class AppServer: @unchecked Sendable {
             "updatedAt": .string(now),
             "status": .string("pending"),
             "comment": .string(JS.trim(comment)),
-            "kind": .string(hit != nil ? "element" : "area"),
+            "kind": picked["kind"]!,
             "device": .object(JSONObject([
                 "udid": .string(udid),
                 "name": device.map { .string($0.name) } ?? .null,
@@ -578,10 +582,10 @@ final class AppServer: @unchecked Sendable {
             ])),
             "rect": rect,
             "label": b["label"]?.stringValue.map { .string(JS.trim($0)) } ?? .null,
-            "target": hit.map { AX.summarize($0.node) } ?? .null,
-            "within": within.map { AX.summarize($0.node) } ?? .null,
-            "targetPath": .array((hit?.path.dropFirst() ?? []).map(JSON.string)),
-            "parts": .array(parts.count > 1 ? parts : []),
+            "target": picked["target"]!,
+            "within": picked["within"]!,
+            "targetPath": picked["targetPath"]!,
+            "parts": picked["parts"]!,
             "inside": .array(inside?.nodes ?? []),
             // How many the box holds, so the note can count what it didn't keep.
             "insideTotal": .number(Double(inside?.total ?? 0)),

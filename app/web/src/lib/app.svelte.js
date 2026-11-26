@@ -4,7 +4,7 @@
 
 import { tick } from 'svelte';
 import { notify } from './notify.svelte.js';
-import { hitTest, describe, nodesInRect, isSpringBoard, isWidget } from './ax.js';
+import { hitTest, refs, describe, nodesInRect, isSpringBoard, isWidget } from './ax.js';
 import { sampler, warm, containerAround, containersAround, partsWithin } from './visual.js';
 import { matchesFrontApp, sdkContainers, sourceFor, viewContext } from './sdk.js';
 import { createDecoder, decodeCapabilities, decodesSmoothly, formatLabel, pickFormat } from './stream.js';
@@ -104,11 +104,11 @@ const rt = {
   counts: { frames: 0, bytes: 0 },
   frozen: null,      // { bitmap, tree, points, pixels, sdk, sdkAvailable, marks }
   pendingTree: null,
-  hover: null,       // { point, targets: [{ rect, label, node?, leaf? }], level }
+  hover: null,       // { point, targets: [{ rect, label, node?, index?, leaf? }], level }
   drag: null,
-  draft: null,       // { kind, rect, point?, leaf?, label, parts? }: what the composer will save
+  draft: null,       // { kind, rect, target?, leaf?, label, parts? }: what the composer will save
   editing: null,     // the mark (see submitComposer) whose annotation the composer has open again
-  picks: [],         // what's selected, each { id, kind, rect, point?, leaf?, label, color, el }
+  picks: [],         // what's selected, each { id, kind, rect, target?, leaf?, label, color, el }; `target` is hitTest's index
   failed: new Set(), // formats Auto gave up on this session
   auto: createAuto(), // what Auto has learned about the connection and decoder (see auto.js)
   seen: { received: 0, decoded: 0, bytes: 0, at: 0 }, // the page's counts at the host's last report
@@ -1162,7 +1162,7 @@ function annotateUp(e) {
   const el = selectionBox(color);
   placeBox(el, rect);
   boxLayer().append(el);
-  rt.picks.push({ id: ++pickIds, kind: target?.node ? 'element' : 'area', rect, point: target?.node ? { x: p.x, y: p.y } : undefined, leaf: target?.leaf, label: target?.label ?? 'Area', role: target?.node?.role, color, el });
+  rt.picks.push({ id: ++pickIds, kind: target?.node ? 'element' : 'area', rect, target: target?.node ? target.index : undefined, leaf: target?.leaf, label: target?.label ?? 'Area', role: target?.node?.role, color, el });
   openComposer();
 }
 
@@ -1173,7 +1173,7 @@ function targetsAt(p) {
   const hit = f.tree ? hitTest(f.tree, p.x, p.y, f.points) : null;
   // `leaf`: the text or icon under the pointer when the element is the
   // control around it, whose own .simTag() the Source line should name.
-  const targets = hit ? [{ rect: hit.node.frame, label: describe(hit.node), node: hit.node, leaf: { ...hit.leaf.node.frame } }] : [];
+  const targets = hit ? [{ rect: hit.node.frame, label: describe(hit.node), node: hit.node, index: hit.index, leaf: { ...hit.leaf.node.frame } }] : [];
   // With the in-app SDK we know the real views and layers; otherwise guess from pixels.
   if (f.sdk) return [...targets, ...sdkContainers(f.sdk, p, hit?.node.frame)];
   if (!f.pixels) return targets;
@@ -1285,12 +1285,12 @@ function openComposer() {
   const picks = rt.picks;
   const [first] = picks;
   rt.draft = picks.length === 1
-    ? { kind: first.kind, rect: first.rect, point: first.point, leaf: first.leaf, label: first.label }
+    ? { kind: first.kind, rect: first.rect, target: first.target, leaf: first.leaf, label: first.label }
     : {
         kind: 'area',
         rect: union(picks.map((k) => k.rect)),
         label: picks.map((k) => k.label).join(', '),
-        parts: picks.map(({ kind, rect, point, leaf, label, color }) => ({ kind, rect, point, leaf, label, color })),
+        parts: picks.map(({ kind, rect, target, leaf, label, color }) => ({ kind, rect, target, leaf, label, color })),
       };
   const boxes = picks.map((k) => (is3D() ? stageRect(k.rect) : null) ?? k.el.getBoundingClientRect());
   ui.draft = {
@@ -1435,8 +1435,9 @@ export async function submitComposer(comment) {
     kind: draft.kind,
     label: draft.label,
     rect: r,
-    point: draft.point,
-    parts: draft.parts?.map(({ leaf, ...part }) => ({ ...part, source: f.sdk ? sourceFor(f.sdk, part.rect, leaf) : undefined })),
+    // The nodes picked, by position in this tree, for the server to name.
+    ...(draft.parts ? {} : refs(f.tree, f.points, draft)),
+    parts: draft.parts?.map(({ leaf, ...part }) => ({ ...part, ...refs(f.tree, f.points, part), source: f.sdk ? sourceFor(f.sdk, part.rect, leaf) : undefined })),
     tree: f.tree,
     app: f.sdk ? { bundleId: f.sdk.bundleId, name: f.sdk.appName } : undefined,
     source: f.sdk ? sourceFor(f.sdk, r, draft.leaf) : undefined,
