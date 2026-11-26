@@ -44,7 +44,9 @@ private func hitTest(_ screen: [String: Any]) -> (CGPoint) -> [String: Any]? {
 }
 
 @Suite struct CollapsedChildrenRecoveryTests {
-    @Test func aNestedTreeHasOnlyItsStatusBarProbed() throws {
+    /// The automation tree is complete apart from SpringBoard's status bar,
+    /// which AXe leaves out too.
+    @Test func aNestedTreeIsNotProbed() throws {
         let tree = try fixture("peri-tabs")
         #expect(!CollapsedChildrenRecovery.isFlat(tree))
         var probed: [CGPoint] = []
@@ -53,69 +55,9 @@ private func hitTest(_ screen: [String: Any]) -> (CGPoint) -> [String: Any]? {
             probe: { point in probed.append(point); return hitTest(tree)(point) },
             deadline: .distantFuture
         )
-        #expect(count == probed.count)
-        #expect(count > 0 && count <= CollapsedChildrenRecovery.statusBarMaxProbes)
-        #expect(probed.allSatisfy { $0.y <= CollapsedChildrenRecovery.statusBarHeight })
-        // Nothing in the strip: the tree comes back as it was.
+        #expect(count == 0)
+        #expect(probed.isEmpty)
         #expect(try canonical(recovered) == canonical(tree))
-    }
-
-    /// SpringBoard draws the status bar over the app, so only a hit-test
-    /// finds its elements; between them it finds what the app draws there,
-    /// such as Settings' header, which reaches below the strip.
-    @Test func aNestedTreeGainsTheStatusBar() throws {
-        let tree = try fixture("peri-tabs")
-        let statusBar = try fixture("status-bar", as: [[String: Any]].self)
-        let header: [String: Any] = [
-            "role": "AXGroup", "label": NSNull(), "children": [[String: Any]](),
-            "frame": ["x": 0, "y": 0, "width": 402, "height": 102],
-        ]
-        let (recovered, count) = CollapsedChildrenRecovery.recover(
-            in: tree,
-            probe: { point in
-                statusBar.filter { rect($0)?.contains(point) == true }
-                    .min { rect($0)!.width * rect($0)!.height < rect($1)!.width * rect($1)!.height } ?? header
-            },
-            deadline: .distantFuture
-        )
-        #expect(count <= CollapsedChildrenRecovery.statusBarMaxProbes)
-        let kids = try #require(recovered["children"] as? [[String: Any]])
-        let original = try #require(tree["children"] as? [[String: Any]])
-        #expect(try canonical(["c": Array(kids.prefix(original.count))]) == canonical(["c": original]))
-        let added = kids.dropFirst(original.count)
-        #expect(added.allSatisfy { $0["synthesized"] as? Bool == true })
-        #expect(Set(added.compactMap { $0["label"] as? String }) == Set(statusBar.compactMap { $0["label"] as? String }))
-        #expect(added.count == statusBar.count)
-        #expect(added.contains { $0["identifier"] as? String == "breadcrumb" })
-    }
-
-    /// SpringBoard's tree has its own clock, signal and battery, and draws
-    /// the Dynamic Island as empty groups, which a probe still names.
-    @Test func whatTheTreeNamesInTheStripIsNotProbed() throws {
-        var tree = try fixture("peri-tabs")
-        let statusBar = try fixture("status-bar", as: [[String: Any]].self)
-        let island = try #require(statusBar.first { $0["label"] as? String == "Dynamic Island, Empty" })
-        let owned = statusBar.filter { $0["label"] as? String != "Dynamic Island, Empty" }
-        let empty: [String: Any] = ["role": "AXGroup", "label": NSNull(), "frame": island["frame"]!, "children": [[String: Any]]()]
-        tree["children"] = ((tree["children"] as? [[String: Any]]) ?? []) + [[
-            "role": "AXGroup", "label": NSNull(), "children": owned + [empty],
-            "frame": ["x": 0, "y": 0, "width": 402, "height": 54],
-        ]]
-        var probed: [CGPoint] = []
-        let (recovered, _) = CollapsedChildrenRecovery.recover(
-            in: tree,
-            probe: { point in
-                probed.append(point)
-                return statusBar.filter { rect($0)?.contains(point) == true }
-                    .min { rect($0)!.width * rect($0)!.height < rect($1)!.width * rect($1)!.height }
-            },
-            deadline: .distantFuture
-        )
-        let kids = try #require(recovered["children"] as? [[String: Any]])
-        let added = kids.dropFirst((tree["children"] as? [[String: Any]])!.count)
-        #expect(added.map { $0["label"] as? String } == ["Dynamic Island, Empty"])
-        let ownedFrames = owned.compactMap(rect)
-        #expect(!probed.contains { p in ownedFrames.contains { $0.contains(p) } })
     }
 
     @Test func aFlatTreeHasItsCollapsedBarProbed() throws {
