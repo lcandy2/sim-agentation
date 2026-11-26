@@ -66,22 +66,59 @@ enum AX {
         entry.depth > 0 && !JS.truthy(entry.node["hidden"]) && JS.truthy(entry.node["frame"]) && area(entry.node["frame"]) > 0
     }
 
-    /// Smallest visible node under a point: what a click targets. Nodes that
-    /// cover most of the screen are window-level wrappers, not targets.
-    /// `screen` is the screen size in points and defaults to the root's
-    /// frame; a 0×0 root (the simulator now reports the application element
-    /// that way) means no limit.
+    /// Roles a person would call a control. The full tree draws a control's
+    /// text and icon as children of it, and a click on them means the control.
+    private static let controls: Set<String> = [
+        "AXButton", "AXPopUpButton", "AXMenuButton", "AXRadioButton", "AXCheckBox", "AXSwitch", "AXToggle",
+        "AXLink", "AXMenuItem", "AXTab", "AXCell", "AXSlider", "AXIncrementor", "AXTextField", "AXTextArea",
+        "AXSearchField", "AXComboBox", "AXDisclosureTriangle",
+    ]
+
+    /// A home-screen widget, one element over its whole card: its value says
+    /// "Widget" ("Widget, Stack" in a Smart Stack).
+    static func isWidget(_ node: JSONObject) -> Bool {
+        guard let value = node["value"]?.stringValue else { return false }
+        return value.split(separator: ",", omittingEmptySubsequences: false).contains { $0.drop(while: \.isWhitespace) == "Widget" }
+    }
+
+    private static func isControl(_ node: JSONObject) -> Bool {
+        node["role"]?.stringValue.map(controls.contains) == true || isWidget(node)
+    }
+
+    private static func named(_ node: JSONObject) -> Bool {
+        !(JS.trimmed(node["label"]) ?? "").isEmpty || !(JS.trimmed(node["title"]) ?? "").isEmpty || JS.truthy(node["identifier"])
+    }
+
+    /// What a click targets: the smallest visible node under a point, or,
+    /// when that is the text or icon inside a control, the nearest control
+    /// around it. An unnamed control right inside another is the outer one's
+    /// part (a pop-up button's button), so the outer one is named. Plain text
+    /// outside any control stays the text. Nodes that cover most of the
+    /// screen are window-level wrappers, not targets. `screen` is the screen
+    /// size in points and defaults to the root's frame; a 0×0 root (the
+    /// simulator now reports the application element that way) means no limit.
     static func hitTest(_ tree: JSONObject, x: Double, y: Double, screen: JSON?? = nil) -> Entry? {
         let screen: JSON? = screen ?? tree["frame"]
         let limit = JS.truthy(screen) && area(screen) > 0 ? area(screen) * 0.6 : .infinity
-        var best: Entry?
-        for entry in flatten(tree) {
-            guard visible(entry), contains(entry.node["frame"], x, y) else { continue }
-            let a = area(entry.node["frame"])
-            if a > limit { continue }
-            if best == nil || a <= area(best!.node["frame"]) { best = entry }
+        let entries = flatten(tree)
+        func target(_ e: Entry) -> Bool { visible(e) && !(area(e.node["frame"]) > limit) }
+        var best: Int?
+        for (i, entry) in entries.enumerated() {
+            guard target(entry), contains(entry.node["frame"], x, y) else { continue }
+            if best == nil || area(entry.node["frame"]) <= area(entries[best!].node["frame"]) { best = i }
         }
-        return best
+        guard let best else { return nil }
+        // The hit and its ancestors, innermost first: in the depth-first list
+        // each ancestor is the nearest entry before it one level up.
+        var chain = [entries[best]]
+        var i = best - 1
+        while i >= 0, chain.last!.depth > 1 {
+            if entries[i].depth == chain.last!.depth - 1 { chain.append(entries[i]) }
+            i -= 1
+        }
+        guard var at = chain.firstIndex(where: { target($0) && isControl($0.node) }) else { return chain[0] }
+        while !named(chain[at].node), at + 1 < chain.count, target(chain[at + 1]), isControl(chain[at + 1].node) { at += 1 }
+        return chain[at]
     }
 
     /// Nodes that sit mostly inside a box, smallest first.
