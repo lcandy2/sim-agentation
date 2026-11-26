@@ -85,6 +85,29 @@ export function treeToPortrait(tree, orientation, screen, foldable = false) {
   return mapped;
 }
 
+/**
+ * Whether a tree is iPhone Duo's cover's rather than the unfolded panel's:
+ * what the cover's screen shows fits on it, while the unfolded panel's
+ * spreads past it (the home screen's widgets below, Settings' sidebar
+ * across). The root can say either panel's size, so it doesn't count. Nor
+ * do unnamed elements or ones bigger than the cover: the automation tree
+ * holds those past its edges on the cover too (a list's scroll content
+ * and its sections' backgrounds, the home screen's next page, layers
+ * sized and placed in pixels, icon glows).
+ */
+export function withinCover(tree, cover) {
+  const named = (node) => [node.label, node.title, node.value].some((s) => typeof s === 'string' && s.trim());
+  const big = (f) => f.width > cover.width + 2 || f.height > cover.height + 2;
+  const past = (f) => f.x + f.width > cover.width + 2 || f.y + f.height > cover.height + 2;
+  let within = true;
+  (function walk(node, root) {
+    const f = node?.frame;
+    if (!root && isRect(f) && named(node) && !big(f) && past(f)) within = false;
+    for (const child of node?.children ?? []) walk(child, false);
+  })(tree, true);
+  return within;
+}
+
 /** The SDK snapshot in framebuffer points, when its screen is landscape. */
 export function sdkToPortrait(sdk, orientation, screen) {
   const rotate = toPortrait(orientation, screen);
