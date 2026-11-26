@@ -42,7 +42,7 @@ What each line tells you, and how far to trust it:
 | **Device** | The simulator, by name. |
 | **App** | The app's name, and its bundle ID when the app runs the SimAgentationPlus SDK. No bundle ID means no SDK. |
 | **Screen** | The navigation titles on screen, outermost first: which screen the user was on. |
-| **Source** | SDK only. The view type, and the file and line where `.simTag()` was written. That is usually where the view is *used*, so the type's own `body` may be elsewhere: search `struct ItemRow` or `class ItemRow`. The path is `Module/File.swift`; look for the file under that module's sources. `inside` lines name the tagged views around it. |
+| **Source** | SDK only. The view type, and the file and line where `.simTag()` was written. That is usually where the view is *used*, so the type's own `body` may be elsewhere: search `struct ItemRow` or `class ItemRow`. The path is `Module/File.swift`; look for the file under that module's sources. `inside` lines name the tagged views around it. A click on the text or icon inside a control starts at that text or icon's own tag, when it has one. |
 | **View controller**, **Views** | SDK only. App-defined UIKit classes around the box, innermost first. |
 | **Element** | The accessibility element clicked: role (`StaticText` is a `Text` or label, `Button`, `Image`, `Cell`), label, `id=` identifier, `value=`, and its frame in points. A click on the text or icon inside a control names the control. **Path** gives its ancestors. |
 | **Area**, **Within** | A box rather than an element; **Within** is the element under the box's center, as a click there would name it. |

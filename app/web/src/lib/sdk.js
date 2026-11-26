@@ -71,10 +71,12 @@ export function viewContext(sdk, rect) {
   return { views: views.slice(0, 4), controller: around.find((e) => e.controller)?.controller ?? null };
 }
 
-// Tagged views that enclose a rect, innermost first.
-export function sourceFor(sdk, rect) {
+// Tagged views that enclose a rect, innermost first. A click's rect is the
+// control it names, and `leaf` the text or icon it landed on: tags on that,
+// inside the control, count too, so the innermost is the view clicked.
+export function sourceFor(sdk, rect, leaf) {
   return sdk.tags
-    .filter((t) => encloses(t.frame, rect))
+    .filter((t) => encloses(t.frame, rect) || (leaf && encloses(t.frame, leaf)))
     .sort((a, b) => area(a.frame) - area(b.frame))
     .map(({ name, file, line }) => ({ name, file, line }));
 }

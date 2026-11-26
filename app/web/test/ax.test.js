@@ -19,6 +19,14 @@ test("the title menu's text names the pop-up", () => {
   assert.equal(node.identifier, 'titleMenu');
 });
 
+test('a click on text inside a control keeps the text as its leaf', () => {
+  const picked = hitTest(trees.current, 190, 75);
+  assert.equal(picked.node.identifier, 'titleMenu');
+  assert.equal(describe(picked.leaf.node), 'StaticText "Touchpad"');
+  const control = hitTest(trees.current, 38, 84);
+  assert.equal(control.leaf.node, control.node);
+});
+
 test('the Host icon names the pop-up', () => {
   assert.equal(describe(hit('current', 307, 84)), 'PopUpButton "Host: No Host"');
 });

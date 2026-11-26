@@ -72,10 +72,11 @@ const named = (node) => !!(node.label?.trim() || node.title?.trim() || node.iden
 // that is the text or icon inside a control, the nearest control around it.
 // An unnamed control right inside another is the outer one's part (a
 // pop-up button's button), so the outer one is named. Plain text outside
-// any control stays the text. Nodes that cover most of the screen are
-// window-level wrappers, not targets. `screen` is the screen size in
-// points; the tree's root can't be trusted for it, because the simulator
-// now reports the application element as 0×0.
+// any control stays the text. `leaf` is the smallest node itself, for the
+// SDK's tags on the text or icon inside a control. Nodes that cover most of
+// the screen are window-level wrappers, not targets. `screen` is the screen
+// size in points; the tree's root can't be trusted for it, because the
+// simulator now reports the application element as 0×0.
 export function hitTest(tree, x, y, screen = tree.frame) {
   const limit = screen && area(screen) > 0 ? area(screen) * 0.6 : Infinity;
   const entries = flatten(tree);
@@ -93,9 +94,9 @@ export function hitTest(tree, x, y, screen = tree.frame) {
     if (entries[i].depth === chain.at(-1).depth - 1) chain.push(entries[i]);
   }
   let at = chain.findIndex((e) => target(e) && isControl(e.node));
-  if (at < 0) return chain[0];
+  if (at < 0) return { ...chain[0], leaf: chain[0] };
   while (!named(chain[at].node) && chain[at + 1] && target(chain[at + 1]) && isControl(chain[at + 1].node)) at++;
-  return chain[at];
+  return { ...chain[at], leaf: chain[0] };
 }
 
 // Nodes that sit mostly inside a box, smallest first.
