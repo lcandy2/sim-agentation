@@ -7,9 +7,10 @@ import Testing
 /// `AXNode.walk` emits them: the automation tree (client type 2), nested 13
 /// deep with every control in the top bar, and the VoiceOver tree (client
 /// type 0), flat, with the top bar left as one childless AXGroup.
-private func fixture(_ name: String) throws -> [String: Any] {
-    let url = try #require(Bundle.module.url(forResource: name, withExtension: "json", subdirectory: "Fixtures"))
-    return try #require(try JSONSerialization.jsonObject(with: Data(contentsOf: url)) as? [String: Any])
+/// A fixture from app/host/Tests/Fixtures, shared with sim-agentationTests and the web tests.
+private func fixture<T>(_ name: String, as: T.Type = [String: Any].self) throws -> T {
+    let url = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().appendingPathComponent("Fixtures/\(name).json")
+    return try #require(try JSONSerialization.jsonObject(with: Data(contentsOf: url)) as? T)
 }
 
 private func rect(_ node: [String: Any]) -> CGRect? {
@@ -44,7 +45,7 @@ private func hitTest(_ screen: [String: Any]) -> (CGPoint) -> [String: Any]? {
 
 @Suite struct CollapsedChildrenRecoveryTests {
     @Test func aNestedTreeHasOnlyItsStatusBarProbed() throws {
-        let tree = try fixture("automation-tree")
+        let tree = try fixture("peri-tabs")
         #expect(!CollapsedChildrenRecovery.isFlat(tree))
         var probed: [CGPoint] = []
         let (recovered, count) = CollapsedChildrenRecovery.recover(
@@ -63,9 +64,8 @@ private func hitTest(_ screen: [String: Any]) -> (CGPoint) -> [String: Any]? {
     /// finds its elements; between them it finds what the app draws there,
     /// such as Settings' header, which reaches below the strip.
     @Test func aNestedTreeGainsTheStatusBar() throws {
-        let tree = try fixture("automation-tree")
-        let url = try #require(Bundle.module.url(forResource: "status-bar", withExtension: "json", subdirectory: "Fixtures"))
-        let statusBar = try #require(try JSONSerialization.jsonObject(with: Data(contentsOf: url)) as? [[String: Any]])
+        let tree = try fixture("peri-tabs")
+        let statusBar = try fixture("status-bar", as: [[String: Any]].self)
         let header: [String: Any] = [
             "role": "AXGroup", "label": NSNull(), "children": [[String: Any]](),
             "frame": ["x": 0, "y": 0, "width": 402, "height": 102],
@@ -92,9 +92,8 @@ private func hitTest(_ screen: [String: Any]) -> (CGPoint) -> [String: Any]? {
     /// SpringBoard's tree has its own clock, signal and battery, and draws
     /// the Dynamic Island as empty groups, which a probe still names.
     @Test func whatTheTreeNamesInTheStripIsNotProbed() throws {
-        var tree = try fixture("automation-tree")
-        let url = try #require(Bundle.module.url(forResource: "status-bar", withExtension: "json", subdirectory: "Fixtures"))
-        let statusBar = try #require(try JSONSerialization.jsonObject(with: Data(contentsOf: url)) as? [[String: Any]])
+        var tree = try fixture("peri-tabs")
+        let statusBar = try fixture("status-bar", as: [[String: Any]].self)
         let island = try #require(statusBar.first { $0["label"] as? String == "Dynamic Island, Empty" })
         let owned = statusBar.filter { $0["label"] as? String != "Dynamic Island, Empty" }
         let empty: [String: Any] = ["role": "AXGroup", "label": NSNull(), "frame": island["frame"]!, "children": [[String: Any]]()]
@@ -124,7 +123,7 @@ private func hitTest(_ screen: [String: Any]) -> (CGPoint) -> [String: Any]? {
         #expect(CollapsedChildrenRecovery.isFlat(tree))
         let (recovered, count) = CollapsedChildrenRecovery.recover(
             in: tree,
-            probe: hitTest(try fixture("automation-tree")),
+            probe: hitTest(try fixture("peri-tabs")),
             deadline: .distantFuture
         )
         #expect(count > 0)
@@ -140,7 +139,7 @@ private func hitTest(_ screen: [String: Any]) -> (CGPoint) -> [String: Any]? {
         #expect(CollapsedChildrenRecovery.isFlat(root))
         let (recovered, count) = CollapsedChildrenRecovery.recover(
             in: root,
-            probe: hitTest(try fixture("automation-tree")),
+            probe: hitTest(try fixture("peri-tabs")),
             deadline: .distantFuture
         )
         #expect(count > 0)

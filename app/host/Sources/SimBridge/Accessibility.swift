@@ -284,10 +284,13 @@ enum AXClientType {
     static let application = 2
     static let pointHitTestRequest = 6
 
+    private static let requestType = NSSelectorFromString("requestType")
+    private static let setClientType = NSSelectorFromString("setClientType:")
+
     static func apply(to request: AnyObject) {
         guard let request = request as? NSObject,
-              request.responds(to: NSSelectorFromString("requestType")),
-              request.responds(to: NSSelectorFromString("setClientType:")),
+              request.responds(to: requestType),
+              request.responds(to: setClientType),
               (request.value(forKey: "requestType") as? NSNumber)?.intValue != pointHitTestRequest
         else { return }
         request.setValue(NSNumber(value: application), forKey: "clientType")

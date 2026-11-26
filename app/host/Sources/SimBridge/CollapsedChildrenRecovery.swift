@@ -80,6 +80,8 @@ public enum CollapsedChildrenRecovery {
     /// points: as tall as an iPhone's with a Dynamic Island, which holds the
     /// shorter ones too.
     public static let statusBarHeight: Double = 54
+    /// How far around a found element a probe centre still counts as on it.
+    static let touchTargetSlop: CGFloat = 2
     public static let statusBarMaxProbes = 40
     /// Seed cells across the strip, each its full height: narrow enough that
     /// a probe at their centres lands on each of the clock, signal, Wi-Fi and
@@ -96,11 +98,11 @@ public enum CollapsedChildrenRecovery {
     /// probed, and what it finds is added to the root, marked `synthesized`.
     /// Between them a probe can find what the app draws under the bar (a
     /// header reaching below it): that, like nothing, splits the cell.
-    public static func recoverStatusBar(
+    private static func recoverStatusBar(
         in root: [String: Any],
         probe: PointProbe,
         deadline: Date,
-        maxProbes: Int = statusBarMaxProbes
+        maxProbes: Int
     ) -> (tree: [String: Any], probes: Int) {
         guard let screen = rect(of: root), screen.width > 0, screen.height > 0 else { return (root, 0) }
         let strip = CGRect(x: screen.minX, y: screen.minY, width: screen.width, height: min(screen.height, CGFloat(statusBarHeight)))
@@ -114,7 +116,6 @@ public enum CollapsedChildrenRecovery {
             let x = strip.minX + CGFloat(col) * cellW
             queue.push(CGRect(x: x, y: strip.minY, width: min(cellW, strip.maxX - x), height: strip.height))
         }
-        let touchTargetSlop: CGFloat = 2
         // Named elements the tree already has in the strip (SpringBoard's
         // own clock, signal and battery, on the home screen) need no probe.
         // Only named leaves: a container, such as the status bar itself, or
@@ -328,8 +329,6 @@ public enum CollapsedChildrenRecovery {
                 }
             }
         }
-
-        let touchTargetSlop: CGFloat = 2
 
         drain: while let cell = queue.pop(), budget.available {
             let centre = CGPoint(x: cell.midX, y: cell.midY)

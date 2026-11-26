@@ -7,21 +7,25 @@ const flattened = new WeakMap();
 export function flatten(tree) {
   if (tree && flattened.has(tree)) return flattened.get(tree);
   const out = [];
-  const walk = (node, depth, path) => {
+  const walk = (node, depth, path, parent) => {
     const here = [...path, describe(node)];
-    out.push({ node, depth, path: here });
-    for (const child of node.children || []) walk(child, depth + 1, here);
+    const at = out.length;
+    out.push({ node, depth, path: here, parent });
+    for (const child of node.children || []) walk(child, depth + 1, here, at);
   };
   if (tree) {
-    walk(tree, 0, []);
+    walk(tree, 0, [], -1);
     flattened.set(tree, out);
   }
   return out;
 }
 
+// What a node is called: its label, else its title, else its identifier.
+const nameOf = (node) => node.label?.trim() || node.title?.trim() || node.identifier || '';
+
 export function describe(node) {
   const role = (node.role || 'AXElement').replace(/^AX/, '');
-  const name = node.label?.trim() || node.title?.trim() || node.identifier || '';
+  const name = nameOf(node);
   return name ? `${role} "${name}"` : role;
 }
 
@@ -66,7 +70,7 @@ const CONTROLS = new Set([
   'AXTextArea', 'AXSearchField', 'AXComboBox', 'AXDisclosureTriangle',
 ]);
 const isControl = (node) => CONTROLS.has(node.role) || isWidget(node);
-const named = (node) => !!(node.label?.trim() || node.title?.trim() || node.identifier);
+const named = (node) => !!nameOf(node);
 
 // What a click targets: the smallest visible node under a point, or, when
 // that is the text or icon inside a control, the nearest control around it.
@@ -87,14 +91,10 @@ export function hitTest(tree, x, y, screen = tree.frame) {
     if (best < 0 || area(entry.node.frame) <= area(entries[best].node.frame)) best = i;
   });
   if (best < 0) return null;
-  // The hit and its ancestors, innermost first: in the depth-first list each
-  // ancestor is the nearest entry before it one level up.
+  // The hit and its ancestors below the root, innermost first.
   const chain = [entries[best]];
-  for (let i = best - 1; i >= 0 && chain.at(-1).depth > 1; i--) {
-    if (entries[i].depth === chain.at(-1).depth - 1) chain.push(entries[i]);
-  }
-  let at = chain.findIndex((e) => target(e) && isControl(e.node));
-  if (at < 0) return { ...chain[0], leaf: chain[0] };
+  for (let p = entries[best].parent; p >= 0 && entries[p].depth > 0; p = entries[p].parent) chain.push(entries[p]);
+  let at = Math.max(0, chain.findIndex((e) => target(e) && isControl(e.node)));
   while (!named(chain[at].node) && chain[at + 1] && target(chain[at + 1]) && isControl(chain[at + 1].node)) at++;
   return { ...chain[at], leaf: chain[0] };
 }

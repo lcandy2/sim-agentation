@@ -10,7 +10,8 @@ import Testing
 /// pop-ups.
 enum Peri {
     static func tree(_ name: String) throws -> JSONObject {
-        let url = try #require(Bundle.module.url(forResource: name, withExtension: "json", subdirectory: "Fixtures"))
+        // app/host/Tests/Fixtures, shared with SimBridgeTests and the web tests.
+        let url = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().appendingPathComponent("Fixtures/\(name).json")
         return try #require(try JSON.parse(Data(contentsOf: url)).objectValue)
     }
 
@@ -21,47 +22,47 @@ enum Peri {
 
 @Suite struct HitTestTests {
     @Test func theTitleMenusTextNamesThePopUp() throws {
-        let node = try Peri.hit("peri-current", 190, 75)
+        let node = try Peri.hit("peri-title-menu", 190, 75)
         #expect(AX.describe(node) == "PopUpButton \"Touchpad\"")
         #expect(node["identifier"]?.stringValue == "titleMenu")
     }
 
     @Test func theHostIconNamesThePopUp() throws {
-        let node = try Peri.hit("peri-current", 307, 84)
+        let node = try Peri.hit("peri-title-menu", 307, 84)
         #expect(AX.describe(node) == "PopUpButton \"Host: No Host\"")
     }
 
     @Test func aButtonsIconNamesTheButton() throws {
-        #expect(AX.describe(try Peri.hit("peri-current", 75, 790)) == "Button \"Left click\"")
-        #expect(AX.describe(try Peri.hit("peri-old", 75, 790)) == "Button \"Left click\"")
+        #expect(AX.describe(try Peri.hit("peri-title-menu", 75, 790)) == "Button \"Left click\"")
+        #expect(AX.describe(try Peri.hit("peri-tabs", 75, 790)) == "Button \"Left click\"")
     }
 
     @Test func theInterfacesTextNamesThePopUp() throws {
-        let node = try Peri.hit("peri-old", 340, 126)
+        let node = try Peri.hit("peri-tabs", 340, 126)
         #expect(AX.describe(node) == "PopUpButton \"Interfaces\"")
         #expect(node["identifier"]?.stringValue == "interfacesMenu")
     }
 
     @Test func aTabsImageNamesTheRadioButton() throws {
-        let node = try Peri.hit("peri-old", 51, 85)
+        let node = try Peri.hit("peri-tabs", 51, 85)
         #expect(node["role"]?.stringValue == "AXRadioButton")
         #expect(AX.describe(node) == "RadioButton \"Touchpad\"")
-        #expect(AX.describe(try Peri.hit("peri-old", 240, 85)) == "RadioButton \"Game Controller\"")
+        #expect(AX.describe(try Peri.hit("peri-tabs", 240, 85)) == "RadioButton \"Game Controller\"")
     }
 
     @Test func plainTextStaysTheText() throws {
         let text = "StaticText \"This device can't act as a Bluetooth keyboard.\""
-        #expect(AX.describe(try Peri.hit("peri-current", 200, 125)) == text)
-        #expect(AX.describe(try Peri.hit("peri-old", 200, 168)) == text)
+        #expect(AX.describe(try Peri.hit("peri-title-menu", 200, 125)) == text)
+        #expect(AX.describe(try Peri.hit("peri-tabs", 200, 168)) == text)
     }
 
     @Test func aNamedControlIsItsOwnTarget() throws {
-        #expect(AX.describe(try Peri.hit("peri-current", 38, 84)) == "Button \"Settings\"")
-        #expect(AX.describe(try Peri.hit("peri-current", 358, 300)) == "Slider \"Scroll\"")
+        #expect(AX.describe(try Peri.hit("peri-title-menu", 38, 84)) == "Button \"Settings\"")
+        #expect(AX.describe(try Peri.hit("peri-title-menu", 358, 300)) == "Slider \"Scroll\"")
     }
 
     @Test func thePathEndsAtTheControl() throws {
-        let entry = try #require(AX.hitTest(Peri.tree("peri-current"), x: 190, y: 75))
+        let entry = try #require(AX.hitTest(Peri.tree("peri-title-menu"), x: 190, y: 75))
         #expect(entry.path.last == "PopUpButton \"Touchpad\"")
         #expect(entry.path.dropLast().last == "Group")
     }

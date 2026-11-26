@@ -33,15 +33,13 @@ let package = Package(
         // trees are saved native walks.
         .testTarget(
             name: "SimBridgeTests",
-            dependencies: ["SimBridge"],
-            resources: [.copy("Fixtures")]
+            dependencies: ["SimBridge"]
         ),
         // No simulator or server: trees are describe_ui output saved from a
         // simulator, as the host emits them.
         .testTarget(
             name: "sim-agentationTests",
-            dependencies: ["sim-agentation"],
-            resources: [.copy("Fixtures")]
+            dependencies: ["sim-agentation"]
         ),
     ]
 )

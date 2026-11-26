@@ -64,46 +64,48 @@ enum Format {
     /// including nodes the server didn't keep (`insideTotal`).
     private static func inside(_ a: JSONObject, besides target: JSON?) -> [String] {
         let given = items(a["inside"])
-        // Stable, so notes stored smallest first come out the same as new ones.
+        let actionable = given.map(AX.actionable)
+        // Ties keep list order, so notes stored smallest first come out the same as new ones.
         let order = given.indices.filter { !strictEquals(given[$0], target) }
-            .enumerated()
-            .sorted { lhs, rhs in
-                let l = AX.rank(given[lhs.element]), r = AX.rank(given[rhs.element])
-                return l != r ? l < r : lhs.offset < rhs.offset
-            }
-            .map(\.element)
+            .sorted { (AX.rank(given[$0]), $0) < (AX.rank(given[$1]), $1) }
         func parent(_ i: Int) -> Int? {
-            guard let p = given[i]["parent"]?.numberValue, p >= 0, p < Double(given.count), p == p.rounded() else { return nil }
-            return Int(p)
+            guard let p = given[i]["parent"]?.numberValue.flatMap({ Int(exactly: $0) }), given.indices.contains(p) else { return nil }
+            return p
         }
         // Innermost first; a malformed list that loops stops after a full pass.
-        func ancestors(_ i: Int) -> [Int] {
+        let ancestors: [[Int]] = given.indices.map { i in
             var out: [Int] = []
             var at = parent(i)
             while let p = at, p != i, out.count < given.count { out.append(p); at = parent(p) }
             return out
         }
-        let holder: [Int: Int] = Dictionary(uniqueKeysWithValues: given.indices.compactMap { i in
-            guard !AX.actionable(given[i]), let j = ancestors(i).first(where: { AX.actionable(given[$0]) }) else { return nil }
-            return (i, j)
-        })
-        let listed = order.filter { holder[$0] == nil }
-        var around = Set<Int>()
-        for i in listed { around.formUnion(ancestors(i)) }
+        // The listed control each node's line folds into, if any.
+        var held: [Int: [Int]] = [:]
+        var listed: [Int] = []
+        for i in order {
+            if !actionable[i], let j = ancestors[i].first(where: { actionable[$0] }) {
+                held[j, default: []].append(i)
+            } else {
+                listed.append(i)
+            }
+        }
+        let around = Set(listed.flatMap { ancestors[$0] })
         var lines: [(head: String, shown: [String])] = []
+        var lineOf: [String: Int] = [:]
         for j in listed where !(AX.rank(given[j]) == 3 && around.contains(j)) {
             let n = given[j]
             // Only what adds a name the control's own line doesn't print.
             let own = [n["label"], n["value"], n["identifier"]].compactMap { JS.trimmed($0) }.filter { !$0.isEmpty }
-            let shown = order.filter { holder[$0] == j }.map { given[$0] }.filter { m in
+            let shown = (held[j] ?? []).map { given[$0] }.filter { m in
                 let label = JS.trimmed(m["label"]) ?? ""
                 return (!label.isEmpty && !own.contains { JS.same($0, label) })
                     || (JS.truthy(m["identifier"]) && !strictEquals(m["identifier"], n["identifier"]))
             }.map(node)
             let head = "\(node(n)) at \(frame(n["frame"]))"
-            if let k = lines.firstIndex(where: { $0.head == head }) {
+            if let k = lineOf[head] {
                 lines[k].shown += shown
             } else {
+                lineOf[head] = lines.count
                 lines.append((head, shown))
             }
         }

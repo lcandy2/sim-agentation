@@ -9,11 +9,6 @@ import Testing
 /// (a button over text runs and images), the Host pop-up and Record.
 /// `settings` is Settings' top level, its search field floating over the
 /// list's last rows.
-private func tree(_ name: String) throws -> JSONObject {
-    let url = try #require(Bundle.module.url(forResource: name, withExtension: "json", subdirectory: "Fixtures"))
-    return try #require(JSON.parse(Data(contentsOf: url)).objectValue)
-}
-
 private func rect(_ x: Double, _ y: Double, _ w: Double, _ h: Double) -> JSON {
     .object(JSONObject(["x": .number(x), "y": .number(y), "width": .number(w), "height": .number(h)]))
 }
@@ -49,7 +44,7 @@ private let bar = rect(0, 60, 402, 57)
 
 @Suite struct BoxNoteTests {
     @Test func aBarOfTabsListsEveryControlWithItsIcon() throws {
-        let note = boxNote(try tree("peri-tabs"), bar)
+        let note = boxNote(try Peri.tree("peri-tabs"), bar)
         // Each tab's image is on its tab's line, named when it adds a name;
         // the unnamed groups around the controls add nothing.
         #expect(inside(note) == [
@@ -69,7 +64,7 @@ private let bar = rect(0, 60, 402, 57)
     }
 
     @Test func aBarWithATitleMenuListsThePopUpsAndButtons() throws {
-        let note = boxNote(try tree("peri-title-menu"), bar)
+        let note = boxNote(try Peri.tree("peri-title-menu"), bar)
         // The pop-ups' inner buttons, text runs and images are on their lines,
         // less the text that repeats the title menu's value; the two unnamed
         // groups around the Host pop-up add nothing.
@@ -116,7 +111,7 @@ private let bar = rect(0, 60, 402, 57)
     }
 
     @Test func aWholeScreenListsEveryControl() throws {
-        let lines = inside(boxNote(try tree("peri-tabs"), rect(0, 0, 402, 874)))
+        let lines = inside(boxNote(try Peri.tree("peri-tabs"), rect(0, 0, 402, 874)))
         #expect(lines.count == 21)
         #expect(lines.contains("Button \"Left click\" at (16, 778) 127×46pt, showing StaticText \"Click\" and Image \"Cursor Arrow With A Click Indicator\" id=cursorarrow.click"))
         #expect(lines.contains("Button \"Right Click\" id=contextualmenu.and.cursorarrow at (259, 778) 127×46pt"))
@@ -128,7 +123,7 @@ private let bar = rect(0, 60, 402, 57)
     /// Settings' floating search field sits over the Screen Time row; it and
     /// its icon are not the row's.
     @Test func aFieldDrawnOverARowKeepsItsOwnLine() throws {
-        let note = boxNote(try tree("settings"), rect(20, 800, 362, 44))
+        let note = boxNote(try Peri.tree("settings"), rect(20, 800, 362, 44))
         #expect(line(note, "- **Within**: ") == "- **Within**: TextField value=\"Search\" at (28, 808) 346×28pt")
         #expect(inside(note) == [
             "Button \"Dictate\" at (342, 811) 17×22pt",
@@ -139,7 +134,7 @@ private let bar = rect(0, 60, 402, 57)
 
     /// The automation tree holds Settings' Dictate button twice, at one frame.
     @Test func anElementTheTreeHoldsTwiceIsOneLine() throws {
-        let lines = inside(boxNote(try tree("settings"), rect(0, 0, 402, 874)))
+        let lines = inside(boxNote(try Peri.tree("settings"), rect(0, 0, 402, 874)))
         #expect(lines.filter { $0.hasPrefix("Button \"Dictate\"") } == ["Button \"Dictate\" at (342, 811) 17×22pt"])
     }
 

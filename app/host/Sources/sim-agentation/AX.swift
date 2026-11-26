@@ -1,4 +1,5 @@
 import Foundation
+import SimBridge
 
 /// Accessibility-tree helpers with the same semantics as the browser's
 /// web/src/lib/ax.js. Frames are in
@@ -29,17 +30,16 @@ enum AX {
     static func describe(_ node: JSONObject) -> String {
         let role = JS.truthy(node["role"]) ? JS.string(node["role"]) : "AXElement"
         let bare = JS.dropAX(role)
-        let name: String
-        if let label = JS.trimmed(node["label"]), !label.isEmpty {
-            name = label
-        } else if let title = JS.trimmed(node["title"]), !title.isEmpty {
-            name = title
-        } else if JS.truthy(node["identifier"]) {
-            name = JS.string(node["identifier"])
-        } else {
-            name = ""
-        }
+        let name = name(node)
         return name.isEmpty ? bare : "\(bare) \"\(name)\""
+    }
+
+    /// What a node is called: its label, else its title, else its
+    /// identifier; empty when it has none.
+    private static func name(_ node: JSONObject) -> String {
+        if let label = JS.trimmed(node["label"]), !label.isEmpty { return label }
+        if let title = JS.trimmed(node["title"]), !title.isEmpty { return title }
+        return JS.truthy(node["identifier"]) ? JS.string(node["identifier"]) : ""
     }
 
     static func area(_ f: JSON?) -> Double {
@@ -79,7 +79,7 @@ enum AX {
 
     /// A home-screen widget, one element over its whole card: its value says
     /// "Widget" ("Widget, Stack" in a Smart Stack).
-    static func isWidget(_ node: JSONObject) -> Bool {
+    private static func isWidget(_ node: JSONObject) -> Bool {
         guard let value = node["value"]?.stringValue else { return false }
         return value.split(separator: ",", omittingEmptySubsequences: false).contains { $0.drop(while: \.isWhitespace) == "Widget" }
     }
@@ -88,9 +88,7 @@ enum AX {
         node["role"]?.stringValue.map(controls.contains) == true || isWidget(node)
     }
 
-    private static func named(_ node: JSONObject) -> Bool {
-        !(JS.trimmed(node["label"]) ?? "").isEmpty || !(JS.trimmed(node["title"]) ?? "").isEmpty || JS.truthy(node["identifier"])
-    }
+    private static func named(_ node: JSONObject) -> Bool { !name(node).isEmpty }
 
     /// What a click targets: the smallest visible node under a point, or,
     /// when that is the text or icon inside a control, the nearest control
@@ -111,15 +109,11 @@ enum AX {
             if best == nil || area(entry.node["frame"]) <= area(entries[best!].node["frame"]) { best = i }
         }
         guard let best else { return nil }
-        // The hit and its ancestors, innermost first: in the depth-first list
-        // each ancestor is the nearest entry before it one level up.
+        // The hit and its ancestors below the root, innermost first.
         var chain = [entries[best]]
-        var i = best - 1
-        while i >= 0, chain.last!.depth > 1 {
-            if entries[i].depth == chain.last!.depth - 1 { chain.append(entries[i]) }
-            i -= 1
-        }
-        guard var at = chain.firstIndex(where: { target($0) && isControl($0.node) }) else { return chain[0] }
+        var up = entries[best].parent
+        while let p = up, entries[p].depth > 0 { chain.append(entries[p]); up = entries[p].parent }
+        var at = chain.firstIndex(where: { target($0) && isControl($0.node) }) ?? 0
         while !named(chain[at].node), at + 1 < chain.count, target(chain[at + 1]), isControl(chain[at + 1].node) { at += 1 }
         return chain[at]
     }
@@ -145,33 +139,24 @@ enum AX {
         return JS.same(node?["role"]?.stringValue, "AXImage") ? 2 : 1
     }
 
-    /// How many of a box's nodes a note keeps: a whole screen's, on the
-    /// screens measured (Settings' automation tree holds 134 nodes in all).
+    /// How many of a box's nodes a note keeps: enough for a whole screen.
     static let insideKept = 200
 
     /// A box note's `inside`: the nodes that sit mostly inside the box, best
-    /// first by `rank` and smallest first within a rank (ax.js's
-    /// nodesInRect sorts by size alone; its one caller re-sorts by
-    /// position). The first `keep` are summarized, each with `parent`, the
+    /// first by `rank` and smallest first within a rank. The first `keep` are summarized, each with `parent`, the
     /// position in this list of its nearest ancestor that is in it too (null
     /// for none), so the note can tell what a control holds from what is
     /// drawn over it. `total` counts them all.
     static func inside(_ tree: JSONObject, _ rect: JSON, keep: Int = insideKept) -> (nodes: [JSON], total: Int) {
         let entries = flatten(tree)
-        var position: [Int: Int] = [:]
         let found = entries.indices
             .filter { visible(entries[$0]) && intersection(entries[$0].node["frame"], rect) >= area(entries[$0].node["frame"]) * 0.6 }
-            .map { (index: $0, rank: rank(.object(entries[$0].node))) }
-            .enumerated()
-            .sorted { lhs, rhs in
-                // Array.prototype.sort is stable.
-                if lhs.element.rank != rhs.element.rank { return lhs.element.rank < rhs.element.rank }
-                let a = area(entries[lhs.element.index].node["frame"]), b = area(entries[rhs.element.index].node["frame"])
-                return a != b ? a < b : lhs.offset < rhs.offset
-            }
-            .map(\.element.index)
+            .map { (index: $0, rank: rank(.object(entries[$0].node)), area: area(entries[$0].node["frame"])) }
+            // Ties keep tree order, as Array.prototype.sort's stable sort does.
+            .sorted { ($0.rank, $0.area, $0.index) < ($1.rank, $1.area, $1.index) }
+            .map(\.index)
         let kept = Array(found.prefix(keep))
-        for (k, i) in kept.enumerated() { position[i] = k }
+        let position = Dictionary(uniqueKeysWithValues: kept.enumerated().map { ($1, $0) })
         let nodes = kept.map { i -> JSON in
             var up = entries[i].parent
             while let p = up, position[p] == nil { up = entries[p].parent }
@@ -182,7 +167,7 @@ enum AX {
         return (nodes, found.count)
     }
 
-    private static let statusBar = 54.0 // pt; clock, battery and signal live above this
+    private static let statusBar = CollapsedChildrenRecovery.statusBarHeight // clock, battery and signal live above this
 
     /// Best guess at which screen this is: app name plus headings and
     /// navigation titles near the top.

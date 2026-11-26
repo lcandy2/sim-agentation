@@ -6,10 +6,10 @@ import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import { describe, hitTest } from '../src/lib/ax.js';
 
-const fixtures = new URL('../../host/Tests/sim-agentationTests/Fixtures/', import.meta.url);
+const fixtures = new URL('../../host/Tests/Fixtures/', import.meta.url);
 const trees = {
-  current: JSON.parse(readFileSync(new URL('peri-current.json', fixtures))),
-  old: JSON.parse(readFileSync(new URL('peri-old.json', fixtures))),
+  current: JSON.parse(readFileSync(new URL('peri-title-menu.json', fixtures))),
+  old: JSON.parse(readFileSync(new URL('peri-tabs.json', fixtures))),
 };
 const hit = (tree, x, y) => hitTest(trees[tree], x, y).node;
 

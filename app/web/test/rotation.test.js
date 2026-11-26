@@ -40,8 +40,8 @@ test('the root says either size and is not counted', () => {
 });
 
 test("Peri Keys' automation tree fits its own screen", () => {
-  const fixtures = new URL('../../host/Tests/sim-agentationTests/Fixtures/', import.meta.url);
-  for (const name of ['peri-current.json', 'peri-old.json']) {
+  const fixtures = new URL('../../host/Tests/Fixtures/', import.meta.url);
+  for (const name of ['peri-title-menu.json', 'peri-tabs.json']) {
     const tree = JSON.parse(readFileSync(new URL(name, fixtures)));
     assert.equal(withinCover(tree, { width: 402, height: 874 }), true, name);
   }
