@@ -1,0 +1,209 @@
+{
+  "children" : [
+    {
+      "children" : [
+
+      ],
+      "enabled" : true,
+      "focused" : false,
+      "frame" : {
+        "height" : 54,
+        "width" : 402,
+        "x" : 0,
+        "y" : 62
+      },
+      "help" : null,
+      "hidden" : false,
+      "identifier" : "Peri Keys",
+      "label" : null,
+      "role" : "AXGroup",
+      "subrole" : null,
+      "title" : null,
+      "value" : null
+    },
+    {
+      "children" : [
+
+      ],
+      "enabled" : true,
+      "focused" : false,
+      "frame" : {
+        "height" : 21.333333333333343,
+        "width" : 91.666666666666657,
+        "x" : 16,
+        "y" : 116
+      },
+      "help" : null,
+      "hidden" : false,
+      "identifier" : null,
+      "label" : "Host: No host",
+      "role" : "AXPopUpButton",
+      "subrole" : null,
+      "title" : null,
+      "value" : null
+    },
+    {
+      "children" : [
+
+      ],
+      "enabled" : true,
+      "focused" : false,
+      "frame" : {
+        "height" : 20.333333333333343,
+        "width" : 103.66666666666669,
+        "x" : 282.33333333333331,
+        "y" : 116.66666666666666
+      },
+      "help" : null,
+      "hidden" : false,
+      "identifier" : "interfacesMenu",
+      "label" : "Interfaces",
+      "role" : "AXPopUpButton",
+      "subrole" : null,
+      "title" : null,
+      "value" : null
+    },
+    {
+      "children" : [
+
+      ],
+      "enabled" : true,
+      "focused" : false,
+      "frame" : {
+        "height" : 19.333328247070312,
+        "width" : 360,
+        "x" : 17.666666030883789,
+        "y" : 159.77824401855469
+      },
+      "help" : null,
+      "hidden" : false,
+      "identifier" : null,
+      "label" : "This device can't act as a Bluetooth keyboard.",
+      "role" : "AXStaticText",
+      "subrole" : null,
+      "title" : null,
+      "value" : null
+    },
+    {
+      "children" : [
+
+      ],
+      "enabled" : true,
+      "focused" : false,
+      "frame" : {
+        "height" : 581.33333333333326,
+        "width" : 316,
+        "x" : 16,
+        "y" : 189
+      },
+      "help" : "Tap to click, two-finger tap to right-click, two fingers to scroll, tap then hold to drag.",
+      "hidden" : false,
+      "identifier" : null,
+      "label" : "Touchpad",
+      "role" : "AXGenericElement",
+      "subrole" : null,
+      "title" : null,
+      "value" : null
+    },
+    {
+      "children" : [
+
+      ],
+      "enabled" : true,
+      "focused" : false,
+      "frame" : {
+        "height" : 581.83331298828125,
+        "width" : 46,
+        "x" : 340,
+        "y" : 188.5
+      },
+      "help" : null,
+      "hidden" : false,
+      "identifier" : null,
+      "label" : "Scroll",
+      "role" : "AXSlider",
+      "subrole" : null,
+      "title" : null,
+      "value" : "0 steps"
+    },
+    {
+      "children" : [
+
+      ],
+      "enabled" : true,
+      "focused" : false,
+      "frame" : {
+        "height" : 45.666666666666629,
+        "width" : 127,
+        "x" : 16,
+        "y" : 778.33333333333326
+      },
+      "help" : null,
+      "hidden" : false,
+      "identifier" : null,
+      "label" : "Left click",
+      "role" : "AXButton",
+      "subrole" : null,
+      "title" : null,
+      "value" : null
+    },
+    {
+      "children" : [
+
+      ],
+      "enabled" : true,
+      "focused" : false,
+      "frame" : {
+        "height" : 45.666666666666629,
+        "width" : 100,
+        "x" : 151,
+        "y" : 778.33333333333326
+      },
+      "help" : "Double-tap to turn on or off.",
+      "hidden" : false,
+      "identifier" : "lock",
+      "label" : "Drag Lock",
+      "role" : "AXButton",
+      "subrole" : null,
+      "title" : null,
+      "value" : "Off"
+    },
+    {
+      "children" : [
+
+      ],
+      "enabled" : true,
+      "focused" : false,
+      "frame" : {
+        "height" : 45.666666666666629,
+        "width" : 127,
+        "x" : 259,
+        "y" : 778.33333333333326
+      },
+      "help" : null,
+      "hidden" : false,
+      "identifier" : "contextualmenu.and.cursorarrow",
+      "label" : "Right Click",
+      "role" : "AXButton",
+      "subrole" : null,
+      "title" : null,
+      "value" : null
+    }
+  ],
+  "enabled" : true,
+  "focused" : false,
+  "frame" : {
+    "height" : 874,
+    "width" : 402,
+    "x" : 0,
+    "y" : 0
+  },
+  "help" : null,
+  "hidden" : false,
+  "identifier" : null,
+  "label" : "Peri Keys",
+  "role" : "AXApplication",
+  "subrole" : null,
+  "title" : null,
+  "value" : null
+}

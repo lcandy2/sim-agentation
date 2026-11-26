@@ -29,10 +29,12 @@ let package = Package(
             name: "sim-agentation",
             dependencies: ["SimBridge"]
         ),
-        // No simulator: requests are stand-in objects with the same keys.
+        // No simulator: requests are stand-in objects with the same keys, and
+        // trees are saved native walks.
         .testTarget(
             name: "SimBridgeTests",
-            dependencies: ["SimBridge"]
+            dependencies: ["SimBridge"],
+            resources: [.copy("Fixtures")]
         ),
     ]
 )

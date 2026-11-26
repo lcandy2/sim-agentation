@@ -10,6 +10,9 @@
 // - Logging and perf counters are dropped.
 // - A root with no children at all is probed as a phase-1 container
 //   whatever its role (sim-use's tree source never returns that shape).
+// - Only a flat tree is probed (see `isFlat`): the automation tree that
+//   client type 2 returns is already complete, and probing it spent the
+//   whole budget on empty overlay groups and blind zones for nothing.
 // The quadtree, budgets, caps, thresholds and blind-zone maths are unchanged.
 
 import CoreGraphics
@@ -51,6 +54,7 @@ public enum CollapsedChildrenRecovery {
         seedCellHeight: Double = defaultSeedCellHeight,
         scanBlindZones: Bool = true
     ) -> (tree: [String: Any], probes: Int) {
+        guard isFlat(root) else { return (root, 0) }
         let budget = ProbeBudget(maxProbes, deadline: deadline)
         let tuning = Tuning(
             minCellSize: max(1, minCellSize),
@@ -66,6 +70,17 @@ public enum CollapsedChildrenRecovery {
         prepopulateSeen(seen, from: root)
         let tree = walk(node: root, probe: probe, budget: budget, tuning: tuning, seen: seen, scanBlindZones: scanBlindZones, isRoot: true)
         return (tree, maxProbes - budget.remaining)
+    }
+
+    /// True when no child of the root has children of its own: the
+    /// VoiceOver tree (client type 0, or a runtime that ignores the client
+    /// type), where labelled leaves sit directly on the application and
+    /// containers come back childless. The automation tree nests elements
+    /// under the window and their containers, so it is flat only on a
+    /// trivial screen, which is then probed as before.
+    public static func isFlat(_ root: [String: Any]) -> Bool {
+        let kids = (root["children"] as? [[String: Any]]) ?? []
+        return kids.allSatisfy { (($0["children"] as? [[String: Any]]) ?? []).isEmpty }
     }
 
     /// Identity key for cross-parent dedup of synthesized hits. Returns `nil`
