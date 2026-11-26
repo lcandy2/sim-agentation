@@ -17,7 +17,8 @@ import ObjectiveC
 public enum Accessibility {
     /// The whole tree as JSON. When it comes back flat (the VoiceOver tree,
     /// on a runtime that ignores the client type), elements missing from
-    /// `accessibilityChildren` are recovered by probing.
+    /// `accessibilityChildren` are recovered by probing; when it comes back
+    /// nested, only the status bar's, which SpringBoard draws over the app.
     public static func describe(udid: String) -> [String: Any]? {
         if let tree = describeOnce(udid: udid) { return tree }
         guard remediateStaleHierarchy(udid: udid) else { return nil }
@@ -37,12 +38,13 @@ public enum Accessibility {
             }
             // The application element can come back 0×0 (AXPTranslator has no
             // host window to size it against); give it the screen.
+            let started = Date()
             let (recovered, probes) = CollapsedChildrenRecovery.recover(
                 in: base.withScreenFrame(ctx.transform.pointSize).json,
                 probe: { point in discover(at: point, ctx: ctx, depthCap: 0)?.json },
                 deadline: min(ctx.deadline, Date().addingTimeInterval(recoveryBudget))
             )
-            log("accessibility: recovered with \(probes) probes")
+            log("accessibility: recovered with \(probes) probes in \(Int(Date().timeIntervalSince(started) * 1000)) ms")
             return recovered
         }
         return stale ? nil : tree

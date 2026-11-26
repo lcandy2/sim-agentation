@@ -10,9 +10,11 @@
 // - Logging and perf counters are dropped.
 // - A root with no children at all is probed as a phase-1 container
 //   whatever its role (sim-use's tree source never returns that shape).
-// - Only a flat tree is probed (see `isFlat`): the automation tree that
-//   client type 2 returns is already complete, and probing it spent the
-//   whole budget on empty overlay groups and blind zones for nothing.
+// - Only a flat tree is probed whole (see `isFlat`): the automation tree
+//   that client type 2 returns is complete apart from the status bar, and
+//   probing it whole spent the whole budget on empty overlay groups and
+//   blind zones. A nested tree has only its status-bar strip probed (see
+//   `recoverStatusBar`).
 // The quadtree, budgets, caps, thresholds and blind-zone maths are unchanged.
 
 import CoreGraphics
@@ -54,7 +56,9 @@ public enum CollapsedChildrenRecovery {
         seedCellHeight: Double = defaultSeedCellHeight,
         scanBlindZones: Bool = true
     ) -> (tree: [String: Any], probes: Int) {
-        guard isFlat(root) else { return (root, 0) }
+        guard isFlat(root) else {
+            return recoverStatusBar(in: root, probe: probe, deadline: deadline, maxProbes: min(maxProbes, statusBarMaxProbes))
+        }
         let budget = ProbeBudget(maxProbes, deadline: deadline)
         let tuning = Tuning(
             minCellSize: max(1, minCellSize),
@@ -69,6 +73,97 @@ public enum CollapsedChildrenRecovery {
         let seen = SeenIdentitySet()
         prepopulateSeen(seen, from: root)
         let tree = walk(node: root, probe: probe, budget: budget, tuning: tuning, seen: seen, scanBlindZones: scanBlindZones, isRoot: true)
+        return (tree, maxProbes - budget.remaining)
+    }
+
+    /// The strip at the top of the screen that the status bar draws in, in
+    /// points: as tall as an iPhone's with a Dynamic Island, which holds the
+    /// shorter ones too.
+    public static let statusBarHeight: Double = 54
+    public static let statusBarMaxProbes = 40
+    /// Seed cells across the strip, each its full height: narrow enough that
+    /// a probe at their centres lands on each of the clock, signal, Wi-Fi and
+    /// battery. A miss splits a cell into its top and bottom halves once,
+    /// which reaches the breadcrumb under the clock: at most three probes a
+    /// cell on an empty strip.
+    static let statusBarCellWidth: Double = 34
+
+    /// SpringBoard draws the status bar over every app, so its elements
+    /// (clock, signal, Wi-Fi, battery, the Dynamic Island and the "Return to
+    /// <app>" breadcrumb) are in neither of the app's trees; only a point
+    /// hit-test finds them. Probing a flat tree whole finds them with the
+    /// rest. A nested tree is complete apart from them, so only the strip is
+    /// probed, and what it finds is added to the root, marked `synthesized`.
+    /// Between them a probe can find what the app draws under the bar (a
+    /// header reaching below it): that, like nothing, splits the cell.
+    public static func recoverStatusBar(
+        in root: [String: Any],
+        probe: PointProbe,
+        deadline: Date,
+        maxProbes: Int = statusBarMaxProbes
+    ) -> (tree: [String: Any], probes: Int) {
+        guard let screen = rect(of: root), screen.width > 0, screen.height > 0 else { return (root, 0) }
+        let strip = CGRect(x: screen.minX, y: screen.minY, width: screen.width, height: min(screen.height, CGFloat(statusBarHeight)))
+        let budget = ProbeBudget(maxProbes, deadline: deadline)
+        let seen = SeenIdentitySet()
+        prepopulateSeen(seen, from: root)
+        var queue = WorkQueue()
+        let cellW = CGFloat(statusBarCellWidth)
+        let cols = max(1, Int((strip.width / cellW).rounded(.up)))
+        for col in 0..<cols {
+            let x = strip.minX + CGFloat(col) * cellW
+            queue.push(CGRect(x: x, y: strip.minY, width: min(cellW, strip.maxX - x), height: strip.height))
+        }
+        let touchTargetSlop: CGFloat = 2
+        // Named elements the tree already has in the strip (SpringBoard's
+        // own clock, signal and battery, on the home screen) need no probe.
+        // Only named leaves: a container, such as the status bar itself, or
+        // an empty group (SpringBoard draws the Dynamic Island as several)
+        // can stand where the element a probe finds is missing.
+        func named(_ node: [String: Any]) -> Bool {
+            ["label", "identifier", "title", "value"].contains { !((node[$0] as? String) ?? "").isEmpty }
+        }
+        func inStrip(_ node: [String: Any]) -> [CGRect] {
+            let kids = (node["children"] as? [[String: Any]]) ?? []
+            guard kids.isEmpty else { return kids.flatMap(inStrip) }
+            guard named(node), let own = rect(of: node), own.width > 0, own.height > 0, rectContained(own, in: strip, slack: 1) else { return [] }
+            return [own]
+        }
+        var covered: [CGRect] = inStrip(root)
+        var hits: [[String: Any]] = []
+        func split(_ cell: CGRect) {
+            guard cell.height > strip.height * 0.75 else { return } // a seed, not yet split
+            let half = cell.height / 2
+            queue.push(CGRect(x: cell.minX, y: cell.minY, width: cell.width, height: half))
+            queue.push(CGRect(x: cell.minX, y: cell.minY + half, width: cell.width, height: half))
+        }
+        while let cell = queue.pop(), budget.available {
+            let centre = CGPoint(x: cell.midX, y: cell.midY)
+            if covered.contains(where: { $0.insetBy(dx: -touchTargetSlop, dy: -touchTargetSlop).contains(centre) }) { continue }
+            budget.consume()
+            guard let hit = probe(centre), let hitRect = rect(of: hit), hitRect.width > 0, hitRect.height > 0,
+                  rectContained(hitRect, in: strip, slack: 1)
+            else {
+                split(cell)
+                continue
+            }
+            covered.append(hitRect)
+            // Already in the tree (the app draws in the strip too) or found
+            // by an earlier probe: nothing to add, but the rest of the cell
+            // may hold more.
+            if let key = identityKey(for: hit), !seen.contains(key) {
+                seen.insert(key)
+                var marked = hit
+                marked["synthesized"] = true
+                hits.append(marked)
+            }
+            for remainder in subtract(hitRect, from: cell)
+            where remainder.width * remainder.height > CGFloat(defaultMinCellSize * defaultMinCellSize) {
+                queue.push(remainder)
+            }
+        }
+        var tree = root
+        if !hits.isEmpty { tree["children"] = ((root["children"] as? [[String: Any]]) ?? []) + hits }
         return (tree, maxProbes - budget.remaining)
     }
 
