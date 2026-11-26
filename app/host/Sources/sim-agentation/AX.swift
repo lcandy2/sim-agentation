@@ -8,18 +8,21 @@ enum AX {
         let node: JSONObject
         let depth: Int
         let path: [String]
+        /// The parent's position in the same `flatten` list.
+        var parent: Int? = nil
     }
 
     static func flatten(_ tree: JSONObject) -> [Entry] {
         var out: [Entry] = []
-        func walk(_ node: JSONObject, _ depth: Int, _ path: [String]) {
+        func walk(_ node: JSONObject, _ depth: Int, _ path: [String], _ parent: Int?) {
             let here = path + [describe(node)]
-            out.append(Entry(node: node, depth: depth, path: here))
+            let at = out.count
+            out.append(Entry(node: node, depth: depth, path: here, parent: parent))
             for child in node["children"]?.arrayValue ?? [] {
-                if let child = child.objectValue { walk(child, depth + 1, here) }
+                if let child = child.objectValue { walk(child, depth + 1, here, at) }
             }
         }
-        walk(tree, 0, [])
+        walk(tree, 0, [], nil)
         return out
     }
 
@@ -121,11 +124,15 @@ enum AX {
         return chain[at]
     }
 
+    /// Fields that show their text, or their placeholder, as their value
+    /// (Settings' search field has no label, only the value "Search").
+    private static let fields: Set<String> = ["AXTextField", "AXSecureTextField", "AXTextArea", "AXSearchField", "AXComboBox"]
+
     /// A control the agent can search for: a control (or widget) with a
-    /// label, title or identifier.
+    /// label, title or identifier, or a text field with a value.
     static func actionable(_ node: JSON?) -> Bool {
-        guard let node = node?.objectValue else { return false }
-        return isControl(node) && named(node)
+        guard let node = node?.objectValue, isControl(node) else { return false }
+        return named(node) || (node["role"]?.stringValue.map(fields.contains) == true && !(JS.trimmed(node["value"]) ?? "").isEmpty)
     }
 
     /// How much a node in a box tells the agent, best first: named controls,
@@ -138,22 +145,41 @@ enum AX {
         return JS.same(node?["role"]?.stringValue, "AXImage") ? 2 : 1
     }
 
-    /// Nodes that sit mostly inside a box, best first by `rank`, smallest
-    /// first within a rank. The server keeps the first 20 for the note.
-    /// ax.js sorts by size alone; its one caller re-sorts by position.
-    static func nodesInRect(_ tree: JSONObject, _ rect: JSON) -> [Entry] {
-        flatten(tree)
-            .filter(visible)
-            .filter { intersection($0.node["frame"], rect) >= area($0.node["frame"]) * 0.6 }
-            .map { (entry: $0, rank: rank(.object($0.node))) }
+    /// How many of a box's nodes a note keeps: a whole screen's, on the
+    /// screens measured (Settings' automation tree holds 134 nodes in all).
+    static let insideKept = 200
+
+    /// A box note's `inside`: the nodes that sit mostly inside the box, best
+    /// first by `rank` and smallest first within a rank (ax.js's
+    /// nodesInRect sorts by size alone; its one caller re-sorts by
+    /// position). The first `keep` are summarized, each with `parent`, the
+    /// position in this list of its nearest ancestor that is in it too (null
+    /// for none), so the note can tell what a control holds from what is
+    /// drawn over it. `total` counts them all.
+    static func inside(_ tree: JSONObject, _ rect: JSON, keep: Int = insideKept) -> (nodes: [JSON], total: Int) {
+        let entries = flatten(tree)
+        var position: [Int: Int] = [:]
+        let found = entries.indices
+            .filter { visible(entries[$0]) && intersection(entries[$0].node["frame"], rect) >= area(entries[$0].node["frame"]) * 0.6 }
+            .map { (index: $0, rank: rank(.object(entries[$0].node))) }
             .enumerated()
             .sorted { lhs, rhs in
                 // Array.prototype.sort is stable.
                 if lhs.element.rank != rhs.element.rank { return lhs.element.rank < rhs.element.rank }
-                let a = area(lhs.element.entry.node["frame"]), b = area(rhs.element.entry.node["frame"])
+                let a = area(entries[lhs.element.index].node["frame"]), b = area(entries[rhs.element.index].node["frame"])
                 return a != b ? a < b : lhs.offset < rhs.offset
             }
-            .map(\.element.entry)
+            .map(\.element.index)
+        let kept = Array(found.prefix(keep))
+        for (k, i) in kept.enumerated() { position[i] = k }
+        let nodes = kept.map { i -> JSON in
+            var up = entries[i].parent
+            while let p = up, position[p] == nil { up = entries[p].parent }
+            var summary = summarize(entries[i].node).objectValue ?? JSONObject()
+            summary["parent"] = up.flatMap { position[$0] }.map { .number(Double($0)) } ?? .null
+            return .object(summary)
+        }
+        return (nodes, found.count)
     }
 
     private static let statusBar = 54.0 // pt; clock, battery and signal live above this

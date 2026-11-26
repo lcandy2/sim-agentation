@@ -40,7 +40,7 @@ enum Format {
     }
 
     /// Lines listed under "Inside the box"; the rest are counted.
-    private static let insideLines = 12
+    private static let insideLines = 20
     /// What a control's line names of the things drawn in it; the rest are counted.
     private static let shownPerControl = 3
 
@@ -51,45 +51,73 @@ enum Format {
     }
 
     /// What the box holds, one line each: named controls first, then other
-    /// named elements, images and unnamed wrappers (`AX.rank`), smallest
-    /// first within each. Whatever sits mostly in a listed control goes on
-    /// that control's line, so a bar's icons, text runs and wrapper groups
-    /// don't push its controls off the list. Of the controls it overlaps, the
-    /// one covering most of it holds it (a neighbour can overlap a tab's
-    /// icon too), then the smallest (the inner of nested controls).
+    /// named elements, images and unnamed elements (`AX.rank`), smallest
+    /// first within each. With the tree's ancestry (each node's `parent`, a
+    /// position in the same list), what a listed control holds goes on that
+    /// control's line, so a bar's icons, text runs and wrapper groups don't
+    /// push its controls off the list, and an unnamed wrapper around a
+    /// listed element adds nothing and is left out. Only descendants fold:
+    /// something drawn over a control, such as a floating search field over
+    /// a list row, keeps its own line. Notes saved without ancestry list
+    /// every node. Lines that read the same (the automation tree can hold an
+    /// element twice) are one line. The last line counts what didn't fit,
+    /// including nodes the server didn't keep (`insideTotal`).
     private static func inside(_ a: JSONObject, besides target: JSON?) -> [String] {
+        let given = items(a["inside"])
         // Stable, so notes stored smallest first come out the same as new ones.
-        let all = items(a["inside"]).filter { !strictEquals($0, target) }
+        let order = given.indices.filter { !strictEquals(given[$0], target) }
             .enumerated()
-            .sorted { AX.rank($0.element) != AX.rank($1.element) ? AX.rank($0.element) < AX.rank($1.element) : $0.offset < $1.offset }
-            .map(\.element)
-        let controls = all.indices.filter { AX.actionable(all[$0]) }
-        func area(_ i: Int) -> Double { AX.area(all[i]["frame"]) }
-        let holder: [Int?] = all.indices.map { i in
-            guard !AX.actionable(all[i]) else { return nil }
-            func shared(_ j: Int) -> Double { AX.intersection(all[i]["frame"], all[j]["frame"]) }
-            return controls
-                .filter { j in area(j) >= area(i) && shared(j) >= area(i) * 0.6 }
-                .min { shared($0) != shared($1) ? shared($0) > shared($1) : area($0) < area($1) }
-        }
-        var lines: [String] = []
-        for (j, n) in all.enumerated() where holder[j] == nil {
-            // Only what adds a name the control's own line doesn't print.
-            let shown = all.indices.filter { holder[$0] == j }.map { all[$0] }.filter { m in
-                let label = JS.trimmed(m["label"]) ?? ""
-                return (!label.isEmpty && !JS.same(label, JS.trimmed(n["label"])))
-                    || (JS.truthy(m["identifier"]) && !strictEquals(m["identifier"], n["identifier"]))
-            }.map(node).reduce(into: [String]()) { seen, name in
-                // The automation tree can hold the same text run twice in one control.
-                if !seen.contains(name) { seen.append(name) }
+            .sorted { lhs, rhs in
+                let l = AX.rank(given[lhs.element]), r = AX.rank(given[rhs.element])
+                return l != r ? l < r : lhs.offset < rhs.offset
             }
+            .map(\.element)
+        func parent(_ i: Int) -> Int? {
+            guard let p = given[i]["parent"]?.numberValue, p >= 0, p < Double(given.count), p == p.rounded() else { return nil }
+            return Int(p)
+        }
+        // Innermost first; a malformed list that loops stops after a full pass.
+        func ancestors(_ i: Int) -> [Int] {
+            var out: [Int] = []
+            var at = parent(i)
+            while let p = at, p != i, out.count < given.count { out.append(p); at = parent(p) }
+            return out
+        }
+        let holder: [Int: Int] = Dictionary(uniqueKeysWithValues: given.indices.compactMap { i in
+            guard !AX.actionable(given[i]), let j = ancestors(i).first(where: { AX.actionable(given[$0]) }) else { return nil }
+            return (i, j)
+        })
+        let listed = order.filter { holder[$0] == nil }
+        var around = Set<Int>()
+        for i in listed { around.formUnion(ancestors(i)) }
+        var lines: [(head: String, shown: [String])] = []
+        for j in listed where !(AX.rank(given[j]) == 3 && around.contains(j)) {
+            let n = given[j]
+            // Only what adds a name the control's own line doesn't print.
+            let own = [n["label"], n["value"], n["identifier"]].compactMap { JS.trimmed($0) }.filter { !$0.isEmpty }
+            let shown = order.filter { holder[$0] == j }.map { given[$0] }.filter { m in
+                let label = JS.trimmed(m["label"]) ?? ""
+                return (!label.isEmpty && !own.contains { JS.same($0, label) })
+                    || (JS.truthy(m["identifier"]) && !strictEquals(m["identifier"], n["identifier"]))
+            }.map(node)
+            let head = "\(node(n)) at \(frame(n["frame"]))"
+            if let k = lines.firstIndex(where: { $0.head == head }) {
+                lines[k].shown += shown
+            } else {
+                lines.append((head, shown))
+            }
+        }
+        let text = lines.map { line in
+            // The automation tree can hold the same text run twice in one control.
+            let shown = line.shown.reduce(into: [String]()) { seen, name in if !seen.contains(name) { seen.append(name) } }
             let named = shown.count > shownPerControl
                 ? shown.prefix(shownPerControl) + ["\(shown.count - shownPerControl) more"]
                 : shown
-            lines.append("\(node(n)) at \(frame(n["frame"]))" + (named.isEmpty ? "" : ", showing \(list(Array(named)))"))
+            return line.head + (named.isEmpty ? "" : ", showing \(list(Array(named)))")
         }
-        guard lines.count > insideLines else { return lines }
-        return lines.prefix(insideLines) + ["and \(lines.count - insideLines) more"]
+        let dropped = max(0, Int(a["insideTotal"]?.numberValue ?? 0) - given.count)
+        let more = max(0, text.count - insideLines) + dropped
+        return more > 0 ? text.prefix(insideLines) + ["and \(more) more"] : text
     }
 
     /// Strings worth grepping the Swift sources for. With several picked

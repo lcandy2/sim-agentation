@@ -1,0 +1,2622 @@
+{
+ "title": null,
+ "enabled": true,
+ "frame": {
+  "x": 0,
+  "height": 874,
+  "width": 402,
+  "y": 0
+ },
+ "value": null,
+ "hidden": false,
+ "subrole": null,
+ "label": "Settings",
+ "identifier": null,
+ "children": [
+  {
+   "role": "AXGroup",
+   "focused": false,
+   "hidden": false,
+   "value": null,
+   "enabled": true,
+   "label": null,
+   "identifier": null,
+   "subrole": null,
+   "title": null,
+   "children": [
+    {
+     "hidden": false,
+     "subrole": null,
+     "children": [
+      {
+       "value": null,
+       "enabled": true,
+       "hidden": false,
+       "help": null,
+       "label": null,
+       "role": "AXGroup",
+       "subrole": null,
+       "identifier": null,
+       "title": null,
+       "focused": false,
+       "children": [
+        {
+         "subrole": null,
+         "title": null,
+         "frame": {
+          "width": 402,
+          "height": 874,
+          "y": 0,
+          "x": 0
+         },
+         "focused": false,
+         "children": [
+          {
+           "hidden": false,
+           "subrole": null,
+           "help": null,
+           "enabled": true,
+           "role": "AXGroup",
+           "identifier": null,
+           "children": [
+            {
+             "children": [
+              {
+               "label": null,
+               "enabled": true,
+               "children": [
+                {
+                 "children": [
+                  {
+                   "subrole": null,
+                   "enabled": true,
+                   "help": null,
+                   "frame": {
+                    "width": 402,
+                    "x": 0,
+                    "y": 0,
+                    "height": 874
+                   },
+                   "role": "AXGroup",
+                   "title": null,
+                   "focused": false,
+                   "value": null,
+                   "children": [
+                    {
+                     "children": [
+                      {
+                       "role": "AXGroup",
+                       "identifier": "Settings",
+                       "title": null,
+                       "value": null,
+                       "enabled": true,
+                       "hidden": false,
+                       "children": [
+                        {
+                         "children": [],
+                         "subrole": null,
+                         "enabled": true,
+                         "hidden": false,
+                         "title": null,
+                         "focused": false,
+                         "role": "AXHeading",
+                         "value": null,
+                         "help": null,
+                         "frame": {
+                          "y": 119.66666666666667,
+                          "height": 40.66666666666667,
+                          "x": 16,
+                          "width": 133
+                         },
+                         "identifier": null,
+                         "label": "Settings"
+                        }
+                       ],
+                       "frame": {
+                        "x": 0,
+                        "width": 402,
+                        "height": 106,
+                        "y": 62
+                       },
+                       "label": null,
+                       "subrole": null,
+                       "help": null,
+                       "focused": false
+                      },
+                      {
+                       "identifier": null,
+                       "hidden": false,
+                       "title": null,
+                       "subrole": null,
+                       "label": null,
+                       "frame": {
+                        "x": 0,
+                        "height": 874,
+                        "width": 402,
+                        "y": 0
+                       },
+                       "enabled": true,
+                       "focused": false,
+                       "children": [
+                        {
+                         "identifier": null,
+                         "title": null,
+                         "enabled": true,
+                         "role": "AXGroup",
+                         "focused": false,
+                         "subrole": null,
+                         "hidden": false,
+                         "label": null,
+                         "value": null,
+                         "frame": {
+                          "height": 874,
+                          "x": 0,
+                          "y": 0,
+                          "width": 402
+                         },
+                         "children": [
+                          {
+                           "enabled": true,
+                           "subrole": null,
+                           "identifier": null,
+                           "value": null,
+                           "label": null,
+                           "title": null,
+                           "hidden": false,
+                           "children": [
+                            {
+                             "role": "AXGroup",
+                             "subrole": null,
+                             "help": null,
+                             "identifier": null,
+                             "enabled": true,
+                             "focused": false,
+                             "hidden": false,
+                             "frame": {
+                              "x": 0,
+                              "y": 0,
+                              "width": 402,
+                              "height": 874
+                             },
+                             "label": null,
+                             "children": [
+                              {
+                               "frame": {
+                                "width": 402,
+                                "y": 0,
+                                "x": 0,
+                                "height": 874
+                               },
+                               "children": [
+                                {
+                                 "children": [],
+                                 "value": null,
+                                 "help": null,
+                                 "title": null,
+                                 "subrole": null,
+                                 "role": "AXGroup",
+                                 "identifier": null,
+                                 "frame": {
+                                  "x": -16,
+                                  "height": 1856,
+                                  "y": -1580,
+                                  "width": 434
+                                 },
+                                 "enabled": true,
+                                 "label": null,
+                                 "focused": false,
+                                 "hidden": false
+                                },
+                                {
+                                 "value": null,
+                                 "title": null,
+                                 "label": null,
+                                 "identifier": null,
+                                 "frame": {
+                                  "y": 0,
+                                  "height": 874,
+                                  "x": 0,
+                                  "width": 402
+                                 },
+                                 "focused": false,
+                                 "subrole": null,
+                                 "help": null,
+                                 "hidden": false,
+                                 "children": [
+                                  {
+                                   "identifier": null,
+                                   "frame": {
+                                    "height": 102,
+                                    "y": 0,
+                                    "width": 402,
+                                    "x": 0
+                                   },
+                                   "subrole": null,
+                                   "label": null,
+                                   "help": null,
+                                   "focused": false,
+                                   "hidden": false,
+                                   "value": null,
+                                   "enabled": true,
+                                   "children": [],
+                                   "title": null,
+                                   "role": "AXGroup"
+                                  },
+                                  {
+                                   "children": [],
+                                   "value": null,
+                                   "subrole": null,
+                                   "hidden": false,
+                                   "frame": {
+                                    "width": 402,
+                                    "y": 748,
+                                    "x": 0,
+                                    "height": 126
+                                   },
+                                   "enabled": true,
+                                   "role": "AXGroup",
+                                   "focused": false,
+                                   "label": null,
+                                   "identifier": null,
+                                   "title": null,
+                                   "help": null
+                                  }
+                                 ],
+                                 "role": "AXGroup",
+                                 "enabled": true
+                                },
+                                {
+                                 "subrole": null,
+                                 "role": "AXGroup",
+                                 "value": null,
+                                 "title": null,
+                                 "hidden": false,
+                                 "identifier": null,
+                                 "focused": false,
+                                 "enabled": true,
+                                 "frame": {
+                                  "y": 0,
+                                  "height": 874,
+                                  "x": 0,
+                                  "width": 402
+                                 },
+                                 "label": null,
+                                 "help": null,
+                                 "children": [
+                                  {
+                                   "title": null,
+                                   "help": null,
+                                   "identifier": null,
+                                   "frame": {
+                                    "x": 0,
+                                    "y": 748,
+                                    "width": 402,
+                                    "height": 126
+                                   },
+                                   "enabled": true,
+                                   "label": null,
+                                   "hidden": false,
+                                   "focused": false,
+                                   "children": [],
+                                   "role": "AXGroup",
+                                   "subrole": null,
+                                   "value": null
+                                  }
+                                 ]
+                                },
+                                {
+                                 "help": null,
+                                 "title": null,
+                                 "label": null,
+                                 "subrole": null,
+                                 "children": [
+                                  {
+                                   "children": [
+                                    {
+                                     "role": "AXGroup",
+                                     "help": null,
+                                     "hidden": false,
+                                     "subrole": null,
+                                     "label": null,
+                                     "frame": {
+                                      "height": 90.33333333333331,
+                                      "x": 16,
+                                      "y": 168,
+                                      "width": 370
+                                     },
+                                     "value": null,
+                                     "identifier": null,
+                                     "enabled": true,
+                                     "title": null,
+                                     "focused": false,
+                                     "children": [
+                                      {
+                                       "subrole": null,
+                                       "title": null,
+                                       "focused": false,
+                                       "hidden": false,
+                                       "enabled": true,
+                                       "children": [
+                                        {
+                                         "title": null,
+                                         "identifier": "apple.id",
+                                         "enabled": true,
+                                         "subrole": null,
+                                         "focused": false,
+                                         "children": [],
+                                         "label": "apple.id",
+                                         "hidden": false,
+                                         "value": null,
+                                         "help": null,
+                                         "frame": {
+                                          "x": 36,
+                                          "y": 183,
+                                          "width": 60,
+                                          "height": 60.333333333333314
+                                         },
+                                         "role": "AXImage"
+                                        },
+                                        {
+                                         "label": "Apple Account",
+                                         "subrole": null,
+                                         "children": [],
+                                         "help": null,
+                                         "focused": false,
+                                         "enabled": true,
+                                         "value": null,
+                                         "identifier": null,
+                                         "title": null,
+                                         "role": "AXStaticText",
+                                         "frame": {
+                                          "y": 183,
+                                          "x": 104,
+                                          "width": 138.33333333333331,
+                                          "height": 24
+                                         },
+                                         "hidden": false
+                                        },
+                                        {
+                                         "label": "Sign in to access your iCloud data, the App Store, Apple services, and more.",
+                                         "title": null,
+                                         "hidden": false,
+                                         "children": [],
+                                         "role": "AXStaticText",
+                                         "value": null,
+                                         "subrole": null,
+                                         "help": null,
+                                         "frame": {
+                                          "y": 209.66666666666666,
+                                          "height": 33.66666666666666,
+                                          "x": 104,
+                                          "width": 236
+                                         },
+                                         "identifier": null,
+                                         "enabled": true,
+                                         "focused": false
+                                        },
+                                        {
+                                         "children": [],
+                                         "label": null,
+                                         "identifier": "chevron.forward",
+                                         "help": null,
+                                         "frame": {
+                                          "x": 356.6666666666667,
+                                          "height": 12,
+                                          "y": 207,
+                                          "width": 7
+                                         },
+                                         "subrole": null,
+                                         "title": null,
+                                         "focused": false,
+                                         "enabled": true,
+                                         "hidden": false,
+                                         "role": "AXImage",
+                                         "value": null
+                                        }
+                                       ],
+                                       "value": null,
+                                       "role": "AXButton",
+                                       "label": "Apple Account, Sign in to access your iCloud data, the App Store, Apple services, and more.",
+                                       "identifier": "com.apple.settings.primaryAppleAccount",
+                                       "help": null,
+                                       "frame": {
+                                        "width": 370,
+                                        "y": 168,
+                                        "height": 90.33333333333331,
+                                        "x": 16
+                                       }
+                                      }
+                                     ]
+                                    }
+                                   ],
+                                   "frame": {
+                                    "x": 16,
+                                    "height": 90.33333333333331,
+                                    "width": 370,
+                                    "y": 168
+                                   },
+                                   "label": null,
+                                   "subrole": null,
+                                   "role": "AXGroup",
+                                   "help": null,
+                                   "title": null,
+                                   "enabled": true,
+                                   "value": null,
+                                   "identifier": null,
+                                   "focused": false,
+                                   "hidden": false
+                                  }
+                                 ],
+                                 "value": null,
+                                 "hidden": false,
+                                 "focused": false,
+                                 "frame": {
+                                  "x": 16,
+                                  "height": 90.33333333333331,
+                                  "y": 168,
+                                  "width": 370
+                                 },
+                                 "enabled": true,
+                                 "role": "AXGroup",
+                                 "identifier": null
+                                },
+                                {
+                                 "subrole": null,
+                                 "title": null,
+                                 "children": [],
+                                 "label": null,
+                                 "role": "AXGroup",
+                                 "frame": {
+                                  "width": 434,
+                                  "y": 276,
+                                  "x": -16,
+                                  "height": 503
+                                 },
+                                 "enabled": true,
+                                 "focused": false,
+                                 "identifier": null,
+                                 "hidden": false,
+                                 "value": null,
+                                 "help": null
+                                },
+                                {
+                                 "hidden": false,
+                                 "frame": {
+                                  "x": 16,
+                                  "y": 293.3333333333333,
+                                  "width": 370,
+                                  "height": 52
+                                 },
+                                 "children": [
+                                  {
+                                   "focused": false,
+                                   "hidden": false,
+                                   "help": null,
+                                   "children": [
+                                    {
+                                     "hidden": false,
+                                     "subrole": null,
+                                     "identifier": null,
+                                     "frame": {
+                                      "x": 16,
+                                      "width": 370,
+                                      "y": 293.3333333333333,
+                                      "height": 52
+                                     },
+                                     "label": null,
+                                     "value": null,
+                                     "enabled": true,
+                                     "title": null,
+                                     "help": null,
+                                     "children": [
+                                      {
+                                       "subrole": null,
+                                       "children": [
+                                        {
+                                         "title": null,
+                                         "subrole": null,
+                                         "identifier": null,
+                                         "help": null,
+                                         "enabled": true,
+                                         "value": null,
+                                         "label": null,
+                                         "focused": false,
+                                         "frame": {
+                                          "width": 28,
+                                          "y": 305.3333333333333,
+                                          "height": 28,
+                                          "x": 34
+                                         },
+                                         "hidden": false,
+                                         "role": "AXImage",
+                                         "children": []
+                                        },
+                                        {
+                                         "subrole": null,
+                                         "identifier": null,
+                                         "title": null,
+                                         "frame": {
+                                          "x": 34,
+                                          "y": 305.3333435058594,
+                                          "width": 101.33332824707031,
+                                          "height": 28
+                                         },
+                                         "enabled": true,
+                                         "label": "General",
+                                         "value": null,
+                                         "help": null,
+                                         "focused": false,
+                                         "hidden": false,
+                                         "children": [],
+                                         "role": "AXStaticText"
+                                        },
+                                        {
+                                         "help": null,
+                                         "title": null,
+                                         "subrole": null,
+                                         "identifier": "chevron.forward",
+                                         "hidden": false,
+                                         "value": null,
+                                         "frame": {
+                                          "x": 356.6666666666667,
+                                          "width": 7,
+                                          "y": 313.3333333333333,
+                                          "height": 12
+                                         },
+                                         "enabled": true,
+                                         "children": [],
+                                         "label": null,
+                                         "role": "AXImage",
+                                         "focused": false
+                                        }
+                                       ],
+                                       "label": "General",
+                                       "frame": {
+                                        "width": 370,
+                                        "y": 293.3333333333333,
+                                        "height": 52,
+                                        "x": 16
+                                       },
+                                       "identifier": "com.apple.settings.general",
+                                       "role": "AXButton",
+                                       "title": null,
+                                       "hidden": false,
+                                       "help": null,
+                                       "enabled": true,
+                                       "value": null,
+                                       "focused": false
+                                      }
+                                     ],
+                                     "role": "AXGroup",
+                                     "focused": false
+                                    }
+                                   ],
+                                   "value": null,
+                                   "enabled": true,
+                                   "identifier": null,
+                                   "label": null,
+                                   "role": "AXGroup",
+                                   "frame": {
+                                    "width": 370,
+                                    "x": 16,
+                                    "y": 293.3333333333333,
+                                    "height": 52
+                                   },
+                                   "subrole": null,
+                                   "title": null
+                                  }
+                                 ],
+                                 "subrole": null,
+                                 "value": null,
+                                 "role": "AXGroup",
+                                 "title": null,
+                                 "help": null,
+                                 "label": null,
+                                 "enabled": true,
+                                 "identifier": null,
+                                 "focused": false
+                                },
+                                {
+                                 "focused": false,
+                                 "subrole": null,
+                                 "label": null,
+                                 "value": null,
+                                 "hidden": false,
+                                 "role": "AXGroup",
+                                 "children": [
+                                  {
+                                   "title": null,
+                                   "subrole": null,
+                                   "role": "AXGroup",
+                                   "identifier": null,
+                                   "hidden": false,
+                                   "children": [
+                                    {
+                                     "role": "AXGroup",
+                                     "value": null,
+                                     "focused": false,
+                                     "children": [
+                                      {
+                                       "enabled": true,
+                                       "label": "Accessibility",
+                                       "hidden": false,
+                                       "children": [
+                                        {
+                                         "subrole": null,
+                                         "role": "AXImage",
+                                         "identifier": null,
+                                         "help": null,
+                                         "hidden": false,
+                                         "children": [],
+                                         "title": null,
+                                         "enabled": true,
+                                         "focused": false,
+                                         "label": null,
+                                         "value": null,
+                                         "frame": {
+                                          "height": 28,
+                                          "x": 34,
+                                          "y": 357.33333333333337,
+                                          "width": 28
+                                         }
+                                        },
+                                        {
+                                         "role": "AXStaticText",
+                                         "identifier": null,
+                                         "title": null,
+                                         "focused": false,
+                                         "help": null,
+                                         "hidden": false,
+                                         "value": null,
+                                         "enabled": true,
+                                         "subrole": null,
+                                         "label": "Accessibility",
+                                         "frame": {
+                                          "width": 136.66665649414062,
+                                          "height": 28,
+                                          "x": 34,
+                                          "y": 357.3333435058594
+                                         },
+                                         "children": []
+                                        },
+                                        {
+                                         "label": null,
+                                         "title": null,
+                                         "frame": {
+                                          "width": 7,
+                                          "height": 12,
+                                          "y": 365.33333333333337,
+                                          "x": 356.6666666666667
+                                         },
+                                         "identifier": "chevron.forward",
+                                         "role": "AXImage",
+                                         "subrole": null,
+                                         "help": null,
+                                         "enabled": true,
+                                         "hidden": false,
+                                         "value": null,
+                                         "focused": false,
+                                         "children": []
+                                        }
+                                       ],
+                                       "focused": false,
+                                       "subrole": null,
+                                       "title": null,
+                                       "frame": {
+                                        "width": 370,
+                                        "height": 52,
+                                        "x": 16,
+                                        "y": 345.33333333333337
+                                       },
+                                       "role": "AXButton",
+                                       "value": null,
+                                       "identifier": "com.apple.settings.accessibility",
+                                       "help": null
+                                      }
+                                     ],
+                                     "hidden": false,
+                                     "frame": {
+                                      "width": 370,
+                                      "height": 52,
+                                      "x": 16,
+                                      "y": 345.33333333333337
+                                     },
+                                     "subrole": null,
+                                     "title": null,
+                                     "label": null,
+                                     "help": null,
+                                     "enabled": true,
+                                     "identifier": null
+                                    }
+                                   ],
+                                   "enabled": true,
+                                   "help": null,
+                                   "focused": false,
+                                   "frame": {
+                                    "y": 345.33333333333337,
+                                    "height": 52,
+                                    "x": 16,
+                                    "width": 370
+                                   },
+                                   "label": null,
+                                   "value": null
+                                  }
+                                 ],
+                                 "identifier": null,
+                                 "enabled": true,
+                                 "title": null,
+                                 "help": null,
+                                 "frame": {
+                                  "x": 16,
+                                  "width": 370,
+                                  "height": 52,
+                                  "y": 345.33333333333337
+                                 }
+                                },
+                                {
+                                 "value": null,
+                                 "help": null,
+                                 "identifier": null,
+                                 "frame": {
+                                  "x": 76,
+                                  "width": 290,
+                                  "height": 1,
+                                  "y": 344.33333333333337
+                                 },
+                                 "children": [],
+                                 "enabled": true,
+                                 "focused": false,
+                                 "label": null,
+                                 "title": null,
+                                 "subrole": null,
+                                 "hidden": false,
+                                 "role": "AXGroup"
+                                },
+                                {
+                                 "hidden": false,
+                                 "title": null,
+                                 "frame": {
+                                  "y": 397.33333333333337,
+                                  "x": 16,
+                                  "height": 52,
+                                  "width": 370
+                                 },
+                                 "focused": false,
+                                 "enabled": true,
+                                 "subrole": null,
+                                 "help": null,
+                                 "value": null,
+                                 "role": "AXGroup",
+                                 "label": null,
+                                 "identifier": null,
+                                 "children": [
+                                  {
+                                   "hidden": false,
+                                   "focused": false,
+                                   "enabled": true,
+                                   "frame": {
+                                    "width": 370,
+                                    "y": 397.33333333333337,
+                                    "height": 52,
+                                    "x": 16
+                                   },
+                                   "role": "AXGroup",
+                                   "children": [
+                                    {
+                                     "title": null,
+                                     "enabled": true,
+                                     "role": "AXGroup",
+                                     "children": [
+                                      {
+                                       "label": "Action Button",
+                                       "value": null,
+                                       "help": null,
+                                       "subrole": null,
+                                       "children": [
+                                        {
+                                         "identifier": null,
+                                         "role": "AXImage",
+                                         "subrole": null,
+                                         "title": null,
+                                         "help": null,
+                                         "value": null,
+                                         "enabled": true,
+                                         "focused": false,
+                                         "hidden": false,
+                                         "children": [],
+                                         "label": null,
+                                         "frame": {
+                                          "height": 28,
+                                          "x": 34,
+                                          "y": 409.33333333333337,
+                                          "width": 28
+                                         }
+                                        },
+                                        {
+                                         "identifier": null,
+                                         "frame": {
+                                          "y": 409.3333435058594,
+                                          "width": 145.66665649414062,
+                                          "x": 34,
+                                          "height": 28
+                                         },
+                                         "label": "Action Button",
+                                         "help": null,
+                                         "hidden": false,
+                                         "role": "AXStaticText",
+                                         "enabled": true,
+                                         "children": [],
+                                         "focused": false,
+                                         "title": null,
+                                         "value": null,
+                                         "subrole": null
+                                        },
+                                        {
+                                         "focused": false,
+                                         "help": null,
+                                         "identifier": "chevron.forward",
+                                         "children": [],
+                                         "value": null,
+                                         "subrole": null,
+                                         "label": null,
+                                         "enabled": true,
+                                         "hidden": false,
+                                         "role": "AXImage",
+                                         "frame": {
+                                          "x": 356.6666666666667,
+                                          "width": 7,
+                                          "height": 12,
+                                          "y": 417.33333333333337
+                                         },
+                                         "title": null
+                                        }
+                                       ],
+                                       "title": null,
+                                       "enabled": true,
+                                       "identifier": "com.apple.settings.actionButton",
+                                       "focused": false,
+                                       "role": "AXButton",
+                                       "frame": {
+                                        "x": 16,
+                                        "height": 52,
+                                        "y": 397.33333333333337,
+                                        "width": 370
+                                       },
+                                       "hidden": false
+                                      }
+                                     ],
+                                     "identifier": null,
+                                     "frame": {
+                                      "width": 370,
+                                      "height": 52,
+                                      "y": 397.33333333333337,
+                                      "x": 16
+                                     },
+                                     "label": null,
+                                     "focused": false,
+                                     "help": null,
+                                     "subrole": null,
+                                     "value": null,
+                                     "hidden": false
+                                    }
+                                   ],
+                                   "label": null,
+                                   "subrole": null,
+                                   "identifier": null,
+                                   "value": null,
+                                   "title": null,
+                                   "help": null
+                                  }
+                                 ]
+                                },
+                                {
+                                 "label": null,
+                                 "identifier": null,
+                                 "title": null,
+                                 "help": null,
+                                 "enabled": true,
+                                 "focused": false,
+                                 "hidden": false,
+                                 "children": [],
+                                 "subrole": null,
+                                 "value": null,
+                                 "frame": {
+                                  "height": 1,
+                                  "x": 76,
+                                  "y": 396.33333333333337,
+                                  "width": 290
+                                 },
+                                 "role": "AXGroup"
+                                },
+                                {
+                                 "title": null,
+                                 "identifier": null,
+                                 "label": null,
+                                 "subrole": null,
+                                 "role": "AXGroup",
+                                 "help": null,
+                                 "enabled": true,
+                                 "hidden": false,
+                                 "children": [
+                                  {
+                                   "enabled": true,
+                                   "value": null,
+                                   "hidden": false,
+                                   "children": [
+                                    {
+                                     "label": null,
+                                     "title": null,
+                                     "identifier": null,
+                                     "subrole": null,
+                                     "children": [
+                                      {
+                                       "value": null,
+                                       "enabled": true,
+                                       "label": "Appearance",
+                                       "subrole": null,
+                                       "frame": {
+                                        "height": 52,
+                                        "x": 16,
+                                        "y": 449.3333333333333,
+                                        "width": 370
+                                       },
+                                       "title": null,
+                                       "hidden": false,
+                                       "role": "AXButton",
+                                       "help": null,
+                                       "children": [
+                                        {
+                                         "hidden": false,
+                                         "children": [],
+                                         "focused": false,
+                                         "identifier": null,
+                                         "title": null,
+                                         "frame": {
+                                          "height": 28,
+                                          "x": 34,
+                                          "y": 461.3333333333333,
+                                          "width": 28
+                                         },
+                                         "value": null,
+                                         "role": "AXImage",
+                                         "subrole": null,
+                                         "label": null,
+                                         "help": null,
+                                         "enabled": true
+                                        },
+                                        {
+                                         "title": null,
+                                         "help": null,
+                                         "role": "AXStaticText",
+                                         "value": null,
+                                         "frame": {
+                                          "y": 461.3333435058594,
+                                          "x": 34,
+                                          "width": 134,
+                                          "height": 28
+                                         },
+                                         "subrole": null,
+                                         "identifier": null,
+                                         "label": "Appearance",
+                                         "hidden": false,
+                                         "children": [],
+                                         "focused": false,
+                                         "enabled": true
+                                        },
+                                        {
+                                         "label": null,
+                                         "focused": false,
+                                         "subrole": null,
+                                         "help": null,
+                                         "value": null,
+                                         "enabled": true,
+                                         "frame": {
+                                          "height": 12,
+                                          "x": 356.6666666666667,
+                                          "y": 469.3333333333333,
+                                          "width": 7
+                                         },
+                                         "hidden": false,
+                                         "identifier": "chevron.forward",
+                                         "children": [],
+                                         "role": "AXImage",
+                                         "title": null
+                                        }
+                                       ],
+                                       "focused": false,
+                                       "identifier": "com.apple.settings.appearance"
+                                      }
+                                     ],
+                                     "focused": false,
+                                     "role": "AXGroup",
+                                     "help": null,
+                                     "value": null,
+                                     "enabled": true,
+                                     "hidden": false,
+                                     "frame": {
+                                      "y": 449.3333333333333,
+                                      "x": 16,
+                                      "width": 370,
+                                      "height": 52
+                                     }
+                                    }
+                                   ],
+                                   "label": null,
+                                   "frame": {
+                                    "height": 52,
+                                    "x": 16,
+                                    "width": 370,
+                                    "y": 449.3333333333333
+                                   },
+                                   "identifier": null,
+                                   "subrole": null,
+                                   "help": null,
+                                   "focused": false,
+                                   "role": "AXGroup",
+                                   "title": null
+                                  }
+                                 ],
+                                 "frame": {
+                                  "x": 16,
+                                  "width": 370,
+                                  "height": 52,
+                                  "y": 449.3333333333333
+                                 },
+                                 "value": null,
+                                 "focused": false
+                                },
+                                {
+                                 "focused": false,
+                                 "enabled": true,
+                                 "hidden": false,
+                                 "title": null,
+                                 "subrole": null,
+                                 "frame": {
+                                  "x": 76,
+                                  "width": 290,
+                                  "height": 1,
+                                  "y": 448.3333333333333
+                                 },
+                                 "value": null,
+                                 "children": [],
+                                 "label": null,
+                                 "role": "AXGroup",
+                                 "identifier": null,
+                                 "help": null
+                                },
+                                {
+                                 "title": null,
+                                 "frame": {
+                                  "x": 16,
+                                  "y": 501.3333333333333,
+                                  "height": 51.99999999999994,
+                                  "width": 370
+                                 },
+                                 "role": "AXGroup",
+                                 "subrole": null,
+                                 "help": null,
+                                 "focused": false,
+                                 "label": null,
+                                 "enabled": true,
+                                 "identifier": null,
+                                 "value": null,
+                                 "hidden": false,
+                                 "children": [
+                                  {
+                                   "identifier": null,
+                                   "hidden": false,
+                                   "help": null,
+                                   "children": [
+                                    {
+                                     "enabled": true,
+                                     "help": null,
+                                     "hidden": false,
+                                     "identifier": null,
+                                     "subrole": null,
+                                     "children": [
+                                      {
+                                       "help": null,
+                                       "label": "Camera",
+                                       "role": "AXButton",
+                                       "identifier": "com.apple.settings.camera",
+                                       "enabled": true,
+                                       "subrole": null,
+                                       "title": null,
+                                       "focused": false,
+                                       "children": [
+                                        {
+                                         "value": null,
+                                         "subrole": null,
+                                         "title": null,
+                                         "label": "Camera",
+                                         "identifier": null,
+                                         "help": null,
+                                         "frame": {
+                                          "x": 34,
+                                          "height": 28,
+                                          "y": 513.3333129882812,
+                                          "width": 101.33332824707031
+                                         },
+                                         "enabled": true,
+                                         "focused": false,
+                                         "hidden": false,
+                                         "role": "AXStaticText",
+                                         "children": []
+                                        },
+                                        {
+                                         "subrole": null,
+                                         "role": "AXImage",
+                                         "label": null,
+                                         "value": null,
+                                         "enabled": true,
+                                         "focused": false,
+                                         "hidden": false,
+                                         "identifier": null,
+                                         "children": [],
+                                         "frame": {
+                                          "x": 34,
+                                          "width": 28,
+                                          "height": 28,
+                                          "y": 513.3333333333333
+                                         },
+                                         "help": null,
+                                         "title": null
+                                        },
+                                        {
+                                         "frame": {
+                                          "y": 521.3333333333333,
+                                          "height": 12,
+                                          "width": 7,
+                                          "x": 356.6666666666667
+                                         },
+                                         "identifier": "chevron.forward",
+                                         "focused": false,
+                                         "help": null,
+                                         "enabled": true,
+                                         "role": "AXImage",
+                                         "hidden": false,
+                                         "children": [],
+                                         "title": null,
+                                         "subrole": null,
+                                         "label": null,
+                                         "value": null
+                                        }
+                                       ],
+                                       "value": null,
+                                       "hidden": false,
+                                       "frame": {
+                                        "width": 370,
+                                        "y": 501.3333333333333,
+                                        "height": 51.99999999999994,
+                                        "x": 16
+                                       }
+                                      }
+                                     ],
+                                     "focused": false,
+                                     "role": "AXGroup",
+                                     "title": null,
+                                     "label": null,
+                                     "value": null,
+                                     "frame": {
+                                      "width": 370,
+                                      "y": 501.3333333333333,
+                                      "height": 51.99999999999994,
+                                      "x": 16
+                                     }
+                                    }
+                                   ],
+                                   "enabled": true,
+                                   "subrole": null,
+                                   "title": null,
+                                   "focused": false,
+                                   "label": null,
+                                   "role": "AXGroup",
+                                   "value": null,
+                                   "frame": {
+                                    "y": 501.3333333333333,
+                                    "x": 16,
+                                    "width": 370,
+                                    "height": 51.99999999999994
+                                   }
+                                  }
+                                 ]
+                                },
+                                {
+                                 "hidden": false,
+                                 "help": null,
+                                 "label": null,
+                                 "identifier": null,
+                                 "frame": {
+                                  "width": 290,
+                                  "height": 1,
+                                  "x": 76,
+                                  "y": 500.3333333333333
+                                 },
+                                 "title": null,
+                                 "value": null,
+                                 "focused": false,
+                                 "children": [],
+                                 "subrole": null,
+                                 "enabled": true,
+                                 "role": "AXGroup"
+                                },
+                                {
+                                 "help": null,
+                                 "label": null,
+                                 "hidden": false,
+                                 "frame": {
+                                  "width": 370,
+                                  "height": 52,
+                                  "x": 16,
+                                  "y": 553.3333333333333
+                                 },
+                                 "value": null,
+                                 "title": null,
+                                 "enabled": true,
+                                 "subrole": null,
+                                 "identifier": null,
+                                 "role": "AXGroup",
+                                 "focused": false,
+                                 "children": [
+                                  {
+                                   "identifier": null,
+                                   "enabled": true,
+                                   "frame": {
+                                    "width": 370,
+                                    "x": 16,
+                                    "y": 553.3333333333333,
+                                    "height": 52
+                                   },
+                                   "children": [
+                                    {
+                                     "label": null,
+                                     "identifier": null,
+                                     "enabled": true,
+                                     "value": null,
+                                     "hidden": false,
+                                     "role": "AXGroup",
+                                     "children": [
+                                      {
+                                       "value": null,
+                                       "help": null,
+                                       "focused": false,
+                                       "enabled": true,
+                                       "title": null,
+                                       "frame": {
+                                        "width": 370,
+                                        "height": 52,
+                                        "y": 553.3333333333333,
+                                        "x": 16
+                                       },
+                                       "hidden": false,
+                                       "identifier": "com.apple.settings.homeScreen",
+                                       "children": [
+                                        {
+                                         "hidden": false,
+                                         "value": null,
+                                         "children": [],
+                                         "identifier": null,
+                                         "role": "AXStaticText",
+                                         "enabled": true,
+                                         "label": "Home Screen & App Library",
+                                         "title": null,
+                                         "subrole": null,
+                                         "frame": {
+                                          "x": 34,
+                                          "height": 28,
+                                          "y": 565.3333129882812,
+                                          "width": 253.66668701171875
+                                         },
+                                         "help": null,
+                                         "focused": false
+                                        },
+                                        {
+                                         "role": "AXImage",
+                                         "value": null,
+                                         "frame": {
+                                          "width": 28,
+                                          "y": 565.3333333333333,
+                                          "x": 34,
+                                          "height": 28
+                                         },
+                                         "help": null,
+                                         "hidden": false,
+                                         "children": [],
+                                         "title": null,
+                                         "enabled": true,
+                                         "identifier": null,
+                                         "focused": false,
+                                         "label": null,
+                                         "subrole": null
+                                        },
+                                        {
+                                         "focused": false,
+                                         "children": [],
+                                         "frame": {
+                                          "y": 573.3333333333333,
+                                          "x": 356.6666666666667,
+                                          "width": 7,
+                                          "height": 12
+                                         },
+                                         "help": null,
+                                         "label": null,
+                                         "subrole": null,
+                                         "identifier": "chevron.forward",
+                                         "role": "AXImage",
+                                         "value": null,
+                                         "title": null,
+                                         "enabled": true,
+                                         "hidden": false
+                                        }
+                                       ],
+                                       "role": "AXButton",
+                                       "subrole": null,
+                                       "label": "Home Screen & App Library"
+                                      }
+                                     ],
+                                     "subrole": null,
+                                     "help": null,
+                                     "title": null,
+                                     "frame": {
+                                      "x": 16,
+                                      "width": 370,
+                                      "height": 52,
+                                      "y": 553.3333333333333
+                                     },
+                                     "focused": false
+                                    }
+                                   ],
+                                   "help": null,
+                                   "title": null,
+                                   "focused": false,
+                                   "hidden": false,
+                                   "role": "AXGroup",
+                                   "subrole": null,
+                                   "label": null,
+                                   "value": null
+                                  }
+                                 ]
+                                },
+                                {
+                                 "value": null,
+                                 "label": null,
+                                 "role": "AXGroup",
+                                 "focused": false,
+                                 "hidden": false,
+                                 "title": null,
+                                 "identifier": null,
+                                 "help": null,
+                                 "enabled": true,
+                                 "children": [],
+                                 "subrole": null,
+                                 "frame": {
+                                  "x": 76,
+                                  "y": 552.3333333333333,
+                                  "width": 290,
+                                  "height": 1
+                                 }
+                                },
+                                {
+                                 "frame": {
+                                  "height": 52,
+                                  "width": 370,
+                                  "x": 16,
+                                  "y": 605.3333333333333
+                                 },
+                                 "enabled": true,
+                                 "value": null,
+                                 "focused": false,
+                                 "subrole": null,
+                                 "help": null,
+                                 "identifier": null,
+                                 "children": [
+                                  {
+                                   "value": null,
+                                   "hidden": false,
+                                   "identifier": null,
+                                   "role": "AXGroup",
+                                   "title": null,
+                                   "help": null,
+                                   "frame": {
+                                    "x": 16,
+                                    "height": 52,
+                                    "y": 605.3333333333333,
+                                    "width": 370
+                                   },
+                                   "subrole": null,
+                                   "enabled": true,
+                                   "focused": false,
+                                   "children": [
+                                    {
+                                     "label": null,
+                                     "help": null,
+                                     "focused": false,
+                                     "children": [
+                                      {
+                                       "value": null,
+                                       "focused": false,
+                                       "identifier": "com.apple.settings.search",
+                                       "title": null,
+                                       "enabled": true,
+                                       "frame": {
+                                        "x": 16,
+                                        "y": 605.3333333333333,
+                                        "width": 370,
+                                        "height": 52
+                                       },
+                                       "hidden": false,
+                                       "label": "Search",
+                                       "children": [
+                                        {
+                                         "subrole": null,
+                                         "title": null,
+                                         "hidden": false,
+                                         "label": "Search",
+                                         "help": null,
+                                         "role": "AXStaticText",
+                                         "enabled": true,
+                                         "focused": false,
+                                         "identifier": null,
+                                         "frame": {
+                                          "width": 95.33332824707031,
+                                          "x": 34,
+                                          "y": 617.3333129882812,
+                                          "height": 28
+                                         },
+                                         "children": [],
+                                         "value": null
+                                        },
+                                        {
+                                         "children": [],
+                                         "subrole": null,
+                                         "frame": {
+                                          "width": 28,
+                                          "x": 34,
+                                          "y": 617.3333333333333,
+                                          "height": 28
+                                         },
+                                         "enabled": true,
+                                         "title": null,
+                                         "hidden": false,
+                                         "value": null,
+                                         "help": null,
+                                         "identifier": null,
+                                         "role": "AXImage",
+                                         "label": null,
+                                         "focused": false
+                                        },
+                                        {
+                                         "children": [],
+                                         "label": null,
+                                         "focused": false,
+                                         "enabled": true,
+                                         "help": null,
+                                         "title": null,
+                                         "value": null,
+                                         "identifier": "chevron.forward",
+                                         "role": "AXImage",
+                                         "hidden": false,
+                                         "frame": {
+                                          "x": 356.6666666666667,
+                                          "width": 7,
+                                          "y": 625.3333333333333,
+                                          "height": 12
+                                         },
+                                         "subrole": null
+                                        }
+                                       ],
+                                       "role": "AXButton",
+                                       "subrole": null,
+                                       "help": null
+                                      }
+                                     ],
+                                     "subrole": null,
+                                     "title": null,
+                                     "enabled": true,
+                                     "identifier": null,
+                                     "hidden": false,
+                                     "frame": {
+                                      "y": 605.3333333333333,
+                                      "x": 16,
+                                      "width": 370,
+                                      "height": 52
+                                     },
+                                     "role": "AXGroup",
+                                     "value": null
+                                    }
+                                   ],
+                                   "label": null
+                                  }
+                                 ],
+                                 "title": null,
+                                 "hidden": false,
+                                 "role": "AXGroup",
+                                 "label": null
+                                },
+                                {
+                                 "help": null,
+                                 "role": "AXGroup",
+                                 "frame": {
+                                  "x": 76,
+                                  "y": 604.3333333333333,
+                                  "width": 290,
+                                  "height": 1
+                                 },
+                                 "enabled": true,
+                                 "label": null,
+                                 "title": null,
+                                 "hidden": false,
+                                 "value": null,
+                                 "subrole": null,
+                                 "identifier": null,
+                                 "focused": false,
+                                 "children": []
+                                },
+                                {
+                                 "hidden": false,
+                                 "subrole": null,
+                                 "label": null,
+                                 "help": null,
+                                 "enabled": true,
+                                 "children": [
+                                  {
+                                   "help": null,
+                                   "subrole": null,
+                                   "title": null,
+                                   "role": "AXGroup",
+                                   "value": null,
+                                   "identifier": null,
+                                   "enabled": true,
+                                   "frame": {
+                                    "height": 52,
+                                    "x": 16,
+                                    "width": 370,
+                                    "y": 657.3333333333333
+                                   },
+                                   "children": [
+                                    {
+                                     "subrole": null,
+                                     "identifier": null,
+                                     "enabled": true,
+                                     "children": [
+                                      {
+                                       "value": null,
+                                       "subrole": null,
+                                       "label": "Siri",
+                                       "enabled": true,
+                                       "frame": {
+                                        "x": 16,
+                                        "width": 370,
+                                        "y": 657.3333333333333,
+                                        "height": 52
+                                       },
+                                       "hidden": false,
+                                       "children": [
+                                        {
+                                         "identifier": null,
+                                         "hidden": false,
+                                         "help": null,
+                                         "role": "AXStaticText",
+                                         "focused": false,
+                                         "value": null,
+                                         "title": null,
+                                         "label": "Siri",
+                                         "subrole": null,
+                                         "enabled": true,
+                                         "frame": {
+                                          "x": 34,
+                                          "y": 669.3333129882812,
+                                          "height": 28,
+                                          "width": 66
+                                         },
+                                         "children": []
+                                        },
+                                        {
+                                         "frame": {
+                                          "y": 669.3333333333333,
+                                          "width": 28,
+                                          "height": 28,
+                                          "x": 34
+                                         },
+                                         "title": null,
+                                         "subrole": null,
+                                         "help": null,
+                                         "value": null,
+                                         "focused": false,
+                                         "hidden": false,
+                                         "enabled": true,
+                                         "role": "AXImage",
+                                         "identifier": null,
+                                         "label": null,
+                                         "children": []
+                                        },
+                                        {
+                                         "focused": false,
+                                         "help": null,
+                                         "children": [],
+                                         "enabled": true,
+                                         "label": null,
+                                         "hidden": false,
+                                         "identifier": "chevron.forward",
+                                         "role": "AXImage",
+                                         "value": null,
+                                         "subrole": null,
+                                         "frame": {
+                                          "x": 356.6666666666667,
+                                          "width": 7,
+                                          "height": 12,
+                                          "y": 677.3333333333333
+                                         },
+                                         "title": null
+                                        }
+                                       ],
+                                       "identifier": "com.apple.settings.siri",
+                                       "role": "AXButton",
+                                       "help": null,
+                                       "title": null,
+                                       "focused": false
+                                      }
+                                     ],
+                                     "frame": {
+                                      "y": 657.3333333333333,
+                                      "width": 370,
+                                      "x": 16,
+                                      "height": 52
+                                     },
+                                     "value": null,
+                                     "help": null,
+                                     "label": null,
+                                     "focused": false,
+                                     "title": null,
+                                     "hidden": false,
+                                     "role": "AXGroup"
+                                    }
+                                   ],
+                                   "focused": false,
+                                   "hidden": false,
+                                   "label": null
+                                  }
+                                 ],
+                                 "value": null,
+                                 "identifier": null,
+                                 "frame": {
+                                  "y": 657.3333333333333,
+                                  "width": 370,
+                                  "x": 16,
+                                  "height": 52
+                                 },
+                                 "role": "AXGroup",
+                                 "focused": false,
+                                 "title": null
+                                },
+                                {
+                                 "focused": false,
+                                 "subrole": null,
+                                 "children": [],
+                                 "title": null,
+                                 "frame": {
+                                  "x": 76,
+                                  "y": 656.3333333333333,
+                                  "width": 290,
+                                  "height": 1
+                                 },
+                                 "role": "AXGroup",
+                                 "value": null,
+                                 "label": null,
+                                 "enabled": true,
+                                 "hidden": false,
+                                 "identifier": null,
+                                 "help": null
+                                },
+                                {
+                                 "title": null,
+                                 "frame": {
+                                  "y": 709.3333333333334,
+                                  "height": 52,
+                                  "x": 16,
+                                  "width": 370
+                                 },
+                                 "hidden": false,
+                                 "value": null,
+                                 "role": "AXGroup",
+                                 "help": null,
+                                 "identifier": null,
+                                 "children": [
+                                  {
+                                   "identifier": null,
+                                   "enabled": true,
+                                   "focused": false,
+                                   "value": null,
+                                   "children": [
+                                    {
+                                     "hidden": false,
+                                     "label": null,
+                                     "focused": false,
+                                     "subrole": null,
+                                     "value": null,
+                                     "identifier": null,
+                                     "title": null,
+                                     "help": null,
+                                     "frame": {
+                                      "x": 16,
+                                      "height": 52,
+                                      "y": 709.3333333333334,
+                                      "width": 370
+                                     },
+                                     "children": [
+                                      {
+                                       "frame": {
+                                        "height": 52,
+                                        "x": 16,
+                                        "width": 370,
+                                        "y": 709.3333333333334
+                                       },
+                                       "enabled": true,
+                                       "value": null,
+                                       "hidden": false,
+                                       "focused": false,
+                                       "children": [
+                                        {
+                                         "help": null,
+                                         "subrole": null,
+                                         "role": "AXStaticText",
+                                         "label": "StandBy",
+                                         "enabled": true,
+                                         "value": null,
+                                         "focused": false,
+                                         "title": null,
+                                         "frame": {
+                                          "width": 106.33334350585938,
+                                          "y": 721.3333129882812,
+                                          "height": 28,
+                                          "x": 34
+                                         },
+                                         "hidden": false,
+                                         "children": [],
+                                         "identifier": null
+                                        },
+                                        {
+                                         "enabled": true,
+                                         "help": null,
+                                         "children": [],
+                                         "role": "AXImage",
+                                         "subrole": null,
+                                         "value": null,
+                                         "title": null,
+                                         "frame": {
+                                          "width": 28,
+                                          "x": 34,
+                                          "height": 28,
+                                          "y": 721.3333333333334
+                                         },
+                                         "focused": false,
+                                         "hidden": false,
+                                         "label": null,
+                                         "identifier": null
+                                        },
+                                        {
+                                         "hidden": false,
+                                         "label": null,
+                                         "value": null,
+                                         "focused": false,
+                                         "role": "AXImage",
+                                         "subrole": null,
+                                         "title": null,
+                                         "help": null,
+                                         "identifier": "chevron.forward",
+                                         "frame": {
+                                          "x": 356.6666666666667,
+                                          "y": 729.3333333333334,
+                                          "width": 7,
+                                          "height": 12
+                                         },
+                                         "enabled": true,
+                                         "children": []
+                                        }
+                                       ],
+                                       "subrole": null,
+                                       "identifier": "com.apple.settings.standBy",
+                                       "role": "AXButton",
+                                       "label": "StandBy",
+                                       "title": null,
+                                       "help": null
+                                      }
+                                     ],
+                                     "enabled": true,
+                                     "role": "AXGroup"
+                                    }
+                                   ],
+                                   "frame": {
+                                    "x": 16,
+                                    "width": 370,
+                                    "height": 52,
+                                    "y": 709.3333333333334
+                                   },
+                                   "hidden": false,
+                                   "subrole": null,
+                                   "label": null,
+                                   "title": null,
+                                   "role": "AXGroup",
+                                   "help": null
+                                  }
+                                 ],
+                                 "label": null,
+                                 "enabled": true,
+                                 "focused": false,
+                                 "subrole": null
+                                },
+                                {
+                                 "label": null,
+                                 "value": null,
+                                 "frame": {
+                                  "width": 290,
+                                  "y": 708.3333333333334,
+                                  "height": 1,
+                                  "x": 76
+                                 },
+                                 "focused": false,
+                                 "help": null,
+                                 "title": null,
+                                 "role": "AXGroup",
+                                 "identifier": null,
+                                 "enabled": true,
+                                 "hidden": false,
+                                 "children": [],
+                                 "subrole": null
+                                },
+                                {
+                                 "hidden": false,
+                                 "subrole": null,
+                                 "value": null,
+                                 "enabled": true,
+                                 "label": null,
+                                 "children": [],
+                                 "identifier": null,
+                                 "frame": {
+                                  "y": 779,
+                                  "height": 87,
+                                  "x": -16,
+                                  "width": 434
+                                 },
+                                 "focused": false,
+                                 "title": null,
+                                 "help": null,
+                                 "role": "AXGroup"
+                                },
+                                {
+                                 "frame": {
+                                  "width": 370,
+                                  "y": 796.3333333333334,
+                                  "height": 52,
+                                  "x": 16
+                                 },
+                                 "focused": false,
+                                 "role": "AXGroup",
+                                 "hidden": false,
+                                 "identifier": null,
+                                 "subrole": null,
+                                 "title": null,
+                                 "enabled": true,
+                                 "children": [
+                                  {
+                                   "hidden": false,
+                                   "role": "AXGroup",
+                                   "identifier": null,
+                                   "help": null,
+                                   "focused": false,
+                                   "value": null,
+                                   "enabled": true,
+                                   "subrole": null,
+                                   "title": null,
+                                   "children": [
+                                    {
+                                     "title": null,
+                                     "focused": false,
+                                     "children": [
+                                      {
+                                       "identifier": "com.apple.settings.screenTime",
+                                       "title": null,
+                                       "value": null,
+                                       "help": null,
+                                       "enabled": true,
+                                       "role": "AXButton",
+                                       "label": "Screen Time",
+                                       "focused": false,
+                                       "hidden": false,
+                                       "children": [
+                                        {
+                                         "title": null,
+                                         "children": [],
+                                         "enabled": true,
+                                         "focused": false,
+                                         "value": null,
+                                         "help": null,
+                                         "subrole": null,
+                                         "label": "Screen Time",
+                                         "role": "AXStaticText",
+                                         "identifier": null,
+                                         "frame": {
+                                          "width": 137.33334350585938,
+                                          "y": 808.3333129882812,
+                                          "height": 28,
+                                          "x": 34
+                                         },
+                                         "hidden": false
+                                        },
+                                        {
+                                         "label": null,
+                                         "focused": false,
+                                         "hidden": false,
+                                         "children": [],
+                                         "enabled": true,
+                                         "role": "AXImage",
+                                         "value": null,
+                                         "subrole": null,
+                                         "identifier": null,
+                                         "title": null,
+                                         "help": null,
+                                         "frame": {
+                                          "x": 34,
+                                          "height": 28,
+                                          "y": 808.3333333333334,
+                                          "width": 28
+                                         }
+                                        },
+                                        {
+                                         "title": null,
+                                         "label": null,
+                                         "hidden": false,
+                                         "children": [],
+                                         "value": null,
+                                         "frame": {
+                                          "y": 816.3333333333334,
+                                          "height": 12,
+                                          "x": 356.6666666666667,
+                                          "width": 7
+                                         },
+                                         "focused": false,
+                                         "subrole": null,
+                                         "role": "AXImage",
+                                         "identifier": "chevron.forward",
+                                         "help": null,
+                                         "enabled": true
+                                        }
+                                       ],
+                                       "frame": {
+                                        "width": 370,
+                                        "y": 796.3333333333334,
+                                        "x": 16,
+                                        "height": 52
+                                       },
+                                       "subrole": null
+                                      }
+                                     ],
+                                     "role": "AXGroup",
+                                     "hidden": false,
+                                     "frame": {
+                                      "height": 52,
+                                      "width": 370,
+                                      "y": 796.3333333333334,
+                                      "x": 16
+                                     },
+                                     "subrole": null,
+                                     "identifier": null,
+                                     "enabled": true,
+                                     "help": null,
+                                     "label": null,
+                                     "value": null
+                                    }
+                                   ],
+                                   "label": null,
+                                   "frame": {
+                                    "x": 16,
+                                    "width": 370,
+                                    "y": 796.3333333333334,
+                                    "height": 52
+                                   }
+                                  }
+                                 ],
+                                 "help": null,
+                                 "value": null,
+                                 "label": null
+                                },
+                                {
+                                 "value": null,
+                                 "subrole": null,
+                                 "identifier": null,
+                                 "children": [],
+                                 "role": "AXGroup",
+                                 "help": null,
+                                 "label": null,
+                                 "focused": false,
+                                 "enabled": true,
+                                 "hidden": false,
+                                 "frame": {
+                                  "width": 434,
+                                  "y": 866,
+                                  "height": 139,
+                                  "x": -16
+                                 },
+                                 "title": null
+                                },
+                                {
+                                 "subrole": null,
+                                 "enabled": true,
+                                 "title": null,
+                                 "frame": {
+                                  "height": 696,
+                                  "x": 369,
+                                  "width": 30,
+                                  "y": 116
+                                 },
+                                 "children": [
+                                  {
+                                   "focused": false,
+                                   "children": [],
+                                   "title": null,
+                                   "value": null,
+                                   "frame": {
+                                    "y": 119,
+                                    "height": 428.66666666666674,
+                                    "x": 396,
+                                    "width": 3
+                                   },
+                                   "help": null,
+                                   "identifier": null,
+                                   "subrole": null,
+                                   "role": "AXGroup",
+                                   "label": null,
+                                   "enabled": true,
+                                   "hidden": false
+                                  }
+                                 ],
+                                 "help": null,
+                                 "value": "0%",
+                                 "role": "AXSlider",
+                                 "label": "Vertical scroll bar, 2 pages",
+                                 "identifier": null,
+                                 "hidden": false,
+                                 "focused": false
+                                },
+                                {
+                                 "enabled": true,
+                                 "subrole": null,
+                                 "help": null,
+                                 "children": [
+                                  {
+                                   "label": null,
+                                   "identifier": null,
+                                   "hidden": false,
+                                   "children": [],
+                                   "frame": {
+                                    "y": 119,
+                                    "width": 3,
+                                    "height": 428.66666666666674,
+                                    "x": 396
+                                   },
+                                   "subrole": null,
+                                   "enabled": true,
+                                   "role": "AXGroup",
+                                   "title": null,
+                                   "value": null,
+                                   "help": null,
+                                   "focused": false
+                                  }
+                                 ],
+                                 "hidden": false,
+                                 "role": "AXSlider",
+                                 "value": "0%",
+                                 "focused": false,
+                                 "title": null,
+                                 "label": "Vertical scroll bar, 2 pages",
+                                 "identifier": null,
+                                 "frame": {
+                                  "height": 696,
+                                  "y": 116,
+                                  "x": 369,
+                                  "width": 30
+                                 }
+                                }
+                               ],
+                               "subrole": null,
+                               "title": null,
+                               "hidden": false,
+                               "role": "AXGroup",
+                               "value": null,
+                               "help": null,
+                               "label": null,
+                               "enabled": true,
+                               "focused": false,
+                               "identifier": "com.apple.settings.sidebar.collectionView"
+                              },
+                              {
+                               "identifier": null,
+                               "focused": false,
+                               "help": null,
+                               "hidden": false,
+                               "enabled": true,
+                               "frame": {
+                                "height": 0,
+                                "x": 201,
+                                "width": 0,
+                                "y": 478
+                               },
+                               "title": null,
+                               "children": [],
+                               "value": null,
+                               "role": "AXGroup",
+                               "subrole": null,
+                               "label": null
+                              }
+                             ],
+                             "value": null,
+                             "title": null
+                            }
+                           ],
+                           "role": "AXGroup",
+                           "focused": false,
+                           "help": null,
+                           "frame": {
+                            "width": 402,
+                            "x": 0,
+                            "y": 0,
+                            "height": 874
+                           }
+                          }
+                         ],
+                         "help": null
+                        }
+                       ],
+                       "value": null,
+                       "role": "AXGroup",
+                       "help": null
+                      },
+                      {
+                       "identifier": "Toolbar",
+                       "focused": false,
+                       "children": [
+                        {
+                         "help": null,
+                         "enabled": true,
+                         "label": null,
+                         "title": null,
+                         "role": "AXGroup",
+                         "hidden": false,
+                         "children": [
+                          {
+                           "role": "AXGroup",
+                           "frame": {
+                            "y": 62,
+                            "width": 402,
+                            "x": 0,
+                            "height": 812
+                           },
+                           "identifier": null,
+                           "title": null,
+                           "subrole": null,
+                           "value": null,
+                           "enabled": true,
+                           "label": null,
+                           "children": [
+                            {
+                             "role": "AXGroup",
+                             "label": null,
+                             "identifier": null,
+                             "value": null,
+                             "subrole": null,
+                             "enabled": true,
+                             "focused": false,
+                             "hidden": false,
+                             "help": null,
+                             "title": null,
+                             "frame": {
+                              "y": 62,
+                              "x": 0,
+                              "width": 402,
+                              "height": 812
+                             },
+                             "children": [
+                              {
+                               "frame": {
+                                "height": 0,
+                                "y": 62,
+                                "x": 0,
+                                "width": 0
+                               },
+                               "role": "AXGroup",
+                               "title": null,
+                               "help": null,
+                               "label": null,
+                               "subrole": null,
+                               "hidden": false,
+                               "children": [
+                                {
+                                 "frame": {
+                                  "height": 48,
+                                  "x": 28,
+                                  "y": 798,
+                                  "width": 346
+                                 },
+                                 "subrole": null,
+                                 "value": null,
+                                 "label": null,
+                                 "identifier": null,
+                                 "enabled": true,
+                                 "hidden": false,
+                                 "children": [
+                                  {
+                                   "help": null,
+                                   "children": [
+                                    {
+                                     "identifier": null,
+                                     "role": "AXGroup",
+                                     "frame": {
+                                      "width": 346,
+                                      "x": 28,
+                                      "height": 28,
+                                      "y": 808
+                                     },
+                                     "enabled": true,
+                                     "focused": false,
+                                     "subrole": null,
+                                     "hidden": false,
+                                     "value": null,
+                                     "title": null,
+                                     "label": null,
+                                     "children": [
+                                      {
+                                       "title": null,
+                                       "enabled": true,
+                                       "label": null,
+                                       "focused": false,
+                                       "hidden": false,
+                                       "subrole": "AXSearchField",
+                                       "frame": {
+                                        "x": 28,
+                                        "y": 808,
+                                        "width": 346,
+                                        "height": 28
+                                       },
+                                       "children": [
+                                        {
+                                         "role": "AXButton",
+                                         "value": null,
+                                         "children": [],
+                                         "identifier": "Dictate",
+                                         "hidden": false,
+                                         "enabled": true,
+                                         "subrole": null,
+                                         "title": null,
+                                         "focused": false,
+                                         "help": "Double-tap to start dictation. Double-tap with two fingers when finished.",
+                                         "label": "Dictate",
+                                         "frame": {
+                                          "width": 17.333333333333314,
+                                          "y": 811,
+                                          "x": 341.6666666666667,
+                                          "height": 22
+                                         }
+                                        },
+                                        {
+                                         "identifier": "magnifyingglass",
+                                         "help": null,
+                                         "frame": {
+                                          "y": 812,
+                                          "width": 20.66666666666667,
+                                          "height": 19.33333333333337,
+                                          "x": 40
+                                         },
+                                         "focused": false,
+                                         "hidden": false,
+                                         "enabled": true,
+                                         "role": "AXImage",
+                                         "title": null,
+                                         "children": [],
+                                         "value": null,
+                                         "subrole": null,
+                                         "label": "Search"
+                                        },
+                                        {
+                                         "subrole": null,
+                                         "help": "Double-tap to start dictation. Double-tap with two fingers when finished.",
+                                         "role": "AXButton",
+                                         "frame": {
+                                          "width": 17.333333333333314,
+                                          "height": 22,
+                                          "y": 811,
+                                          "x": 341.6666666666667
+                                         },
+                                         "value": null,
+                                         "enabled": true,
+                                         "label": "Dictate",
+                                         "focused": false,
+                                         "hidden": false,
+                                         "title": null,
+                                         "identifier": "Dictate",
+                                         "children": []
+                                        }
+                                       ],
+                                       "help": null,
+                                       "identifier": null,
+                                       "role": "AXTextField",
+                                       "value": "Search"
+                                      }
+                                     ],
+                                     "help": null
+                                    }
+                                   ],
+                                   "title": null,
+                                   "enabled": true,
+                                   "frame": {
+                                    "y": 798,
+                                    "width": 346,
+                                    "height": 48,
+                                    "x": 28
+                                   },
+                                   "role": "AXGroup",
+                                   "subrole": null,
+                                   "identifier": null,
+                                   "value": null,
+                                   "focused": false,
+                                   "label": null,
+                                   "hidden": false
+                                  }
+                                 ],
+                                 "help": null,
+                                 "focused": false,
+                                 "role": "AXGroup",
+                                 "title": null
+                                }
+                               ],
+                               "focused": false,
+                               "value": null,
+                               "enabled": true,
+                               "identifier": null
+                              }
+                             ]
+                            }
+                           ],
+                           "help": null,
+                           "focused": false,
+                           "hidden": false
+                          }
+                         ],
+                         "value": null,
+                         "identifier": null,
+                         "frame": {
+                          "height": 874,
+                          "y": 0,
+                          "x": 0,
+                          "width": 402
+                         },
+                         "focused": false,
+                         "subrole": null
+                        }
+                       ],
+                       "value": null,
+                       "help": null,
+                       "title": null,
+                       "hidden": false,
+                       "label": "Toolbar",
+                       "subrole": null,
+                       "frame": {
+                        "x": 0,
+                        "y": 0,
+                        "width": 402,
+                        "height": 874
+                       },
+                       "enabled": true,
+                       "role": "AXGroup"
+                      }
+                     ],
+                     "identifier": null,
+                     "focused": false,
+                     "frame": {
+                      "height": 874,
+                      "y": 0,
+                      "width": 402,
+                      "x": 0
+                     },
+                     "title": null,
+                     "value": null,
+                     "enabled": true,
+                     "role": "AXGroup",
+                     "label": null,
+                     "help": null,
+                     "hidden": false,
+                     "subrole": null
+                    }
+                   ],
+                   "label": null,
+                   "hidden": false,
+                   "identifier": null
+                  },
+                  {
+                   "enabled": true,
+                   "value": null,
+                   "role": "AXGroup",
+                   "subrole": null,
+                   "label": "Toolbar",
+                   "hidden": false,
+                   "title": null,
+                   "children": [
+                    {
+                     "enabled": true,
+                     "value": null,
+                     "role": "AXGroup",
+                     "focused": false,
+                     "frame": {
+                      "width": 402,
+                      "y": 0,
+                      "x": 0,
+                      "height": 874
+                     },
+                     "children": [],
+                     "subrole": null,
+                     "label": null,
+                     "identifier": null,
+                     "title": null,
+                     "help": null,
+                     "hidden": false
+                    }
+                   ],
+                   "help": null,
+                   "frame": {
+                    "height": 874,
+                    "x": 0,
+                    "y": 0,
+                    "width": 402
+                   },
+                   "focused": false,
+                   "identifier": "Toolbar"
+                  }
+                 ],
+                 "title": null,
+                 "value": null,
+                 "frame": {
+                  "width": 402,
+                  "x": 0,
+                  "y": 0,
+                  "height": 874
+                 },
+                 "label": null,
+                 "help": null,
+                 "hidden": false,
+                 "role": "AXGroup",
+                 "identifier": null,
+                 "subrole": null,
+                 "enabled": true,
+                 "focused": false
+                }
+               ],
+               "help": null,
+               "title": null,
+               "focused": false,
+               "subrole": null,
+               "hidden": false,
+               "frame": {
+                "x": 0,
+                "y": 0,
+                "height": 874,
+                "width": 402
+               },
+               "identifier": null,
+               "role": "AXGroup",
+               "value": null
+              },
+              {
+               "title": null,
+               "subrole": null,
+               "label": null,
+               "children": [
+                {
+                 "hidden": false,
+                 "children": [],
+                 "label": null,
+                 "enabled": true,
+                 "focused": false,
+                 "role": "AXGroup",
+                 "identifier": null,
+                 "value": null,
+                 "help": null,
+                 "title": null,
+                 "subrole": null,
+                 "frame": {
+                  "width": 402,
+                  "height": 874,
+                  "y": 0,
+                  "x": 0
+                 }
+                }
+               ],
+               "enabled": true,
+               "role": "AXGroup",
+               "help": null,
+               "focused": false,
+               "hidden": false,
+               "frame": {
+                "height": 874,
+                "width": 402,
+                "x": 0,
+                "y": 0
+               },
+               "value": null,
+               "identifier": null
+              }
+             ],
+             "subrole": null,
+             "title": null,
+             "frame": {
+              "height": 874,
+              "y": 0,
+              "width": 402,
+              "x": 0
+             },
+             "help": null,
+             "role": "AXGroup",
+             "label": null,
+             "value": null,
+             "identifier": null,
+             "enabled": true,
+             "focused": false,
+             "hidden": false
+            }
+           ],
+           "label": null,
+           "value": null,
+           "frame": {
+            "y": 0,
+            "height": 874,
+            "x": 0,
+            "width": 402
+           },
+           "title": null,
+           "focused": false
+          }
+         ],
+         "hidden": false,
+         "label": null,
+         "help": null,
+         "role": "AXGroup",
+         "enabled": true,
+         "identifier": null,
+         "value": null
+        }
+       ],
+       "frame": {
+        "height": 874,
+        "x": 0,
+        "width": 402,
+        "y": 0
+       }
+      }
+     ],
+     "role": "AXGroup",
+     "label": null,
+     "identifier": null,
+     "help": null,
+     "title": null,
+     "enabled": true,
+     "value": null,
+     "frame": {
+      "x": 0,
+      "y": 0,
+      "height": 874,
+      "width": 402
+     },
+     "focused": false
+    }
+   ],
+   "help": null,
+   "frame": {
+    "x": 0,
+    "width": 402,
+    "y": 0,
+    "height": 874
+   }
+  }
+ ],
+ "help": null,
+ "focused": false,
+ "role": "AXApplication"
+}

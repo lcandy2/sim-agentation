@@ -556,6 +556,7 @@ final class AppServer: @unchecked Sendable {
             ]))
         }
         let within = hit == nil && parts.count < 2 ? center(rect) : nil
+        let inside = tree.map { AX.inside($0, rect) }
         let device = (try? await blocking { Simulators.shared.all() })?.first { $0.udid == udid }
         let id = Store.newId()
         let now = Store.timestamp()
@@ -581,7 +582,9 @@ final class AppServer: @unchecked Sendable {
             "within": within.map { AX.summarize($0.node) } ?? .null,
             "targetPath": .array((hit?.path.dropFirst() ?? []).map(JSON.string)),
             "parts": .array(parts.count > 1 ? parts : []),
-            "inside": .array(tree.map { AX.nodesInRect($0, rect).prefix(20).map { AX.summarize($0.node) } } ?? []),
+            "inside": .array(inside?.nodes ?? []),
+            // How many the box holds, so the note can count what it didn't keep.
+            "insideTotal": .number(Double(inside?.total ?? 0)),
             "screen": AX.screenContext(tree),
             "app": b["app"]?.objectValue != nil
                 ? b["app"]!
